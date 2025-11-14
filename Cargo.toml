@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "crates/umbral-lexer",
+    "crates/umbral-parser",
+    "crates/umbral-runtime",
+    "crates/umbral-interpreter",
+    "crates/umbral-cli",
+    "crates/umbral-repl"
+]
