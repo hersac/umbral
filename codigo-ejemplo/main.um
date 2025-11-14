@@ -1,0 +1,164 @@
+!! Esto es un comentario
+
+!! Tipos del lenguaje Humbral
+
+v: x = "Esta variable puede contener cualquier tipo";
+v: nombre->Str = 'Heriberto';
+v: edad->Int = 30;
+v: peso->Flo = 87.5;
+v: estaVivo->Bool = true;
+v: persona1->Persona = [
+	"id" => 1,
+	"descripcion" => "Esta persona es buena",
+	"edad"=>20
+];
+v: listaPersonas->[]Personas = {
+	persona1,
+	[
+		"id" => 2,
+		"descripcion" => "Esta persona tambien es buena",
+		"edad"=>49
+	]
+};
+
+c: EDAD_MAXIMA = 90;
+c: ALTURA_MAXIMA->Flo = 1.85;
+
+f: calcularEdadFaltante(edad->Int, edadMaxima->Int)->Int {
+
+	c: resultado = edadMaxima - edad;
+
+	r: (resultado);
+}
+
+c: edadFaltante = calcularEdadFAltante(edad, EDAD_MAXIMA);
+
+tprint(edadFaltante);
+
+!! condicionales
+
+i: (edad < 0) {
+	tprint('Es negativo');
+} ie: (edad > 0) {
+	tprint('Es positivo');
+} e: {
+	tprint('Es 0');
+}
+
+sw: (edad) {
+	ca: 0 =>
+		tprint('Es 0');
+	ca: 1 =>
+		tprint('Es 1');
+	def: =>
+		tprint("Es &edad");
+}
+
+!! Bucles
+
+v: listaAutos->[]Str = { 'Mazda', 'Toyota', 'Nissan' };
+
+fo: (v: i = 0 ; i < listaAutos.length ; i++) {
+	tprint(listaAutos[i]);
+}
+
+fe: (v: auto->Str <= listaAutos) {
+	tprint(auto);
+}
+
+v: count->Int = 0;
+
+wh: (count < 5) {
+	tprint(count);
+	count++;
+}
+
+v: count2 -> 0;
+
+dw: {
+	tprint(count2);
+	count2++
+} (count < 5)
+
+!! Clases y POO:
+
+cs: Persona {
+	pr: id->Int;
+	pr: descripcion->Str;
+	pr: edad->Int;
+
+	pu f: Persona(id->int, descripcion->Str, edad->Int) {
+		th.id = id;
+		th.descripcion = descripcion;
+		th.edad = edad;
+	}
+
+	pu f: getId()->Int {
+		r: (th.id);
+	}
+
+	pu f: setId(id->Int) = {
+		th.id = id;
+	}
+
+	pu f: getDescripcion()->Str {
+		r: (th.descripcion);
+	}
+
+	pu f: setDescripcion(descripcion->Str) {
+		th.descripcion = descripcion;
+	}
+
+	pu f: getEdad()->Int {
+		r: (th.edad);
+	}
+
+	pu f: setEdad(edad->Int) {
+		th.edad = edad;
+	}
+
+	pu f: toString()->Str {
+		r: ('''
+			[
+				"id" => &th.id,
+				"descripcion" => &th.descripcion,
+				"edad" => &th.edad
+			]
+		''');
+	}
+}
+
+c: persona3 = n: Persona(3, "Otra persona buena mas", 57);
+
+tprint("Persona: &persona3.toString");
+
+!! Interfaces e implementación
+
+in: PersonaService {
+	pu f: buscarTodos()->[]Persona;
+	pu f: crear(data->Persona)->Persona;
+}
+
+cs: PersonaServiceImpl imp: PersonaService {
+
+	pu f: PersonaServiceImpl() {}
+
+	pu f: buscarTodos()->[]Persona {
+		r: (null);
+	}
+
+	pu f: crear(data->Persona)->Persona {
+		r: (null);
+	}
+}
+
+!! Enum de estados
+
+em: ESTADO {
+	APROBADO,
+	RECHAZADO,
+	PENDIENTE
+};
+
+
+
