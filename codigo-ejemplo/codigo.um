@@ -1,0 +1,3 @@
+v: nombre -> Str = "Heri"
+v: edad -> Int = 30
+v: peso -> Flo = 87.5
