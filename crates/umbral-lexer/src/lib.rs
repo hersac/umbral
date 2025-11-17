@@ -13,7 +13,6 @@ pub enum Token {
     DeclararInterfaz,
     Implementacion,
     DeclararEnum,
-
     If,
     ElseIf,
     Else,
@@ -25,9 +24,7 @@ pub enum Token {
     While,
     DoWhile,
     Return,
-
     TPrint,
-
     OperadorTipo,
     FlechaDoble,
     Asignacion,
@@ -41,13 +38,11 @@ pub enum Token {
     Decremento,
     Punto,
     Interpolacion,
-
     Numero(String),
     Cadena(String),
     CadenaMultilinea(String),
     Identificador(String),
     Tipo(String),
-
     ParentesisIzq,
     ParentesisDer,
     LlaveIzq,
@@ -68,11 +63,9 @@ pub enum Token {
     Not,
     Rango,
     RangoIncluyente,
-
     Verdadero,
     Falso,
     Nulo,
-
     Desconocido(char),
 }
 
@@ -171,14 +164,16 @@ pub fn analizar(texto: &str) -> Vec<Token> {
             lista.push(Token::Cadena(val));
             continue;
         }
+
         if ch == '"' {
             let val = leer_cadena_doble(&mut iterador);
             lista.push(Token::Cadena(val));
             continue;
         }
+
         if ch.is_ascii_digit() {
-            let num = leer_numero(&mut iterador, ch);
-            lista.push(Token::Numero(num));
+            let numero = leer_numero(&mut iterador, ch);
+            lista.push(Token::Numero(numero));
             continue;
         }
 
@@ -188,21 +183,33 @@ pub fn analizar(texto: &str) -> Vec<Token> {
 
             if prox == Some(':') {
                 iterador.next();
-                match palabra.as_str() {
-                    "v" => {
-                        lista.push(Token::DeclararVariable);
-                        continue;
-                    }
-                    "c" => {
-                        lista.push(Token::DeclararConstante);
-                        continue;
-                    }
-                    "f" => {
-                        lista.push(Token::DeclararFuncion);
-                        continue;
-                    }
-                    _ => {}
+                if palabra == "v" {
+                    lista.push(Token::DeclararVariable);
+                    continue;
                 }
+                if palabra == "c" {
+                    lista.push(Token::DeclararConstante);
+                    continue;
+                }
+                if palabra == "f" {
+                    lista.push(Token::DeclararFuncion);
+                    continue;
+                }
+            }
+
+            if palabra == "em" {
+                lista.push(Token::DeclararEnum);
+                continue;
+            }
+
+            if palabra == "in" {
+                lista.push(Token::DeclararInterfaz);
+                continue;
+            }
+
+            if palabra == "cs" {
+                lista.push(Token::DeclararClase);
+                continue;
             }
 
             lista.push(Token::Identificador(palabra.clone()));

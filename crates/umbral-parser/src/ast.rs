@@ -27,7 +27,7 @@ pub struct DeclaracionVariable {
 #[derive(Debug, Clone)]
 pub struct DeclaracionConstante {
     pub nombre: String,
-    pub tipo: Tipo,
+    pub tipo: Option<Tipo>,
     pub valor: Expresion,
 }
 

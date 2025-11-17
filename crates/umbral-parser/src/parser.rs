@@ -149,29 +149,23 @@ impl Parser {
 
     fn parsear_declaracion_constante(&mut self) -> Result<Sentencia, ParseError> {
         let nombre = self.parsear_identificador_consumir()?;
-        if !self.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
-            return Err(ParseError::nuevo(
-                "Se esperaba '->' en declaracion constante",
-                self.posicion,
-            ));
-        }
-        let tipo = match self.parsear_tipo()? {
-            Some(t) => t,
-            None => {
-                return Err(ParseError::nuevo(
-                    "Tipo esperado en declaracion constante",
-                    self.posicion,
-                ));
-            }
+
+        let tipo = if self.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
+            self.parsear_tipo()?
+        } else {
+            None
         };
+
         if !self.coincidir(|t| matches!(t, LexToken::Asignacion)) {
             return Err(ParseError::nuevo(
                 "Se esperaba '=' en declaracion constante",
                 self.posicion,
             ));
         }
+
         let valor = self.parsear_expresion()?;
         self.coincidir(|t| matches!(t, LexToken::PuntoYComa));
+
         Ok(Sentencia::DeclaracionConstante(DeclaracionConstante {
             nombre,
             tipo,
@@ -349,6 +343,7 @@ impl Parser {
                 None => return Err(ParseError::nuevo("Fin inesperado en enum", self.posicion)),
             }
         }
+        self.coincidir(|t| matches!(t, LexToken::PuntoYComa));
         Ok(Sentencia::Enum(DeclaracionEnum { nombre, variantes }))
     }
 
@@ -635,11 +630,11 @@ impl Parser {
             }
             Some(("corchete_izq", _)) => {
                 self.avanzar();
-                self.parsear_array()
+                self.parsear_objeto()
             }
             Some(("llave_izq", _)) => {
                 self.avanzar();
-                self.parsear_objeto()
+                self.parsear_array()
             }
             _ => Err(ParseError::nuevo("Expresion no valida", self.posicion)),
         }
@@ -647,7 +642,7 @@ impl Parser {
 
     fn parsear_array(&mut self) -> Result<Expresion, ParseError> {
         let mut elementos = Vec::new();
-        if self.coincidir(|t| matches!(t, LexToken::CorcheteDer)) {
+        if self.coincidir(|t| matches!(t, LexToken::LlaveDer)) {
             return Ok(Expresion::Array(elementos));
         }
         loop {
@@ -655,17 +650,17 @@ impl Parser {
             if self.coincidir(|t| matches!(t, LexToken::Coma)) {
                 continue;
             }
-            if self.coincidir(|t| matches!(t, LexToken::CorcheteDer)) {
+            if self.coincidir(|t| matches!(t, LexToken::LlaveDer)) {
                 break;
             }
-            return Err(ParseError::nuevo("Se esperaba ',' o ']'", self.posicion));
+            return Err(ParseError::nuevo("Se esperaba ',' o '}'", self.posicion));
         }
         Ok(Expresion::Array(elementos))
     }
 
     fn parsear_objeto(&mut self) -> Result<Expresion, ParseError> {
         let mut pares = Vec::new();
-        if self.coincidir(|t| matches!(t, LexToken::LlaveDer)) {
+        if self.coincidir(|t| matches!(t, LexToken::CorcheteDer)) {
             return Ok(Expresion::Objeto(pares));
         }
         loop {
@@ -687,11 +682,11 @@ impl Parser {
                 if self.coincidir(|t| matches!(t, LexToken::Coma)) {
                     continue;
                 }
-                if self.coincidir(|t| matches!(t, LexToken::LlaveDer)) {
+                if self.coincidir(|t| matches!(t, LexToken::CorcheteDer)) {
                     break;
                 }
                 return Err(ParseError::nuevo(
-                    "Se esperaba ',' o '}' en objeto",
+                    "Se esperaba ',' o ']' en objeto",
                     self.posicion,
                 ));
             } else {
