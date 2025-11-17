@@ -83,6 +83,8 @@ pub struct Clase {
 #[derive(Debug, Clone)]
 pub struct DeclaracionClase {
     pub nombre: String,
+    pub extensiones: Vec<String>,
+    pub implementaciones: Vec<String>,
     pub propiedades: Vec<Propiedad>,
     pub metodos: Vec<Metodo>,
 }

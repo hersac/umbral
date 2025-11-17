@@ -1,9 +1,16 @@
+use std::env;
 use std::fs;
 use umbral_lexer::analizar;
 use umbral_parser::Parser;
 
 fn main() {
-    let ruta_archivo = "codigo-ejemplo/main.um";
+    let args: Vec<String> = env::args().collect();
+    let ruta_archivo = if args.len() > 1 {
+        &args[1]
+    } else {
+        "codigo-ejemplo/main.um"
+    };
+    
     let fuente = match fs::read_to_string(ruta_archivo) {
         Ok(contenido) => contenido,
         Err(e) => {

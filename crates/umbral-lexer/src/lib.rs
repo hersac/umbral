@@ -12,6 +12,7 @@ pub enum Token {
     PropPublica,
     DeclararInterfaz,
     Implementacion,
+    Extension,
     DeclararEnum,
     If,
     ElseIf,
@@ -260,6 +261,10 @@ pub fn analizar(texto: &str) -> Vec<Token> {
                         lista.push(Token::Implementacion);
                         continue;
                     }
+                    "ext" => {
+                        lista.push(Token::Extension);
+                        continue;
+                    }
                     "em" => {
                         lista.push(Token::DeclararEnum);
                         continue;
@@ -303,11 +308,6 @@ pub fn analizar(texto: &str) -> Vec<Token> {
 
             if palabra == "pu" {
                 lista.push(Token::PropPublica);
-                continue;
-            }
-
-            if palabra == "imp" {
-                lista.push(Token::Implementacion);
                 continue;
             }
 

@@ -6,8 +6,24 @@ use umbral_lexer::Token as LexToken;
 pub fn parsear_declaracion_clase(p: &mut Parser) -> Result<Sentencia, ParseError> {
     let nombre = p.parsear_identificador_consumir()?;
     
+    let mut extensiones = Vec::new();
+    if p.coincidir(|t| matches!(t, LexToken::Extension)) {
+        loop {
+            extensiones.push(p.parsear_identificador_consumir()?);
+            if !p.coincidir(|t| matches!(t, LexToken::Coma)) {
+                break;
+            }
+        }
+    }
+    
+    let mut implementaciones = Vec::new();
     if p.coincidir(|t| matches!(t, LexToken::Implementacion)) {
-        p.parsear_identificador_consumir()?;
+        loop {
+            implementaciones.push(p.parsear_identificador_consumir()?);
+            if !p.coincidir(|t| matches!(t, LexToken::Coma)) {
+                break;
+            }
+        }
     }
     
     if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
@@ -51,6 +67,8 @@ pub fn parsear_declaracion_clase(p: &mut Parser) -> Result<Sentencia, ParseError
 
     Ok(Sentencia::Clase(DeclaracionClase {
         nombre,
+        extensiones,
+        implementaciones,
         propiedades,
         metodos,
     }))
