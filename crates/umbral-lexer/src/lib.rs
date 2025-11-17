@@ -76,7 +76,18 @@ pub enum Token {
     Desconocido(char),
 }
 
-fn leer_cadena(iter: &mut Peekable<Chars>) -> String {
+fn leer_cadena_simple(iter: &mut Peekable<Chars>) -> String {
+    let mut s = String::new();
+    while let Some(c) = iter.next() {
+        if c == '\'' {
+            break;
+        }
+        s.push(c);
+    }
+    s
+}
+
+fn leer_cadena_doble(iter: &mut Peekable<Chars>) -> String {
     let mut s = String::new();
     while let Some(c) = iter.next() {
         if c == '"' {
@@ -87,20 +98,15 @@ fn leer_cadena(iter: &mut Peekable<Chars>) -> String {
     s
 }
 
-fn leer_multilinea(iter: &mut Peekable<Chars>) -> String {
+fn leer_triple_comilla_simple(iter: &mut Peekable<Chars>) -> String {
     let mut s = String::new();
-    loop {
-        let a = iter.next();
-        if a.is_none() {
-            break;
-        }
-        let ch = a.unwrap();
-        if ch == '\'' && iter.peek().copied() == Some('\'') && iter.clone().nth(1) == Some('\'') {
+    while let Some(c) = iter.next() {
+        if c == '\'' && iter.peek().copied() == Some('\'') && iter.clone().nth(1) == Some('\'') {
             iter.next();
             iter.next();
             break;
         }
-        s.push(ch);
+        s.push(c);
     }
     s
 }
@@ -152,22 +158,24 @@ pub fn analizar(texto: &str) -> Vec<Token> {
             continue;
         }
 
-        if ch == '\'' && doble == Some('\'') {
+        if ch == '\'' && doble == Some('\'') && iterador.clone().nth(1) == Some('\'') {
             iterador.next();
-            if iterador.peek().copied() == Some('\'') {
-                iterador.next();
-                let val = leer_multilinea(&mut iterador);
-                lista.push(Token::CadenaMultilinea(val));
-                continue;
-            }
-        }
-
-        if ch == '"' {
-            let val = leer_cadena(&mut iterador);
-            lista.push(Token::Cadena(val));
+            iterador.next();
+            let val = leer_triple_comilla_simple(&mut iterador);
+            lista.push(Token::CadenaMultilinea(val));
             continue;
         }
 
+        if ch == '\'' {
+            let val = leer_cadena_simple(&mut iterador);
+            lista.push(Token::Cadena(val));
+            continue;
+        }
+        if ch == '"' {
+            let val = leer_cadena_doble(&mut iterador);
+            lista.push(Token::Cadena(val));
+            continue;
+        }
         if ch.is_ascii_digit() {
             let num = leer_numero(&mut iterador, ch);
             lista.push(Token::Numero(num));
@@ -177,6 +185,35 @@ pub fn analizar(texto: &str) -> Vec<Token> {
         if ch.is_ascii_alphabetic() || ch == '_' {
             let palabra = leer_palabra(&mut iterador, ch);
             let prox = iterador.peek().copied();
+
+            // Manejo de declaración tipo v: lista -> tipo
+            if prox == Some('-') && iterador.clone().nth(1) == Some('>') {
+                iterador.next();
+                iterador.next();
+                lista.push(Token::OperadorTipo);
+
+                // Leer corchetes anidados []
+                let mut prefijo = String::new();
+                while iterador.peek().copied() == Some('[') && iterador.clone().nth(1) == Some(']')
+                {
+                    iterador.next();
+                    iterador.next();
+                    prefijo.push_str("[]");
+                }
+
+                // Leer tipo base
+                let mut tipo_base = String::new();
+                while let Some(&c) = iterador.peek() {
+                    if c.is_ascii_alphanumeric() || c == '_' {
+                        tipo_base.push(iterador.next().unwrap());
+                    } else {
+                        break;
+                    }
+                }
+
+                lista.push(Token::Tipo(format!("{}{}", prefijo, tipo_base)));
+                continue;
+            }
 
             if prox == Some(':') {
                 iterador.next();
@@ -193,103 +230,8 @@ pub fn analizar(texto: &str) -> Vec<Token> {
                         lista.push(Token::DeclararFuncion);
                         continue;
                     }
-                    "n" => {
-                        lista.push(Token::Instanciar);
-                        continue;
-                    }
-                    "cs" => {
-                        lista.push(Token::DeclararClase);
-                        continue;
-                    }
-                    "pr" => {
-                        lista.push(Token::PropPrivada);
-                        continue;
-                    }
-                    "pu" => {
-                        lista.push(Token::PropPublica);
-                        continue;
-                    }
-                    "in" => {
-                        lista.push(Token::DeclararInterfaz);
-                        continue;
-                    }
-                    "imp" => {
-                        lista.push(Token::Implementacion);
-                        continue;
-                    }
-                    "em" => {
-                        lista.push(Token::DeclararEnum);
-                        continue;
-                    }
-                    "i" => {
-                        lista.push(Token::If);
-                        continue;
-                    }
-                    "ie" => {
-                        lista.push(Token::ElseIf);
-                        continue;
-                    }
-                    "e" => {
-                        lista.push(Token::Else);
-                        continue;
-                    }
-                    "sw" => {
-                        lista.push(Token::Switch);
-                        continue;
-                    }
-                    "ca" => {
-                        lista.push(Token::Case);
-                        continue;
-                    }
-                    "def" => {
-                        lista.push(Token::Default);
-                        continue;
-                    }
-                    "fo" => {
-                        lista.push(Token::For);
-                        continue;
-                    }
-                    "fe" => {
-                        lista.push(Token::ForEach);
-                        continue;
-                    }
-                    "wh" => {
-                        lista.push(Token::While);
-                        continue;
-                    }
-                    "dw" => {
-                        lista.push(Token::DoWhile);
-                        continue;
-                    }
-                    "r" => {
-                        lista.push(Token::Return);
-                        continue;
-                    }
-                    _ => {
-                        lista.push(Token::Identificador(palabra));
-                        continue;
-                    }
+                    _ => {}
                 }
-            }
-
-            match palabra.as_str() {
-                "tprint" => {
-                    lista.push(Token::TPrint);
-                    continue;
-                }
-                "true" => {
-                    lista.push(Token::Verdadero);
-                    continue;
-                }
-                "false" => {
-                    lista.push(Token::Falso);
-                    continue;
-                }
-                "null" => {
-                    lista.push(Token::Nulo);
-                    continue;
-                }
-                _ => {}
             }
 
             let primera = palabra.chars().next().unwrap();
@@ -297,172 +239,157 @@ pub fn analizar(texto: &str) -> Vec<Token> {
                 lista.push(Token::Tipo(palabra));
                 continue;
             }
-
             lista.push(Token::Identificador(palabra));
             continue;
         }
 
-        if ch == '-' && doble == Some('>') {
-            iterador.next();
-            lista.push(Token::OperadorTipo);
-            continue;
-        }
-
-        if ch == '=' && doble == Some('=') {
-            iterador.next();
-            lista.push(Token::IgualIgual);
-            continue;
-        }
-
-        if ch == '=' && doble == Some('>') {
-            iterador.next();
-            lista.push(Token::FlechaDoble);
-            continue;
-        }
-
-        if ch == '!' && doble == Some('=') {
-            iterador.next();
-            lista.push(Token::Diferente);
-            continue;
-        }
-
-        if ch == '<' && doble == Some('=') {
-            iterador.next();
-            lista.push(Token::MenorIgual);
-            continue;
-        }
-
-        if ch == '>' && doble == Some('=') {
-            iterador.next();
-            lista.push(Token::MayorIgual);
-            continue;
-        }
-
-        if ch == '&' && doble == Some('&') {
-            iterador.next();
-            lista.push(Token::And);
-            continue;
-        }
-
-        if ch == '|' && doble == Some('|') {
-            iterador.next();
-            lista.push(Token::Or);
-            continue;
-        }
-
-        if ch == '+' && doble == Some('+') {
-            iterador.next();
-            lista.push(Token::Incremento);
-            continue;
-        }
-
-        if ch == '-' && doble == Some('-') {
-            iterador.next();
-            lista.push(Token::Decremento);
-            continue;
-        }
-
-        if ch == '.' && iterador.peek().copied() == Some('.') {
-            iterador.next();
-            if iterador.peek().copied() == Some('=') {
-                iterador.next();
-                lista.push(Token::RangoIncluyente);
+        // Operadores
+        match ch {
+            '-' => {
+                if doble == Some('>') {
+                    iterador.next();
+                    lista.push(Token::OperadorTipo);
+                    continue;
+                }
+                if doble == Some('-') {
+                    iterador.next();
+                    lista.push(Token::Decremento);
+                    continue;
+                }
+                lista.push(Token::Resta);
                 continue;
             }
-            lista.push(Token::Rango);
-            continue;
+            '+' => {
+                if doble == Some('+') {
+                    iterador.next();
+                    lista.push(Token::Incremento);
+                    continue;
+                }
+                lista.push(Token::Suma);
+                continue;
+            }
+            '=' => {
+                if doble == Some('=') {
+                    iterador.next();
+                    lista.push(Token::IgualIgual);
+                    continue;
+                }
+                if doble == Some('>') {
+                    iterador.next();
+                    lista.push(Token::FlechaDoble);
+                    continue;
+                }
+                lista.push(Token::Asignacion);
+                continue;
+            }
+            '!' => {
+                if doble == Some('=') {
+                    iterador.next();
+                    lista.push(Token::Diferente);
+                    continue;
+                }
+                lista.push(Token::Not);
+                continue;
+            }
+            '<' => {
+                if doble == Some('=') {
+                    iterador.next();
+                    lista.push(Token::MenorIgual);
+                    continue;
+                }
+                lista.push(Token::Menor);
+                continue;
+            }
+            '>' => {
+                if doble == Some('=') {
+                    iterador.next();
+                    lista.push(Token::MayorIgual);
+                    continue;
+                }
+                lista.push(Token::Mayor);
+                continue;
+            }
+            '&' => {
+                if doble == Some('&') {
+                    iterador.next();
+                    lista.push(Token::And);
+                    continue;
+                }
+                continue;
+            }
+            '|' => {
+                if doble == Some('|') {
+                    iterador.next();
+                    lista.push(Token::Or);
+                    continue;
+                }
+                continue;
+            }
+            '.' => {
+                if iterador.peek().copied() == Some('.') {
+                    iterador.next();
+                    if iterador.peek().copied() == Some('=') {
+                        iterador.next();
+                        lista.push(Token::RangoIncluyente);
+                        continue;
+                    }
+                    lista.push(Token::Rango);
+                    continue;
+                }
+                lista.push(Token::Punto);
+                continue;
+            }
+            ':' => {
+                lista.push(Token::DosPuntos);
+                continue;
+            }
+            ',' => {
+                lista.push(Token::Coma);
+                continue;
+            }
+            '(' => {
+                lista.push(Token::ParentesisIzq);
+                continue;
+            }
+            ')' => {
+                lista.push(Token::ParentesisDer);
+                continue;
+            }
+            '{' => {
+                lista.push(Token::LlaveIzq);
+                continue;
+            }
+            '}' => {
+                lista.push(Token::LlaveDer);
+                continue;
+            }
+            '[' => {
+                lista.push(Token::CorcheteIzq);
+                continue;
+            }
+            ']' => {
+                lista.push(Token::CorcheteDer);
+                continue;
+            }
+            '*' => {
+                lista.push(Token::Multiplicacion);
+                continue;
+            }
+            '/' => {
+                lista.push(Token::Division);
+                continue;
+            }
+            '%' => {
+                lista.push(Token::Modulo);
+                continue;
+            }
+            ';' => {
+                lista.push(Token::PuntoYComa);
+                continue;
+            }
+            ch if ch.is_whitespace() => continue,
+            _ => lista.push(Token::Desconocido(ch)),
         }
-
-        if ch == '.' {
-            lista.push(Token::Punto);
-            continue;
-        }
-
-        if ch == '&' {
-            lista.push(Token::Interpolacion);
-            continue;
-        }
-
-        if ch == '=' {
-            lista.push(Token::Asignacion);
-            continue;
-        }
-
-        if ch == ':' {
-            lista.push(Token::DosPuntos);
-            continue;
-        }
-
-        if ch == ',' {
-            lista.push(Token::Coma);
-            continue;
-        }
-
-        if ch == '(' {
-            lista.push(Token::ParentesisIzq);
-            continue;
-        }
-
-        if ch == ')' {
-            lista.push(Token::ParentesisDer);
-            continue;
-        }
-
-        if ch == '{' {
-            lista.push(Token::LlaveIzq);
-            continue;
-        }
-
-        if ch == '}' {
-            lista.push(Token::LlaveDer);
-            continue;
-        }
-
-        if ch == '[' {
-            lista.push(Token::CorcheteIzq);
-            continue;
-        }
-
-        if ch == ']' {
-            lista.push(Token::CorcheteDer);
-            continue;
-        }
-
-        if ch == '+' {
-            lista.push(Token::Suma);
-            continue;
-        }
-
-        if ch == '-' {
-            lista.push(Token::Resta);
-            continue;
-        }
-
-        if ch == '*' {
-            lista.push(Token::Multiplicacion);
-            continue;
-        }
-
-        if ch == '/' {
-            lista.push(Token::Division);
-            continue;
-        }
-
-        if ch == '%' {
-            lista.push(Token::Modulo);
-            continue;
-        }
-
-        if ch == ';' {
-            lista.push(Token::PuntoYComa);
-            continue;
-        }
-
-        if ch.is_whitespace() {
-            continue;
-        }
-
-        lista.push(Token::Desconocido(ch));
     }
 
     lista

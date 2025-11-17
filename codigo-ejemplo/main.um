@@ -73,12 +73,12 @@ wh: (count < 5) {
 	count++;
 }
 
-v: count2 -> 0;
+v: count2->Int = 0;
 
 dw: {
 	tprint(count2);
 	count2++
-} (count < 5)
+} (count2 < 5)
 
 !! Clases y POO:
 

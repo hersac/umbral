@@ -5,6 +5,10 @@ version = 4
 [[package]]
 name = "umbral-cli"
 version = "0.1.0"
+dependencies = [
+ "umbral-lexer",
+ "umbral-parser",
+]
 
 [[package]]
 name = "umbral-interpreter"
@@ -17,6 +21,9 @@ version = "0.1.0"
 [[package]]
 name = "umbral-parser"
 version = "0.1.0"
+dependencies = [
+ "umbral-lexer",
+]
 
 [[package]]
 name = "umbral-repl"

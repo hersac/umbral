@@ -1,14 +1,14 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+pub mod ast;
+pub mod error;
+pub mod parser;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub use ast::*;
+pub use error::ParseError;
+pub use parser::Parser;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+use umbral_lexer::Token;
+
+pub fn parsear_programa(tokens: Vec<Token>) -> Result<Programa, ParseError> {
+    let mut p = Parser::nuevo(tokens);
+    p.parsear_programa()
 }
