@@ -1,0 +1,77 @@
+use crate::ast::*;
+use crate::error::ParseError;
+use crate::parser::Parser;
+use umbral_lexer::Token as LexToken;
+
+fn parsear_parametro(p: &mut Parser) -> Result<Parametro, ParseError> {
+    let nombre = p.parsear_identificador_consumir()?;
+    let tipo = if p.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
+        p.parsear_tipo()?
+    } else {
+        None
+    };
+    Ok(Parametro { nombre, tipo })
+}
+
+fn parsear_lista_parametros(p: &mut Parser) -> Result<Vec<Parametro>, ParseError> {
+    if !p.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
+        return Err(ParseError::nuevo(
+            "Se esperaba '(' en definición de función",
+            p.posicion,
+        ));
+    }
+    let mut lista = Vec::new();
+    if p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
+        return Ok(lista);
+    }
+    loop {
+        lista.push(parsear_parametro(p)?);
+        if p.coincidir(|t| matches!(t, LexToken::Coma)) {
+            continue;
+        }
+        if p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
+            break;
+        }
+        return Err(ParseError::nuevo(
+            "Se esperaba ',' o ')' en lista de parámetros",
+            p.posicion,
+        ));
+    }
+    Ok(lista)
+}
+
+pub fn parsear_declaracion_funcion(p: &mut Parser) -> Result<Sentencia, ParseError> {
+    let nombre = p.parsear_identificador_consumir()?;
+    let parametros = parsear_lista_parametros(p)?;
+    let tipo_retorno = if p.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
+        p.parsear_tipo()?
+    } else {
+        None
+    };
+    let cuerpo = p.parsear_bloque()?;
+    Ok(Sentencia::Funcion(DeclaracionFuncion {
+        nombre,
+        parametros,
+        tipo_retorno,
+        cuerpo,
+    }))
+}
+
+impl Parser {
+    pub fn parsear_bloque(&mut self) -> Result<Vec<Sentencia>, ParseError> {
+        if !self.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
+            return Err(ParseError::nuevo(
+                "Se esperaba '{' para bloque",
+                self.posicion,
+            ));
+        }
+        let mut sentencias = Vec::new();
+        while !self.esta_fin() {
+            if self.coincidir(|t| matches!(t, LexToken::LlaveDer)) {
+                break;
+            }
+            sentencias.push(self.parsear_sentencia()?);
+        }
+        Ok(sentencias)
+    }
+}
