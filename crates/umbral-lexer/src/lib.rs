@@ -186,35 +186,6 @@ pub fn analizar(texto: &str) -> Vec<Token> {
             let palabra = leer_palabra(&mut iterador, ch);
             let prox = iterador.peek().copied();
 
-            // Manejo de declaración tipo v: lista -> tipo
-            if prox == Some('-') && iterador.clone().nth(1) == Some('>') {
-                iterador.next();
-                iterador.next();
-                lista.push(Token::OperadorTipo);
-
-                // Leer corchetes anidados []
-                let mut prefijo = String::new();
-                while iterador.peek().copied() == Some('[') && iterador.clone().nth(1) == Some(']')
-                {
-                    iterador.next();
-                    iterador.next();
-                    prefijo.push_str("[]");
-                }
-
-                // Leer tipo base
-                let mut tipo_base = String::new();
-                while let Some(&c) = iterador.peek() {
-                    if c.is_ascii_alphanumeric() || c == '_' {
-                        tipo_base.push(iterador.next().unwrap());
-                    } else {
-                        break;
-                    }
-                }
-
-                lista.push(Token::Tipo(format!("{}{}", prefijo, tipo_base)));
-                continue;
-            }
-
             if prox == Some(':') {
                 iterador.next();
                 match palabra.as_str() {
@@ -234,16 +205,36 @@ pub fn analizar(texto: &str) -> Vec<Token> {
                 }
             }
 
-            let primera = palabra.chars().next().unwrap();
-            if primera.is_ascii_uppercase() {
-                lista.push(Token::Tipo(palabra));
-                continue;
+            lista.push(Token::Identificador(palabra.clone()));
+
+            if iterador.peek().copied() == Some('-') && iterador.clone().nth(1) == Some('>') {
+                iterador.next();
+                iterador.next();
+                lista.push(Token::OperadorTipo);
+
+                let mut prefijo = String::new();
+                while iterador.peek().copied() == Some('[') && iterador.clone().nth(1) == Some(']')
+                {
+                    iterador.next();
+                    iterador.next();
+                    prefijo.push_str("[]");
+                }
+
+                let mut tipo_base = String::new();
+                while let Some(&c) = iterador.peek() {
+                    if c.is_ascii_alphanumeric() || c == '_' {
+                        tipo_base.push(iterador.next().unwrap());
+                    } else {
+                        break;
+                    }
+                }
+
+                lista.push(Token::Tipo(format!("{}{}", prefijo, tipo_base)));
             }
-            lista.push(Token::Identificador(palabra));
+
             continue;
         }
 
-        // Operadores
         match ch {
             '-' => {
                 if doble == Some('>') {

@@ -126,4 +126,10 @@ pub enum Expresion {
         expresion: Box<Expresion>,
     },
     Agrupada(Box<Expresion>),
+    Array(Vec<Expresion>),
+    Objeto(Vec<(String, Expresion)>),
+    Instanciacion {
+        tipo: String,
+        argumentos: Vec<Expresion>,
+    },
 }

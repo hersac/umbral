@@ -12,7 +12,7 @@ v: persona1->Persona = [
 	"descripcion" => "Esta persona es buena",
 	"edad"=>20
 ];
-v: listaPersonas->[]Personas = {
+v: listaPersonas->[]Persona = {
 	persona1,
 	[
 		"id" => 2,
