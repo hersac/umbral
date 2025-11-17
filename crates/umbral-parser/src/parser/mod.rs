@@ -90,6 +90,9 @@ impl Parser {
         if self.coincidir(|t| matches!(t, LexToken::TPrint)) {
             return sentencias::parsear_tprint(self);
         }
+        if self.coincidir(|t| matches!(t, LexToken::Return)) {
+            return sentencias::parsear_return(self);
+        }
 
         if let Some(LexToken::Identificador(_)) = self.peekear() {
             if self.posicion + 1 < self.tokens.len() {

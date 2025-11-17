@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Token {
     DeclararVariable,
     DeclararConstante,
@@ -183,17 +183,89 @@ pub fn analizar(texto: &str) -> Vec<Token> {
 
             if prox == Some(':') {
                 iterador.next();
-                if palabra == "v" {
-                    lista.push(Token::DeclararVariable);
-                    continue;
-                }
-                if palabra == "c" {
-                    lista.push(Token::DeclararConstante);
-                    continue;
-                }
-                if palabra == "f" {
-                    lista.push(Token::DeclararFuncion);
-                    continue;
+                match palabra.as_str() {
+                    "v" => {
+                        lista.push(Token::DeclararVariable);
+                        continue;
+                    }
+                    "c" => {
+                        lista.push(Token::DeclararConstante);
+                        continue;
+                    }
+                    "f" => {
+                        lista.push(Token::DeclararFuncion);
+                        continue;
+                    }
+                    "r" => {
+                        lista.push(Token::Return);
+                        continue;
+                    }
+                    "tprint" => {
+                        lista.push(Token::TPrint);
+                        continue;
+                    }
+                    "i" => {
+                        lista.push(Token::If);
+                        continue;
+                    }
+                    "ie" => {
+                        lista.push(Token::ElseIf);
+                        continue;
+                    }
+                    "e" => {
+                        lista.push(Token::Else);
+                        continue;
+                    }
+                    "sw" => {
+                        lista.push(Token::Switch);
+                        continue;
+                    }
+                    "ca" => {
+                        lista.push(Token::Case);
+                        continue;
+                    }
+                    "def" => {
+                        lista.push(Token::Default);
+                        continue;
+                    }
+                    "fo" => {
+                        lista.push(Token::For);
+                        continue;
+                    }
+                    "fe" => {
+                        lista.push(Token::ForEach);
+                        continue;
+                    }
+                    "wh" => {
+                        lista.push(Token::While);
+                        continue;
+                    }
+                    "dw" => {
+                        lista.push(Token::DoWhile);
+                        continue;
+                    }
+                    "n" => {
+                        lista.push(Token::Instanciar);
+                        continue;
+                    }
+                    "pr" => {
+                        lista.push(Token::PropPrivada);
+                        continue;
+                    }
+                    "pu" => {
+                        lista.push(Token::PropPublica);
+                        continue;
+                    }
+                    "imp" => {
+                        lista.push(Token::Implementacion);
+                        continue;
+                    }
+                    _ => {
+                        // Si no coincide con ninguna palabra clave, retroceder y tratar como identificador
+                        lista.push(Token::Identificador(palabra.clone()));
+                        lista.push(Token::DosPuntos);
+                        continue;
+                    }
                 }
             }
 
@@ -209,6 +281,21 @@ pub fn analizar(texto: &str) -> Vec<Token> {
 
             if palabra == "cs" {
                 lista.push(Token::DeclararClase);
+                continue;
+            }
+
+            if palabra == "true" {
+                lista.push(Token::Verdadero);
+                continue;
+            }
+
+            if palabra == "false" {
+                lista.push(Token::Falso);
+                continue;
+            }
+
+            if palabra == "null" {
+                lista.push(Token::Nulo);
                 continue;
             }
 

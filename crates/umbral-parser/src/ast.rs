@@ -9,6 +9,7 @@ pub enum Sentencia {
     DeclaracionConstante(DeclaracionConstante),
     Asignacion(Asignacion),
     LlamadoTPrint(LlamadoTPrint),
+    Return(Expresion),
     Expresion(Expresion),
     Funcion(DeclaracionFuncion),
     Clase(DeclaracionClase),
@@ -115,6 +116,7 @@ pub enum Expresion {
     LiteralFloat(f64),
     LiteralCadena(String),
     LiteralBool(bool),
+    LiteralNulo,
     Identificador(String),
     Binaria {
         izquierda: Box<Expresion>,

@@ -15,8 +15,8 @@ fn main() {
     let tokens = analizar(&fuente);
 
     println!("Tokens:");
-    for t in &tokens {
-        println!("  {:?}", t);
+    for (i, t) in tokens.iter().enumerate() {
+        println!("  [{}] {:?}", i, t);
     }
 
     let mut parser = Parser::nuevo(tokens);

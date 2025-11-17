@@ -1,8 +1,6 @@
 use crate::ast::*;
 use crate::error::ParseError;
-use crate::parser::Parser;
-use crate::parser::instancias;
-use crate::parser::objetos;
+use crate::parser::{Parser, instancias, objetos};
 use umbral_lexer::Token as LexToken;
 
 pub fn parsear_expresion_principal(parser: &mut Parser) -> Result<Expresion, ParseError> {
@@ -13,11 +11,7 @@ fn parsear_or(parser: &mut Parser) -> Result<Expresion, ParseError> {
     let mut izquierda = parsear_and(parser)?;
     while parser.coincidir(|t| matches!(t, LexToken::Or)) {
         let derecha = parsear_and(parser)?;
-        izquierda = Expresion::Binaria {
-            izquierda: Box::new(izquierda),
-            operador: "||".to_string(),
-            derecha: Box::new(derecha),
-        };
+        izquierda = crear_binaria(izquierda, derecha, "||");
     }
     Ok(izquierda)
 }
@@ -26,11 +20,7 @@ fn parsear_and(parser: &mut Parser) -> Result<Expresion, ParseError> {
     let mut izquierda = parsear_igualdad(parser)?;
     while parser.coincidir(|t| matches!(t, LexToken::And)) {
         let derecha = parsear_igualdad(parser)?;
-        izquierda = Expresion::Binaria {
-            izquierda: Box::new(izquierda),
-            operador: "&&".to_string(),
-            derecha: Box::new(derecha),
-        };
+        izquierda = crear_binaria(izquierda, derecha, "&&");
     }
     Ok(izquierda)
 }
@@ -39,21 +29,11 @@ fn parsear_igualdad(parser: &mut Parser) -> Result<Expresion, ParseError> {
     let mut izquierda = parsear_comparacion(parser)?;
     loop {
         if parser.coincidir(|t| matches!(t, LexToken::IgualIgual)) {
-            let derecha = parsear_comparacion(parser)?;
-            izquierda = Expresion::Binaria {
-                izquierda: Box::new(izquierda),
-                operador: "==".to_string(),
-                derecha: Box::new(derecha),
-            };
+            izquierda = crear_binaria(izquierda, parsear_comparacion(parser)?, "==");
             continue;
         }
         if parser.coincidir(|t| matches!(t, LexToken::Diferente)) {
-            let derecha = parsear_comparacion(parser)?;
-            izquierda = Expresion::Binaria {
-                izquierda: Box::new(izquierda),
-                operador: "!=".to_string(),
-                derecha: Box::new(derecha),
-            };
+            izquierda = crear_binaria(izquierda, parsear_comparacion(parser)?, "!=");
             continue;
         }
         break;
@@ -65,39 +45,19 @@ fn parsear_comparacion(parser: &mut Parser) -> Result<Expresion, ParseError> {
     let mut izquierda = parsear_termino(parser)?;
     loop {
         if parser.coincidir(|t| matches!(t, LexToken::Menor)) {
-            let derecha = parsear_termino(parser)?;
-            izquierda = Expresion::Binaria {
-                izquierda: Box::new(izquierda),
-                operador: "<".to_string(),
-                derecha: Box::new(derecha),
-            };
+            izquierda = crear_binaria(izquierda, parsear_termino(parser)?, "<");
             continue;
         }
         if parser.coincidir(|t| matches!(t, LexToken::MenorIgual)) {
-            let derecha = parsear_termino(parser)?;
-            izquierda = Expresion::Binaria {
-                izquierda: Box::new(izquierda),
-                operador: "<=".to_string(),
-                derecha: Box::new(derecha),
-            };
+            izquierda = crear_binaria(izquierda, parsear_termino(parser)?, "<=");
             continue;
         }
         if parser.coincidir(|t| matches!(t, LexToken::Mayor)) {
-            let derecha = parsear_termino(parser)?;
-            izquierda = Expresion::Binaria {
-                izquierda: Box::new(izquierda),
-                operador: ">".to_string(),
-                derecha: Box::new(derecha),
-            };
+            izquierda = crear_binaria(izquierda, parsear_termino(parser)?, ">");
             continue;
         }
         if parser.coincidir(|t| matches!(t, LexToken::MayorIgual)) {
-            let derecha = parsear_termino(parser)?;
-            izquierda = Expresion::Binaria {
-                izquierda: Box::new(izquierda),
-                operador: ">=".to_string(),
-                derecha: Box::new(derecha),
-            };
+            izquierda = crear_binaria(izquierda, parsear_termino(parser)?, ">=");
             continue;
         }
         break;
@@ -109,21 +69,11 @@ fn parsear_termino(parser: &mut Parser) -> Result<Expresion, ParseError> {
     let mut izquierda = parsear_factor(parser)?;
     loop {
         if parser.coincidir(|t| matches!(t, LexToken::Suma)) {
-            let derecha = parsear_factor(parser)?;
-            izquierda = Expresion::Binaria {
-                izquierda: Box::new(izquierda),
-                operador: "+".to_string(),
-                derecha: Box::new(derecha),
-            };
+            izquierda = crear_binaria(izquierda, parsear_factor(parser)?, "+");
             continue;
         }
         if parser.coincidir(|t| matches!(t, LexToken::Resta)) {
-            let derecha = parsear_factor(parser)?;
-            izquierda = Expresion::Binaria {
-                izquierda: Box::new(izquierda),
-                operador: "-".to_string(),
-                derecha: Box::new(derecha),
-            };
+            izquierda = crear_binaria(izquierda, parsear_factor(parser)?, "-");
             continue;
         }
         break;
@@ -135,30 +85,15 @@ fn parsear_factor(parser: &mut Parser) -> Result<Expresion, ParseError> {
     let mut izquierda = parsear_unaria(parser)?;
     loop {
         if parser.coincidir(|t| matches!(t, LexToken::Multiplicacion)) {
-            let derecha = parsear_unaria(parser)?;
-            izquierda = Expresion::Binaria {
-                izquierda: Box::new(izquierda),
-                operador: "*".to_string(),
-                derecha: Box::new(derecha),
-            };
+            izquierda = crear_binaria(izquierda, parsear_unaria(parser)?, "*");
             continue;
         }
         if parser.coincidir(|t| matches!(t, LexToken::Division)) {
-            let derecha = parsear_unaria(parser)?;
-            izquierda = Expresion::Binaria {
-                izquierda: Box::new(izquierda),
-                operador: "/".to_string(),
-                derecha: Box::new(derecha),
-            };
+            izquierda = crear_binaria(izquierda, parsear_unaria(parser)?, "/");
             continue;
         }
         if parser.coincidir(|t| matches!(t, LexToken::Modulo)) {
-            let derecha = parsear_unaria(parser)?;
-            izquierda = Expresion::Binaria {
-                izquierda: Box::new(izquierda),
-                operador: "%".to_string(),
-                derecha: Box::new(derecha),
-            };
+            izquierda = crear_binaria(izquierda, parsear_unaria(parser)?, "%");
             continue;
         }
         break;
@@ -168,42 +103,35 @@ fn parsear_factor(parser: &mut Parser) -> Result<Expresion, ParseError> {
 
 fn parsear_unaria(parser: &mut Parser) -> Result<Expresion, ParseError> {
     if parser.coincidir(|t| matches!(t, LexToken::Not)) {
-        let expr = parsear_unaria(parser)?;
         return Ok(Expresion::Unaria {
             operador: "!".to_string(),
-            expresion: Box::new(expr),
+            expresion: Box::new(parsear_unaria(parser)?),
         });
     }
     if parser.coincidir(|t| matches!(t, LexToken::Resta)) {
-        let expr = parsear_unaria(parser)?;
         return Ok(Expresion::Unaria {
             operador: "-".to_string(),
-            expresion: Box::new(expr),
+            expresion: Box::new(parsear_unaria(parser)?),
         });
     }
     parsear_primaria(parser)
 }
 
 fn parsear_primaria(parser: &mut Parser) -> Result<Expresion, ParseError> {
-    match parser.peekear() {
-        Some(LexToken::Numero(n)) => {
-            let s = n.clone();
+    let token = parser.peekear().cloned();
+    match token {
+        Some(LexToken::Numero(ref n)) => {
             parser.avanzar();
-            if s.contains('.') {
-                Ok(Expresion::LiteralFloat(s.parse::<f64>().unwrap_or(0.0)))
+            let val = n.parse::<f64>().unwrap_or(0.0);
+            if n.contains('.') {
+                Ok(Expresion::LiteralFloat(val))
             } else {
-                Ok(Expresion::LiteralEntero(s.parse::<i64>().unwrap_or(0)))
+                Ok(Expresion::LiteralEntero(val as i64))
             }
         }
-        Some(LexToken::Cadena(s)) => {
-            let s = s.clone();
+        Some(LexToken::Cadena(ref s) | LexToken::CadenaMultilinea(ref s)) => {
             parser.avanzar();
-            Ok(Expresion::LiteralCadena(s))
-        }
-        Some(LexToken::CadenaMultilinea(s)) => {
-            let s = s.clone();
-            parser.avanzar();
-            Ok(Expresion::LiteralCadena(s))
+            Ok(Expresion::LiteralCadena(s.clone()))
         }
         Some(LexToken::Verdadero) => {
             parser.avanzar();
@@ -213,34 +141,20 @@ fn parsear_primaria(parser: &mut Parser) -> Result<Expresion, ParseError> {
             parser.avanzar();
             Ok(Expresion::LiteralBool(false))
         }
-        Some(LexToken::Identificador(n)) => {
-            let nombre = n.clone();
-            if parser.posicion + 1 < parser.tokens.len()
-                && matches!(parser.tokens[parser.posicion + 1], LexToken::ParentesisIzq)
-            {
-                parser.avanzar();
-                parser.coincidir(|t| matches!(t, LexToken::ParentesisIzq));
-                let mut args = Vec::new();
-                if !parser.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
-                    loop {
-                        args.push(parsear_expresion_principal(parser)?);
-                        if parser.coincidir(|t| matches!(t, LexToken::Coma)) {
-                            continue;
-                        }
-                        if parser.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
-                            break;
-                        }
-                        return Err(ParseError::nuevo("Se esperaba ',' o ')'", parser.posicion));
-                    }
-                }
-                Ok(Expresion::Instanciacion {
-                    tipo: nombre,
-                    argumentos: args,
-                })
-            } else {
-                parser.avanzar();
-                Ok(Expresion::Identificador(nombre))
+        Some(LexToken::Nulo) => {
+            parser.avanzar();
+            Ok(Expresion::LiteralNulo)
+        }
+        Some(LexToken::Identificador(_)) => {
+            if let Ok(instancia) = instancias::intentar_parsear_instancia_inline(parser) {
+                return Ok(instancia);
             }
+            if let Some(LexToken::Identificador(nombre)) = parser.peekear() {
+                let nombre = nombre.clone();
+                parser.avanzar();
+                return Ok(Expresion::Identificador(nombre));
+            }
+            Err(ParseError::nuevo("Expresion no valida", parser.posicion))
         }
         Some(LexToken::ParentesisIzq) => {
             parser.avanzar();
@@ -264,22 +178,40 @@ fn parsear_primaria(parser: &mut Parser) -> Result<Expresion, ParseError> {
 
 fn parsear_array_principal(parser: &mut Parser) -> Result<Expresion, ParseError> {
     let mut elementos = Vec::new();
+
     if parser.coincidir(|t| matches!(t, LexToken::LlaveDer)) {
         return Ok(Expresion::Array(elementos));
     }
+
     loop {
-        if let Ok(exp) = instancias::intentar_parsear_instancia_inline(parser) {
-            elementos.push(exp);
-        } else {
-            elementos.push(parsear_expresion_principal(parser)?);
-        }
+        let exp = parsear_expresion_principal(parser)?;
+        elementos.push(exp);
+
         if parser.coincidir(|t| matches!(t, LexToken::Coma)) {
+            if matches!(parser.peekear(), Some(LexToken::LlaveDer)) {
+                parser.avanzar();
+                break;
+            }
             continue;
         }
+
         if parser.coincidir(|t| matches!(t, LexToken::LlaveDer)) {
             break;
         }
-        return Err(ParseError::nuevo("Se esperaba ',' o '}'", parser.posicion));
+
+        return Err(ParseError::nuevo(
+            "Se esperaba ',' o '}' despues de un elemento de la lista",
+            parser.posicion,
+        ));
     }
+
     Ok(Expresion::Array(elementos))
+}
+
+fn crear_binaria(izquierda: Expresion, derecha: Expresion, operador: &str) -> Expresion {
+    Expresion::Binaria {
+        izquierda: Box::new(izquierda),
+        operador: operador.to_string(),
+        derecha: Box::new(derecha),
+    }
 }
