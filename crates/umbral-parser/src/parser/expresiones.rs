@@ -114,7 +114,50 @@ fn parsear_unaria(parser: &mut Parser) -> Result<Expresion, ParseError> {
             expresion: Box::new(parsear_unaria(parser)?),
         });
     }
-    parsear_primaria(parser)
+    parsear_postfija(parser)
+}
+
+fn parsear_postfija(parser: &mut Parser) -> Result<Expresion, ParseError> {
+    let mut expr = parsear_primaria(parser)?;
+
+    loop {
+        if parser.coincidir(|t| matches!(t, LexToken::Punto)) {
+            let propiedad = parser.parsear_identificador_consumir()?;
+            expr = Expresion::AccesoPropiedad {
+                objeto: Box::new(expr),
+                propiedad,
+            };
+            continue;
+        }
+        if parser.coincidir(|t| matches!(t, LexToken::CorcheteIzq)) {
+            let indice = parsear_expresion_principal(parser)?;
+            if !parser.coincidir(|t| matches!(t, LexToken::CorcheteDer)) {
+                return Err(ParseError::nuevo("Se esperaba ']'", parser.posicion));
+            }
+            expr = Expresion::AccesoIndice {
+                objeto: Box::new(expr),
+                indice: Box::new(indice),
+            };
+            continue;
+        }
+        if parser.coincidir(|t| matches!(t, LexToken::Incremento)) {
+            expr = Expresion::Unaria {
+                operador: "++".to_string(),
+                expresion: Box::new(expr),
+            };
+            continue;
+        }
+        if parser.coincidir(|t| matches!(t, LexToken::Decremento)) {
+            expr = Expresion::Unaria {
+                operador: "--".to_string(),
+                expresion: Box::new(expr),
+            };
+            continue;
+        }
+        break;
+    }
+
+    Ok(expr)
 }
 
 fn parsear_primaria(parser: &mut Parser) -> Result<Expresion, ParseError> {
@@ -144,6 +187,19 @@ fn parsear_primaria(parser: &mut Parser) -> Result<Expresion, ParseError> {
         Some(LexToken::Nulo) => {
             parser.avanzar();
             Ok(Expresion::LiteralNulo)
+        }
+        Some(LexToken::Instanciar) => {
+            parser.avanzar();
+            let tipo = parser.parsear_identificador_consumir()?;
+            if !parser.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
+                return Err(ParseError::nuevo("Se esperaba '(' después del tipo", parser.posicion));
+            }
+            let mut argumentos = Vec::new();
+            while !parser.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
+                argumentos.push(parsear_expresion_principal(parser)?);
+                parser.coincidir(|t| matches!(t, LexToken::Coma));
+            }
+            Ok(Expresion::Instanciacion { tipo, argumentos })
         }
         Some(LexToken::Identificador(_)) => {
             if let Ok(instancia) = instancias::intentar_parsear_instancia_inline(parser) {

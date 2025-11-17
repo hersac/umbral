@@ -1,30 +1,54 @@
 use crate::ast::*;
 use crate::error::ParseError;
 use crate::parser::Parser;
+use umbral_lexer::Token as LexToken;
 
 pub fn parsear_declaracion_clase(p: &mut Parser) -> Result<Sentencia, ParseError> {
     let nombre = p.parsear_identificador_consumir()?;
-    let miembros = p.parsear_bloque()?;
+    
+    if p.coincidir(|t| matches!(t, LexToken::Implementacion)) {
+        p.parsear_identificador_consumir()?;
+    }
+    
+    if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
+        return Err(ParseError::nuevo("Se esperaba '{'", p.posicion));
+    }
+
     let mut propiedades = Vec::new();
     let mut metodos = Vec::new();
-    for s in miembros {
-        match s {
-            Sentencia::DeclaracionVariable(dv) => propiedades.push(Propiedad {
-                nombre: dv.nombre,
-                tipo: dv.tipo,
-                publico: false,
-                valor_inicial: Some(dv.valor),
-            }),
-            Sentencia::Funcion(f) => metodos.push(Metodo {
-                nombre: f.nombre,
-                parametros: f.parametros,
-                tipo_retorno: f.tipo_retorno,
-                cuerpo: f.cuerpo,
-                publico: true,
-            }),
-            _ => {}
+
+    while !p.coincidir(|t| matches!(t, LexToken::LlaveDer)) {
+        let es_publico = if p.coincidir(|t| matches!(t, LexToken::PropPublica)) {
+            true
+        } else if p.coincidir(|t| matches!(t, LexToken::PropPrivada)) {
+            false
+        } else {
+            return Err(ParseError::nuevo("Se esperaba 'pr' o 'pu' en el cuerpo de la clase", p.posicion));
+        };
+
+        if p.coincidir(|t| matches!(t, LexToken::DeclararFuncion)) {
+            let metodo = crate::parser::funciones::parsear_funcion_interna(p, es_publico)?;
+            metodos.push(metodo);
+        } else {
+            let nombre_prop = p.parsear_identificador_consumir()?;
+            
+            let tipo = if p.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
+                p.parsear_tipo()?
+            } else {
+                None
+            };
+
+            p.coincidir(|t| matches!(t, LexToken::PuntoYComa));
+            
+            propiedades.push(Propiedad {
+                nombre: nombre_prop,
+                tipo,
+                publico: es_publico,
+                valor_inicial: None,
+            });
         }
     }
+
     Ok(Sentencia::Clase(DeclaracionClase {
         nombre,
         propiedades,

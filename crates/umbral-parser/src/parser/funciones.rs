@@ -13,6 +13,21 @@ fn parsear_parametro(p: &mut Parser) -> Result<Parametro, ParseError> {
     Ok(Parametro { nombre, tipo })
 }
 
+pub fn parsear_parametros(p: &mut Parser) -> Result<Vec<Parametro>, ParseError> {
+    let mut lista = Vec::new();
+    if matches!(p.peekear(), Some(LexToken::ParentesisDer)) {
+        return Ok(lista);
+    }
+    loop {
+        lista.push(parsear_parametro(p)?);
+        if p.coincidir(|t| matches!(t, LexToken::Coma)) {
+            continue;
+        }
+        break;
+    }
+    Ok(lista)
+}
+
 fn parsear_lista_parametros(p: &mut Parser) -> Result<Vec<Parametro>, ParseError> {
     if !p.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
         return Err(ParseError::nuevo(
@@ -55,6 +70,27 @@ pub fn parsear_declaracion_funcion(p: &mut Parser) -> Result<Sentencia, ParseErr
         tipo_retorno,
         cuerpo,
     }))
+}
+
+pub fn parsear_funcion_interna(p: &mut Parser, es_publico: bool) -> Result<Metodo, ParseError> {
+    let nombre = p.parsear_identificador_consumir()?;
+    let parametros = parsear_lista_parametros(p)?;
+    let tipo_retorno = if p.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
+        p.parsear_tipo()?
+    } else {
+        None
+    };
+    
+    p.coincidir(|t| matches!(t, LexToken::Asignacion));
+    
+    let cuerpo = p.parsear_bloque()?;
+    Ok(Metodo {
+        nombre,
+        parametros,
+        tipo_retorno,
+        cuerpo,
+        publico: es_publico,
+    })
 }
 
 impl Parser {

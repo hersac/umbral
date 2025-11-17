@@ -260,6 +260,18 @@ pub fn analizar(texto: &str) -> Vec<Token> {
                         lista.push(Token::Implementacion);
                         continue;
                     }
+                    "em" => {
+                        lista.push(Token::DeclararEnum);
+                        continue;
+                    }
+                    "in" => {
+                        lista.push(Token::DeclararInterfaz);
+                        continue;
+                    }
+                    "cs" => {
+                        lista.push(Token::DeclararClase);
+                        continue;
+                    }
                     _ => {
                         // Si no coincide con ninguna palabra clave, retroceder y tratar como identificador
                         lista.push(Token::Identificador(palabra.clone()));
@@ -267,21 +279,6 @@ pub fn analizar(texto: &str) -> Vec<Token> {
                         continue;
                     }
                 }
-            }
-
-            if palabra == "em" {
-                lista.push(Token::DeclararEnum);
-                continue;
-            }
-
-            if palabra == "in" {
-                lista.push(Token::DeclararInterfaz);
-                continue;
-            }
-
-            if palabra == "cs" {
-                lista.push(Token::DeclararClase);
-                continue;
             }
 
             if palabra == "true" {
@@ -296,6 +293,21 @@ pub fn analizar(texto: &str) -> Vec<Token> {
 
             if palabra == "null" {
                 lista.push(Token::Nulo);
+                continue;
+            }
+
+            if palabra == "pr" {
+                lista.push(Token::PropPrivada);
+                continue;
+            }
+
+            if palabra == "pu" {
+                lista.push(Token::PropPublica);
+                continue;
+            }
+
+            if palabra == "imp" {
+                lista.push(Token::Implementacion);
                 continue;
             }
 

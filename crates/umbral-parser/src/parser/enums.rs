@@ -22,5 +22,6 @@ pub fn parsear_declaracion_enum(p: &mut Parser) -> Result<Sentencia, ParseError>
             None => return Err(ParseError::nuevo("Fin inesperado en enum", p.posicion)),
         }
     }
+    p.coincidir(|t| matches!(t, LexToken::PuntoYComa));
     Ok(Sentencia::Enum(DeclaracionEnum { nombre, variantes }))
 }

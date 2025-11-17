@@ -97,7 +97,7 @@ cs: Persona {
 		r: (th.id);
 	}
 
-	pu f: setId(id->Int) = {
+	pu f: setId(id->Int) {
 		th.id = id;
 	}
 

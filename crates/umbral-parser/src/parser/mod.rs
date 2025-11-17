@@ -1,5 +1,6 @@
 pub mod clases;
 pub mod constantes;
+pub mod controles;
 pub mod enums;
 pub mod expresiones;
 pub mod funciones;
@@ -19,6 +20,21 @@ use umbral_lexer::Token as LexToken;
 pub struct Parser {
     pub tokens: Vec<LexToken>,
     pub posicion: usize,
+}
+
+fn expr_a_string(expr: &Expresion) -> String {
+    match expr {
+        Expresion::Identificador(n) => n.clone(),
+        Expresion::AccesoPropiedad { objeto, propiedad } => {
+            format!("{}.{}", expr_a_string(objeto), propiedad)
+        }
+        Expresion::AccesoIndice { objeto, indice } => {
+            format!("{}[{}]", expr_a_string(objeto), expr_a_string(indice))
+        }
+        Expresion::LiteralEntero(n) => n.to_string(),
+        Expresion::LiteralCadena(s) => s.clone(),
+        _ => "expr".to_string(),
+    }
 }
 
 impl Parser {
@@ -93,19 +109,47 @@ impl Parser {
         if self.coincidir(|t| matches!(t, LexToken::Return)) {
             return sentencias::parsear_return(self);
         }
-
-        if let Some(LexToken::Identificador(_)) = self.peekear() {
-            if self.posicion + 1 < self.tokens.len() {
-                if matches!(self.tokens[self.posicion + 1], LexToken::ParentesisIzq) {
-                    return sentencias::parsear_llamado_funcion(self);
-                }
-                if matches!(self.tokens[self.posicion + 1], LexToken::Asignacion) {
-                    return sentencias::parsear_asignacion(self);
-                }
-            }
+        if self.coincidir(|t| matches!(t, LexToken::If)) {
+            return controles::parsear_if(self);
+        }
+        if self.coincidir(|t| matches!(t, LexToken::Switch)) {
+            return controles::parsear_switch(self);
+        }
+        if self.coincidir(|t| matches!(t, LexToken::For)) {
+            return controles::parsear_for(self);
+        }
+        if self.coincidir(|t| matches!(t, LexToken::ForEach)) {
+            return controles::parsear_foreach(self);
+        }
+        if self.coincidir(|t| matches!(t, LexToken::While)) {
+            return controles::parsear_while(self);
+        }
+        if self.coincidir(|t| matches!(t, LexToken::DoWhile)) {
+            return controles::parsear_dowhile(self);
         }
 
-        Ok(Sentencia::Expresion(parsear_expresion_principal(self)?))
+        let expr = parsear_expresion_principal(self)?;
+        
+        if self.coincidir(|t| matches!(t, LexToken::Asignacion)) {
+            let valor = parsear_expresion_principal(self)?;
+            self.coincidir(|t| matches!(t, LexToken::PuntoYComa));
+            
+            let nombre = match expr {
+                Expresion::Identificador(n) => n,
+                Expresion::AccesoPropiedad { objeto, propiedad } => {
+                    format!("{}.{}", expr_a_string(&objeto), propiedad)
+                }
+                Expresion::AccesoIndice { objeto, indice } => {
+                    format!("{}[{}]", expr_a_string(&objeto), expr_a_string(&indice))
+                }
+                _ => return Err(ParseError::nuevo("Objetivo de asignación inválido", self.posicion)),
+            };
+            
+            return Ok(Sentencia::Asignacion(Asignacion { nombre, valor }));
+        }
+        
+        self.coincidir(|t| matches!(t, LexToken::PuntoYComa));
+        Ok(Sentencia::Expresion(expr))
     }
 
     fn parsear_identificador_consumir(&mut self) -> Result<String, ParseError> {
@@ -123,18 +167,29 @@ impl Parser {
     }
 
     fn parsear_tipo(&mut self) -> Result<Option<Tipo>, ParseError> {
+        let mut prefijo = String::new();
+        while self.coincidir(|t| matches!(t, LexToken::CorcheteIzq)) {
+            if !self.coincidir(|t| matches!(t, LexToken::CorcheteDer)) {
+                return Err(ParseError::nuevo("Se esperaba ']'", self.posicion));
+            }
+            prefijo.push_str("[]");
+        }
+        
         match self.peekear() {
             Some(LexToken::Tipo(n)) => {
-                let nombre = n.clone();
+                let nombre = format!("{}{}", prefijo, n);
                 self.avanzar();
                 Ok(Some(Tipo { nombre }))
             }
             Some(LexToken::Identificador(n))
                 if n.chars().next().unwrap_or('a').is_ascii_uppercase() =>
             {
-                let nombre = n.clone();
+                let nombre = format!("{}{}", prefijo, n);
                 self.avanzar();
                 Ok(Some(Tipo { nombre }))
+            }
+            _ if !prefijo.is_empty() => {
+                Err(ParseError::nuevo("Se esperaba nombre de tipo después de []", self.posicion))
             }
             _ => Ok(None),
         }

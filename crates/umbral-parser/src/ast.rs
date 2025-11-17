@@ -10,6 +10,12 @@ pub enum Sentencia {
     Asignacion(Asignacion),
     LlamadoTPrint(LlamadoTPrint),
     Return(Expresion),
+    If(If),
+    Switch(Switch),
+    For(For),
+    ForEach(ForEach),
+    While(While),
+    DoWhile(DoWhile),
     Expresion(Expresion),
     Funcion(DeclaracionFuncion),
     Clase(DeclaracionClase),
@@ -134,4 +140,67 @@ pub enum Expresion {
         tipo: String,
         argumentos: Vec<Expresion>,
     },
+    AccesoPropiedad {
+        objeto: Box<Expresion>,
+        propiedad: String,
+    },
+    AccesoIndice {
+        objeto: Box<Expresion>,
+        indice: Box<Expresion>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub struct If {
+    pub condicion: Expresion,
+    pub bloque_entonces: Vec<Sentencia>,
+    pub else_ifs: Vec<ElseIf>,
+    pub bloque_else: Option<Vec<Sentencia>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ElseIf {
+    pub condicion: Expresion,
+    pub bloque: Vec<Sentencia>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Switch {
+    pub expresion: Expresion,
+    pub casos: Vec<Case>,
+    pub default: Option<Vec<Sentencia>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Case {
+    pub valor: Expresion,
+    pub bloque: Vec<Sentencia>,
+}
+
+#[derive(Debug, Clone)]
+pub struct For {
+    pub inicializacion: Box<Sentencia>,
+    pub condicion: Expresion,
+    pub incremento: Expresion,
+    pub bloque: Vec<Sentencia>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ForEach {
+    pub variable: String,
+    pub tipo: Option<Tipo>,
+    pub iterable: Expresion,
+    pub bloque: Vec<Sentencia>,
+}
+
+#[derive(Debug, Clone)]
+pub struct While {
+    pub condicion: Expresion,
+    pub bloque: Vec<Sentencia>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DoWhile {
+    pub bloque: Vec<Sentencia>,
+    pub condicion: Expresion,
 }
