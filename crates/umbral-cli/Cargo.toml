@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 umbral-lexer = { path = "../umbral-lexer" }
 umbral-parser = { path = "../umbral-parser" }
+umbral-runtime = { path = "../umbral-runtime" }
