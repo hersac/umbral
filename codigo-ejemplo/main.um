@@ -87,7 +87,7 @@ cs: Persona {
 	pr: descripcion->Str;
 	pr: edad->Int;
 
-	pu f: Persona(id->int, descripcion->Str, edad->Int) {
+	pu f: Persona(id->Int, descripcion->Str, edad->Int) {
 		th.id = id;
 		th.descripcion = descripcion;
 		th.edad = edad;
