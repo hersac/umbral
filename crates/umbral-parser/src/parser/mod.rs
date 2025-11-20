@@ -4,6 +4,7 @@ pub mod controles;
 pub mod enums;
 pub mod expresiones;
 pub mod funciones;
+pub mod importaciones;
 pub mod instancias;
 pub mod interfaces;
 pub mod objetos;
@@ -85,23 +86,30 @@ impl Parser {
     }
 
     fn parsear_sentencia(&mut self) -> Result<Sentencia, ParseError> {
+        // Detectar out antes de cualquier declaración
+        let exportado = self.coincidir(|t| matches!(t, LexToken::Out));
+        
+        if self.coincidir(|t| matches!(t, LexToken::Equip)) || self.coincidir(|t| matches!(t, LexToken::Origin)) {
+            self.posicion -= 1;
+            return importaciones::parsear_importacion(self);
+        }
         if self.coincidir(|t| matches!(t, LexToken::DeclararVariable)) {
-            return variables::parsear_declaracion_variable(self);
+            return variables::parsear_declaracion_variable(self, exportado);
         }
         if self.coincidir(|t| matches!(t, LexToken::DeclararConstante)) {
-            return constantes::parsear_declaracion_constante(self);
+            return constantes::parsear_declaracion_constante(self, exportado);
         }
         if self.coincidir(|t| matches!(t, LexToken::DeclararFuncion)) {
-            return funciones::parsear_declaracion_funcion(self);
+            return funciones::parsear_declaracion_funcion(self, exportado);
         }
         if self.coincidir(|t| matches!(t, LexToken::DeclararClase)) {
-            return clases::parsear_declaracion_clase(self);
+            return clases::parsear_declaracion_clase(self, exportado);
         }
         if self.coincidir(|t| matches!(t, LexToken::DeclararInterfaz)) {
-            return interfaces::parsear_declaracion_interfaz(self);
+            return interfaces::parsear_declaracion_interfaz(self, exportado);
         }
         if self.coincidir(|t| matches!(t, LexToken::DeclararEnum)) {
-            return enums::parsear_declaracion_enum(self);
+            return enums::parsear_declaracion_enum(self, exportado);
         }
         if self.coincidir(|t| matches!(t, LexToken::TPrint)) {
             return sentencias::parsear_tprint(self);

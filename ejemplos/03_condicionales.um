@@ -1,0 +1,94 @@
+v: edad = 18;
+
+tprint('=== Condicional Simple ===');
+si (edad >= 18) {
+    tprint('Eres mayor de edad');
+}
+
+v: temperatura = 25;
+
+tprint('=== Si-Sino ===');
+si (temperatura > 30) {
+    tprint('Hace calor');
+} sino {
+    tprint('Temperatura agradable');
+}
+
+v: nota = 85;
+
+tprint('=== Condicionales Anidados ===');
+si (nota >= 90) {
+    tprint('Calificación: A');
+} sino {
+    si (nota >= 80) {
+        tprint('Calificación: B');
+    } sino {
+        si (nota >= 70) {
+            tprint('Calificación: C');
+        } sino {
+            tprint('Calificación: F');
+        }
+    }
+}
+
+v: a = 10;
+v: b = 20;
+
+tprint('=== Operadores de Comparación ===');
+
+si (a == b) {
+    tprint('a es igual a b');
+} sino {
+    tprint('a NO es igual a b');
+}
+
+si (a != b) {
+    tprint('a es diferente de b');
+}
+
+si (a < b) {
+    tprint('a es menor que b');
+}
+
+si (b > a) {
+    tprint('b es mayor que a');
+}
+
+v: tieneLicencia = true;
+v: mayorDeEdad = true;
+v: tieneAuto = false;
+
+tprint('=== Operadores Lógicos ===');
+
+si (tieneLicencia && mayorDeEdad) {
+    tprint('Puede conducir');
+}
+
+si (tieneAuto || tieneLicencia) {
+    tprint('Tiene algún requisito');
+}
+
+si (!tieneAuto) {
+    tprint('NO tiene auto');
+}
+
+f: clasificarEdad(edad->Int)->Str {
+    si (edad < 13) {
+        r: ('Niño');
+    } sino {
+        si (edad < 18) {
+            r: ('Adolescente');
+        } sino {
+            r: ('Adulto');
+        }
+    }
+}
+
+tprint('=== Condicionales en Funciones ===');
+c: cat1 = clasificarEdad(10);
+c: cat2 = clasificarEdad(16);
+c: cat3 = clasificarEdad(30);
+
+tprint('Edad 10: &cat1');
+tprint('Edad 16: &cat2');
+tprint('Edad 30: &cat3');

@@ -1,0 +1,12 @@
+equip { sumar, multiplicar, PI } origin 'modulos/matematicas.um';
+
+tprint('=== Uso de Funciones Importadas ===');
+
+c: suma = sumar(10, 5);
+tprint('10 + 5 = &suma');
+
+c: producto = multiplicar(7, 6);
+tprint('7 x 6 = &producto');
+
+tprint('Valor de PI: &PI');
+

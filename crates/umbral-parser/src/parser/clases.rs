@@ -3,7 +3,7 @@ use crate::error::ParseError;
 use crate::parser::Parser;
 use umbral_lexer::Token as LexToken;
 
-pub fn parsear_declaracion_clase(p: &mut Parser) -> Result<Sentencia, ParseError> {
+pub fn parsear_declaracion_clase(p: &mut Parser, exportado: bool) -> Result<Sentencia, ParseError> {
     let nombre = p.parsear_identificador_consumir()?;
     
     let mut extensiones = Vec::new();
@@ -71,5 +71,6 @@ pub fn parsear_declaracion_clase(p: &mut Parser) -> Result<Sentencia, ParseError
         implementaciones,
         propiedades,
         metodos,
+        exportado,
     }))
 }

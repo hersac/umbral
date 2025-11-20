@@ -1,0 +1,46 @@
+out f: sumar(a->Int, b->Int)->Int {
+    r: (a + b);
+}
+
+out f: restar(a->Int, b->Int)->Int {
+    r: (a - b);
+}
+
+out f: multiplicar(a->Int, b->Int)->Int {
+    r: (a * b);
+}
+
+out f: dividir(a->Int, b->Int)->Int {
+    si (b == 0) {
+        tprint('Error: División por cero');
+        r: (0);
+    }
+    r: (a / b);
+}
+
+out f: potencia(base->Int, exponente->Int)->Int {
+    v: resultado = 1;
+    v: i = 0;
+    
+    mientras (i < exponente) {
+        resultado = resultado * base;
+        i = i + 1;
+    }
+    
+    r: (resultado);
+}
+
+out c: PI = 3.14159;
+out c: E = 2.71828;
+out c: PHI = 1.61803;
+
+f: funcionInterna()->Int {
+    r: (42);
+}
+
+f: calcularAuxiliar(n->Int)->Int {
+    r: (n * 2);
+}
+
+c: CONSTANTE_INTERNA = 999;
+c: VALOR_SECRETO = 'privado';

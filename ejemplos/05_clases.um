@@ -1,0 +1,122 @@
+cs: Persona {
+    pr: nombre->Str;
+    pr: edad->Int;
+    
+    pu f: Persona(nombre->Str, edad->Int) {
+        th.nombre = nombre;
+        th.edad = edad;
+    }
+    
+    pu f: presentarse()->Void {
+        tprint('Hola, soy &th.nombre y tengo &th.edad años');
+    }
+    
+    pu f: esMayorDeEdad()->Bool {
+        r: (th.edad >= 18);
+    }
+}
+
+tprint('=== Clase Básica ===');
+c: persona1 = n: Persona('Juan', 25);
+persona1.presentarse();
+
+c: esMayor = persona1.esMayorDeEdad();
+tprint('¿Es mayor de edad?: &esMayor');
+
+cs: Empleado {
+    pr: nombre->Str;
+    pr: puesto->Str;
+    pr: salario->Flo;
+    pr: activo->Bool;
+    
+    pu f: Empleado(nombre->Str, puesto->Str, salario->Flo) {
+        th.nombre = nombre;
+        th.puesto = puesto;
+        th.salario = salario;
+        th.activo = true;
+    }
+    
+    pu f: mostrarInfo()->Void {
+        tprint('Empleado: &th.nombre');
+        tprint('Puesto: &th.puesto');
+        tprint('Salario: &th.salario');
+    }
+    
+    pu f: darAumento(porcentaje->Flo)->Void {
+        c: aumento = th.salario * (porcentaje / 100);
+        th.salario = th.salario + aumento;
+        tprint('Nuevo salario: &th.salario');
+    }
+}
+
+tprint('=== Clase Empleado ===');
+c: emp1 = n: Empleado('María', 'Desarrolladora', 3000.0);
+emp1.mostrarInfo();
+tprint('Dando aumento del 10%...');
+emp1.darAumento(10.0);
+
+cs: Rectangulo {
+    pr: ancho->Flo;
+    pr: alto->Flo;
+    
+    pu f: Rectangulo(ancho->Flo, alto->Flo) {
+        th.ancho = ancho;
+        th.alto = alto;
+    }
+    
+    pu f: calcularArea()->Flo {
+        r: (th.ancho * th.alto);
+    }
+    
+    pu f: calcularPerimetro()->Flo {
+        r: ((th.ancho + th.alto) * 2);
+    }
+}
+
+tprint('=== Clase Rectangulo ===');
+c: rect = n: Rectangulo(5.0, 3.0);
+c: area = rect.calcularArea();
+c: perimetro = rect.calcularPerimetro();
+
+tprint('Área: &area');
+tprint('Perímetro: &perimetro');
+
+f: crearPersona(nombre->Str, edad->Int)->Persona {
+    r: (n: Persona(nombre, edad));
+}
+
+tprint('=== Funciones que Retornan Clases ===');
+c: persona2 = crearPersona('Ana', 30);
+persona2.presentarse();
+
+f: crearPersonas()->[]Persona {
+    v: arr = [];
+    arr = arr + [n: Persona('Luis', 28)];
+    arr = arr + [n: Persona('Sofia', 32)];
+    arr = arr + [n: Persona('Diego', 25)];
+    r: (arr);
+}
+
+tprint('=== Arrays de Clases ===');
+c: personas = crearPersonas();
+tprint('Array de personas creado con 3 elementos');
+
+f: crearMatrizPersonas()->[][]Persona {
+    v: fila1 = [];
+    fila1 = fila1 + [n: Persona('A1', 20)];
+    fila1 = fila1 + [n: Persona('A2', 21)];
+    
+    v: fila2 = [];
+    fila2 = fila2 + [n: Persona('B1', 25)];
+    fila2 = fila2 + [n: Persona('B2', 26)];
+    
+    v: matriz = [];
+    matriz = matriz + [fila1];
+    matriz = matriz + [fila2];
+    
+    r: (matriz);
+}
+
+tprint('=== Matrices de Clases ===');
+c: matrizPersonas = crearMatrizPersonas();
+tprint('Matriz 2x2 de personas creada');

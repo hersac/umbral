@@ -1,0 +1,206 @@
+c: VERSION = '1.0.0';
+c: MAX_ESTUDIANTES = 50;
+c: NOTA_APROBATORIA = 60;
+
+tprint('=== Sistema de Gestión Académica ===');
+tprint('Versión: &VERSION');
+
+cs: Estudiante {
+    pr: nombre->Str;
+    pr: edad->Int;
+    pr: notas->[]Int;
+    pr: promedio->Flo;
+    pr: aprobado->Bool;
+    
+    pu f: Estudiante(nombre->Str, edad->Int) {
+        th.nombre = nombre;
+        th.edad = edad;
+        th.notas = [];
+        th.promedio = 0.0;
+        th.aprobado = false;
+    }
+    
+    pu f: agregarNota(nota->Int)->Void {
+        si ((nota >= 0) && (nota <= 100)) {
+            th.notas = th.notas + [nota];
+            tprint('Nota agregada a &th.nombre: &nota');
+        } sino {
+            tprint('Error: Nota inválida');
+        }
+    }
+    
+    pu f: calcularPromedio()->Flo {
+        v: suma = 0;
+        v: i = 0;
+        v: cantidad = 5;
+        
+        mientras (i < cantidad) {
+            suma = suma + th.notas[i];
+            i = i + 1;
+        }
+        
+        si (cantidad > 0) {
+            th.promedio = suma / cantidad;
+        } sino {
+            th.promedio = 0.0;
+        }
+        
+        si (th.promedio >= NOTA_APROBATORIA) {
+            th.aprobado = true;
+        } sino {
+            th.aprobado = false;
+        }
+        
+        r: (th.promedio);
+    }
+    
+    pu f: mostrarInformacion()->Void {
+        tprint('--- Información del Estudiante ---');
+        tprint('Nombre: &th.nombre');
+        tprint('Edad: &th.edad años');
+        tprint('Promedio: &th.promedio');
+        
+        si (th.aprobado) {
+            tprint('Estado: APROBADO');
+        } sino {
+            tprint('Estado: REPROBADO');
+        }
+    }
+}
+
+cs: Curso {
+    pr: nombre->Str;
+    pr: codigo->Str;
+    pr: estudiantes->[]Estudiante;
+    pr: totalEstudiantes->Int;
+    
+    pu f: Curso(nombre->Str, codigo->Str) {
+        th.nombre = nombre;
+        th.codigo = codigo;
+        th.estudiantes = [];
+        th.totalEstudiantes = 0;
+    }
+    
+    pu f: inscribirEstudiante(estudiante->Estudiante)->Bool {
+        si (th.totalEstudiantes < MAX_ESTUDIANTES) {
+            th.estudiantes = th.estudiantes + [estudiante];
+            th.totalEstudiantes = th.totalEstudiantes + 1;
+            tprint('&estudiante.nombre inscrito en &th.nombre');
+            r: (true);
+        } sino {
+            tprint('Error: Curso lleno');
+            r: (false);
+        }
+    }
+    
+    pu f: mostrarEstadisticas()->Void {
+        tprint('=== Estadísticas del Curso: &th.nombre ===');
+        tprint('Código: &th.codigo');
+        tprint('Total de estudiantes: &th.totalEstudiantes');
+        
+        v: aprobados = 0;
+        v: reprobados = 0;
+        v: i = 0;
+        
+        mientras (i < th.totalEstudiantes) {
+            si (th.estudiantes[i].aprobado) {
+                aprobados = aprobados + 1;
+            } sino {
+                reprobados = reprobados + 1;
+            }
+            i = i + 1;
+        }
+        
+        tprint('Aprobados: &aprobados');
+        tprint('Reprobados: &reprobados');
+    }
+}
+
+f: generarReporte(curso->Curso)->Void {
+    tprint('===== REPORTE ACADÉMICO FINAL =====');
+    tprint('Curso: &curso.nombre (&curso.codigo)');
+    tprint('Estudiantes registrados: &curso.totalEstudiantes');
+}
+
+f: calcularPromedioGeneral(curso->Curso)->Flo {
+    v: sumaPromedios = 0.0;
+    v: i = 0;
+    
+    mientras (i < curso.totalEstudiantes) {
+        sumaPromedios = sumaPromedios + curso.estudiantes[i].promedio;
+        i = i + 1;
+    }
+    
+    si (curso.totalEstudiantes > 0) {
+        r: (sumaPromedios / curso.totalEstudiantes);
+    } sino {
+        r: (0.0);
+    }
+}
+
+tprint('=== Creando Curso ===');
+c: curso = n: Curso('Programación I', 'PROG-101');
+
+tprint('=== Inscribiendo Estudiantes ===');
+c: est1 = n: Estudiante('Ana García', 20);
+c: est2 = n: Estudiante('Luis Martínez', 22);
+c: est3 = n: Estudiante('María López', 21);
+
+curso.inscribirEstudiante(est1);
+curso.inscribirEstudiante(est2);
+curso.inscribirEstudiante(est3);
+
+tprint('=== Agregando Notas a Ana García ===');
+est1.agregarNota(85);
+est1.agregarNota(90);
+est1.agregarNota(78);
+est1.agregarNota(92);
+est1.agregarNota(88);
+
+c: promedioAna = est1.calcularPromedio();
+est1.mostrarInformacion();
+
+tprint('=== Agregando Notas a Luis Martínez ===');
+est2.agregarNota(55);
+est2.agregarNota(60);
+est2.agregarNota(50);
+est2.agregarNota(58);
+est2.agregarNota(52);
+
+c: promedioLuis = est2.calcularPromedio();
+est2.mostrarInformacion();
+
+tprint('=== Agregando Notas a María López ===');
+est3.agregarNota(95);
+est3.agregarNota(98);
+est3.agregarNota(92);
+est3.agregarNota(97);
+est3.agregarNota(94);
+
+c: promedioMaria = est3.calcularPromedio();
+est3.mostrarInformacion();
+
+curso.mostrarEstadisticas();
+
+c: promedioGeneral = calcularPromedioGeneral(curso);
+tprint('Promedio general del curso: &promedioGeneral');
+
+generarReporte(curso);
+
+tprint('=== Validaciones del Sistema ===');
+
+si (curso.totalEstudiantes < MAX_ESTUDIANTES) {
+    c: disponibles = MAX_ESTUDIANTES - curso.totalEstudiantes;
+    tprint('Cupos disponibles: &disponibles');
+} sino {
+    tprint('Curso completo');
+}
+
+si (promedioGeneral >= NOTA_APROBATORIA) {
+    tprint('Rendimiento del curso: SATISFACTORIO');
+} sino {
+    tprint('Rendimiento del curso: NECESITA MEJORAS');
+}
+
+tprint('=== Sistema Finalizado ===');
+tprint('Gracias por usar el Sistema de Gestión');

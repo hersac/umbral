@@ -3,7 +3,7 @@ use crate::error::ParseError;
 use crate::parser::Parser;
 use umbral_lexer::Token as LexToken;
 
-pub fn parsear_declaracion_variable(p: &mut Parser) -> Result<Sentencia, ParseError> {
+pub fn parsear_declaracion_variable(p: &mut Parser, exportado: bool) -> Result<Sentencia, ParseError> {
     let nombre = p.parsear_identificador_consumir()?;
     let tipo = if p.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
         p.parsear_tipo()?
@@ -22,5 +22,6 @@ pub fn parsear_declaracion_variable(p: &mut Parser) -> Result<Sentencia, ParseEr
         nombre,
         tipo,
         valor,
+        exportado,
     }))
 }

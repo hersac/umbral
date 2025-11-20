@@ -282,24 +282,57 @@ cs: Persona {
         th.edad = edad;
     }
     
-    !! Getters y Setters
-    pu f: getNombre()->Str {
-        r: (th.nombre);
+    !! Método público
+    pu f: presentarse()->Void {
+        tprint("Hola, soy &th.nombre y tengo &th.edad años");
     }
     
-    pu f: setNombre(nombre->Str) {
-        th.nombre = nombre;
-    }
-    
-    !! Método personalizado
-    pu f: toString()->Str {
-        r: ("Persona: &th.nombre, &th.edad años");
+    !! Método con retorno
+    pu f: esMayorDeEdad()->Bool {
+        r: (th.edad >= 18);
     }
 }
 
 !! Instanciación
 c: persona1 = n: Persona("Juan", 25);
-tprint(persona1.toString());
+persona1.presentarse();
+```
+
+### Importaciones y Exportaciones
+
+```umbral
+!! Archivo: modulos/matematicas.um
+!! Solo los elementos con 'out' pueden ser importados
+
+out f: sumar(a->Int, b->Int)->Int {
+    r: (a + b);
+}
+
+out c: PI = 3.14159;
+
+!! Función privada (sin 'out')
+f: funcionInterna()->Int {
+    r: (42);
+}
+
+!! Archivo: main.um
+!! Sintaxis de importación
+
+!! 1. Importación simple
+equip sumar origin 'modulos/matematicas.um';
+
+!! 2. Importación con alias
+equip sumar as suma origin 'modulos/matematicas.um';
+
+!! 3. Importación de lista
+equip { sumar, PI } origin 'modulos/matematicas.um';
+
+!! 4. Importación con namespace
+equip * as mat origin 'modulos/matematicas.um';
+c: resultado = mat_sumar(10, 5);
+
+!! 5. Orden invertido
+origin 'modulos/matematicas.um' equip sumar;
 ```
 
 ### Strings e interpolación
@@ -493,8 +526,18 @@ umbral/
 ├── test_repl.sh            # Tests del REPL
 ├── INSTALL.md              # Guía de instalación
 ├── LICENSE                 # Licencia del proyecto
-├── codigo-ejemplo/         # Ejemplos de código
-│   └── main.um
+├── ejemplos/               # Ejemplos de código organizados
+│   ├── 01_variables_y_constantes.um
+│   ├── 02_funciones.um
+│   ├── 03_condicionales.um
+│   ├── 04_bucles.um
+│   ├── 05_clases.um
+│   ├── 06_importaciones_exportaciones.um
+│   ├── 07_tipos_avanzados.um
+│   ├── 08_ejemplo_completo.um
+│   ├── 09_uso_importaciones.um
+│   └── modulos/
+│       └── matematicas.um
 └── crates/
     ├── umbral-lexer/       # Tokenizador
     │   ├── Cargo.toml
@@ -560,23 +603,37 @@ cargo test -p umbral-interpreter
 ./test_repl.sh
 ```
 
-### Ejemplo de test
+### Ejemplos de código
 
-Ejecuta el archivo de ejemplo:
+Explora los ejemplos organizados por tema:
 
 ```bash
-umbral codigo-ejemplo/main.um
-```
+# Variables y constantes
+umbral ejemplos/01_variables_y_constantes.um
 
-Salida esperada:
-```
-60
-Es positivo
-Es 30
-Mazda
-Toyota
-Nissan
-...
+# Funciones
+umbral ejemplos/02_funciones.um
+
+# Condicionales
+umbral ejemplos/03_condicionales.um
+
+# Bucles
+umbral ejemplos/04_bucles.um
+
+# Clases (POO)
+umbral ejemplos/05_clases.um
+
+# Importaciones y exportaciones
+umbral ejemplos/06_importaciones_exportaciones.um
+
+# Tipos avanzados
+umbral ejemplos/07_tipos_avanzados.um
+
+# Ejemplo completo (Sistema de gestión)
+umbral ejemplos/08_ejemplo_completo.um
+
+# Uso de importaciones
+umbral ejemplos/09_uso_importaciones.um
 ```
 
 ---
@@ -588,25 +645,33 @@ Nissan
 - ✅ Lexer completo
 - ✅ Parser con AST
 - ✅ Runtime funcional
-- ✅ Variables y constantes
-- ✅ Funciones
-- ✅ Clases y POO
-- ✅ Control de flujo completo
+- ✅ Variables y constantes con tipado (Int, Flo, Str, Bool, Void)
+- ✅ Funciones con retorno de tipos avanzados
+- ✅ Clases y POO básico
+- ✅ Condicionales (si/sino)
+- ✅ Bucles (mientras)
 - ✅ Operadores aritméticos, lógicos y de comparación
-- ✅ Arrays y diccionarios
+- ✅ Arrays y matrices ([]Tipo, [][]Tipo)
+- ✅ Arrays/matrices de clases ([]Clase, [][]Clase)
 - ✅ Interpolación de strings
-- ✅ CLI
-- ✅ REPL interactivo
+- ✅ Sistema de módulos con importaciones/exportaciones
+- ✅ Control de acceso público/privado con `out`
+- ✅ 7 sintaxis de importación (equip/origin)
+- ✅ CLI (`umbral`)
+- ✅ REPL interactivo (`umbral-repl`)
 - ✅ Instaladores para Linux/macOS/Windows
+- ✅ 9 ejemplos completos organizados por tema
 
 ### 🔄 Versión 1.1.0 (Próxima)
 
-- [ ] Soporte completo para `th` (this) en métodos
+- [ ] Soporte completo para `th` (this) en constructores
 - [ ] Validación de interfaces
 - [ ] Enums funcionales
 - [ ] Manejo de errores con try/catch
-- [ ] Módulos e imports
+- [ ] Bucles adicionales (for, foreach, do-while)
+- [ ] Switch/case
 - [ ] Librería estándar básica
+- [ ] Sistema de paquetes
 
 ### 🚀 Versión 2.0.0 (Futuro)
 

@@ -55,7 +55,7 @@ fn parsear_lista_parametros(p: &mut Parser) -> Result<Vec<Parametro>, ParseError
     Ok(lista)
 }
 
-pub fn parsear_declaracion_funcion(p: &mut Parser) -> Result<Sentencia, ParseError> {
+pub fn parsear_declaracion_funcion(p: &mut Parser, exportado: bool) -> Result<Sentencia, ParseError> {
     let nombre = p.parsear_identificador_consumir()?;
     let parametros = parsear_lista_parametros(p)?;
     let tipo_retorno = if p.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
@@ -69,6 +69,7 @@ pub fn parsear_declaracion_funcion(p: &mut Parser) -> Result<Sentencia, ParseErr
         parametros,
         tipo_retorno,
         cuerpo,
+        exportado,
     }))
 }
 

@@ -1,0 +1,87 @@
+f: sumar(a->Int, b->Int)->Int {
+    r: (a + b);
+}
+
+tprint('=== Funciones con Retorno ===');
+c: resultado1 = sumar(10, 5);
+tprint('10 + 5 = &resultado1');
+
+f: calcularArea(base->Flo, altura->Flo)->Flo {
+    r: (base * altura);
+}
+
+c: area = calcularArea(5.5, 3.2);
+tprint('Área del rectángulo: &area');
+
+f: esMayor(a->Int, b->Int)->Bool {
+    r: (a > b);
+}
+
+c: comparacion = esMayor(10, 5);
+tprint('¿10 es mayor que 5?: &comparacion');
+
+f: saludar(nombre->Str)->Void {
+    tprint('¡Hola, &nombre!');
+}
+
+tprint('=== Funciones Void ===');
+saludar('Juan');
+saludar('María');
+
+f: esPositivo(numero->Int)->Bool {
+    si (numero > 0) {
+        r: (true);
+    } sino {
+        r: (false);
+    }
+}
+
+tprint('=== Lógica Condicional ===');
+c: check1 = esPositivo(15);
+c: check2 = esPositivo(-5);
+tprint('¿15 es positivo?: &check1');
+tprint('¿-5 es positivo?: &check2');
+
+f: factorial(n->Int)->Int {
+    v: resultado = 1;
+    v: i = 1;
+    
+    mientras (i <= n) {
+        resultado = resultado * i;
+        i = i + 1;
+    }
+    
+    r: (resultado);
+}
+
+tprint('=== Factorial ===');
+c: fact5 = factorial(5);
+tprint('5! = &fact5');
+
+f: crearArray(tamanio->Int)->[]Int {
+    v: arr = [];
+    v: i = 0;
+    
+    mientras (i < tamanio) {
+        arr = arr + [i + 1];
+        i = i + 1;
+    }
+    
+    r: (arr);
+}
+
+c: miArray = crearArray(5);
+tprint('=== Retorno de Arrays ===');
+tprint('Array generado: &miArray');
+
+f: multiplicar(a->Int, b->Int)->Int {
+    r: (a * b);
+}
+
+f: cuadrado(n->Int)->Int {
+    r: (multiplicar(n, n));
+}
+
+tprint('=== Funciones Anidadas ===');
+c: cuad = cuadrado(7);
+tprint('7² = &cuad');

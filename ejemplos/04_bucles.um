@@ -1,0 +1,109 @@
+tprint('=== Bucle Mientras Básico ===');
+v: contador = 0;
+
+mientras (contador < 5) {
+    tprint('Contador: &contador');
+    contador = contador + 1;
+}
+
+tprint('=== Suma Acumulativa ===');
+v: suma = 0;
+v: i = 1;
+
+mientras (i <= 10) {
+    suma = suma + i;
+    i = i + 1;
+}
+
+tprint('Suma de 1 a 10: &suma');
+
+tprint('=== Iteración sobre Arrays ===');
+v: frutas = ['Manzana', 'Banana', 'Naranja'];
+v: indice = 0;
+
+mientras (indice < 3) {
+    c: fruta = frutas[indice];
+    tprint('Fruta &indice: &fruta');
+    indice = indice + 1;
+}
+
+tprint('=== Tabla del 5 ===');
+v: multiplicando = 1;
+
+mientras (multiplicando <= 10) {
+    c: resultado = 5 * multiplicando;
+    tprint('5 x &multiplicando = &resultado');
+    multiplicando = multiplicando + 1;
+}
+
+f: factorial(n->Int)->Int {
+    v: resultado = 1;
+    v: i = 1;
+    
+    mientras (i <= n) {
+        resultado = resultado * i;
+        i = i + 1;
+    }
+    
+    r: (resultado);
+}
+
+tprint('=== Factorial ===');
+c: fact5 = factorial(5);
+c: fact6 = factorial(6);
+tprint('5! = &fact5');
+tprint('6! = &fact6');
+
+f: fibonacci(n->Int)->Int {
+    si (n <= 1) {
+        r: (n);
+    }
+    
+    v: a = 0;
+    v: b = 1;
+    v: i = 2;
+    
+    mientras (i <= n) {
+        c: temp = a + b;
+        a = b;
+        b = temp;
+        i = i + 1;
+    }
+    
+    r: (b);
+}
+
+tprint('=== Secuencia de Fibonacci ===');
+v: fib = 0;
+mientras (fib < 8) {
+    c: valor = fibonacci(fib);
+    tprint('Fibonacci(&fib) = &valor');
+    fib = fib + 1;
+}
+
+f: crearArrayCuadrados(tamanio->Int)->[]Int {
+    v: arr = [];
+    v: i = 1;
+    
+    mientras (i <= tamanio) {
+        c: cuadrado = i * i;
+        arr = arr + [cuadrado];
+        i = i + 1;
+    }
+    
+    r: (arr);
+}
+
+tprint('=== Array de Cuadrados ===');
+c: cuadrados = crearArrayCuadrados(5);
+tprint('Cuadrados: &cuadrados');
+
+tprint('=== Countdown ===');
+v: cuenta = 5;
+
+mientras (cuenta > 0) {
+    tprint('&cuenta...');
+    cuenta = cuenta - 1;
+}
+
+tprint('¡Despegue!');

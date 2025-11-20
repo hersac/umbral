@@ -3,7 +3,7 @@ use crate::error::ParseError;
 use crate::parser::Parser;
 use umbral_lexer::Token as LexToken;
 
-pub fn parsear_declaracion_enum(p: &mut Parser) -> Result<Sentencia, ParseError> {
+pub fn parsear_declaracion_enum(p: &mut Parser, exportado: bool) -> Result<Sentencia, ParseError> {
     let nombre = p.parsear_identificador_consumir()?;
     if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
         return Err(ParseError::nuevo("Se esperaba '{' en enum", p.posicion));
@@ -23,5 +23,5 @@ pub fn parsear_declaracion_enum(p: &mut Parser) -> Result<Sentencia, ParseError>
         }
     }
     p.coincidir(|t| matches!(t, LexToken::PuntoYComa));
-    Ok(Sentencia::Enum(DeclaracionEnum { nombre, variantes }))
+    Ok(Sentencia::Enum(DeclaracionEnum { nombre, variantes, exportado }))
 }

@@ -1,0 +1,155 @@
+tprint('=== Tipos Básicos ===');
+
+v: entero->Int = 42;
+v: decimal->Flo = 3.14159;
+v: texto->Str = 'Hola Umbral';
+v: verdadero->Bool = true;
+
+tprint('Int: &entero');
+tprint('Flo: &decimal');
+tprint('Str: &texto');
+tprint('Bool: &verdadero');
+
+f: sinRetorno()->Void {
+    tprint('Esta función no retorna nada');
+}
+
+sinRetorno();
+
+tprint('=== Arrays ===');
+
+v: numerosInt->[]Int = [1, 2, 3, 4, 5];
+v: numerosFlo->[]Flo = [1.5, 2.5, 3.5];
+v: palabras->[]Str = ['Hola', 'Mundo', 'Umbral'];
+v: banderas->[]Bool = [true, false, true];
+
+tprint('Array Int: &numerosInt');
+tprint('Array Flo: &numerosFlo');
+tprint('Array Str: &palabras');
+tprint('Array Bool: &banderas');
+
+tprint('=== Matrices ===');
+
+v: matrizInt->[][]Int = [[1, 2, 3], [4, 5, 6]];
+v: matrizStr->[][]Str = [['A', 'B'], ['C', 'D']];
+
+tprint('Matriz Int: &matrizInt');
+tprint('Elemento [0][0]: &matrizInt[0][0]');
+tprint('Elemento [1][2]: &matrizInt[1][2]');
+
+cs: Punto {
+    pr: x->Int;
+    pr: y->Int;
+    
+    pu f: Punto(x->Int, y->Int) {
+        th.x = x;
+        th.y = y;
+    }
+    
+    pu f: mostrar()->Void {
+        tprint('Punto(&th.x, &th.y)');
+    }
+}
+
+tprint('=== Clases como Tipos ===');
+
+v: p1->Punto = n: Punto(10, 20);
+p1.mostrar();
+
+f: obtenerEntero()->Int {
+    r: (100);
+}
+
+f: obtenerDecimal()->Flo {
+    r: (3.14);
+}
+
+f: obtenerTexto()->Str {
+    r: ('Hola');
+}
+
+f: obtenerBooleano()->Bool {
+    r: (true);
+}
+
+tprint('=== Funciones con Diferentes Retornos ===');
+c: valorInt = obtenerEntero();
+c: valorFlo = obtenerDecimal();
+c: valorStr = obtenerTexto();
+c: valorBool = obtenerBooleano();
+
+tprint('Retorno Int: &valorInt');
+tprint('Retorno Flo: &valorFlo');
+tprint('Retorno Str: &valorStr');
+tprint('Retorno Bool: &valorBool');
+
+f: crearArrayInt()->[]Int {
+    r: ([10, 20, 30]);
+}
+
+f: crearArrayStr()->[]Str {
+    r: (['A', 'B', 'C']);
+}
+
+tprint('=== Funciones que Retornan Arrays ===');
+c: arrInt = crearArrayInt();
+c: arrStr = crearArrayStr();
+
+tprint('Array Int: &arrInt');
+tprint('Array Str: &arrStr');
+
+f: crearMatrizInt()->[][]Int {
+    r: ([[1, 2], [3, 4]]);
+}
+
+tprint('=== Funciones que Retornan Matrices ===');
+c: matInt = crearMatrizInt();
+tprint('Matriz Int: &matInt');
+
+f: crearPunto(x->Int, y->Int)->Punto {
+    r: (n: Punto(x, y));
+}
+
+tprint('=== Funciones que Retornan Clases ===');
+c: punto = crearPunto(50, 75);
+punto.mostrar();
+
+f: crearArrayPuntos()->[]Punto {
+    v: arr = [];
+    arr = arr + [n: Punto(1, 2)];
+    arr = arr + [n: Punto(3, 4)];
+    arr = arr + [n: Punto(5, 6)];
+    r: (arr);
+}
+
+tprint('=== Arrays de Clases ===');
+c: puntos->[]Punto = crearArrayPuntos();
+tprint('Array de 3 puntos creado');
+
+f: crearMatrizPuntos()->[][]Punto {
+    v: fila1 = [];
+    fila1 = fila1 + [n: Punto(1, 1)];
+    fila1 = fila1 + [n: Punto(1, 2)];
+    
+    v: fila2 = [];
+    fila2 = fila2 + [n: Punto(2, 1)];
+    fila2 = fila2 + [n: Punto(2, 2)];
+    
+    v: matriz = [];
+    matriz = matriz + [fila1];
+    matriz = matriz + [fila2];
+    
+    r: (matriz);
+}
+
+tprint('=== Matrices de Clases ===');
+c: matrizPuntos->[][]Punto = crearMatrizPuntos();
+tprint('Matriz 2x2 de puntos creada');
+
+tprint('=== Resumen de Tipos en Umbral ===');
+tprint('Básicos: Int, Flo, Str, Bool, Void');
+tprint('Arrays: []Int, []Flo, []Str, []Bool');
+tprint('Matrices: [][]Int, [][]Str, etc.');
+tprint('Clases: Punto, Persona, etc.');
+tprint('Arrays de Clases: []Punto, []Persona');
+tprint('Matrices de Clases: [][]Punto');

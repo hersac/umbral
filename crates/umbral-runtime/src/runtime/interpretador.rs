@@ -10,6 +10,7 @@ pub struct Interpretador {
     pub gestor_clases: GestorClases,
     pub gestor_funciones: GestorFunciones,
     pub valor_retorno: Option<Valor>,
+    pub exportaciones: HashMap<String, bool>,
 }
 
 impl Interpretador {
@@ -19,6 +20,7 @@ impl Interpretador {
             gestor_clases: GestorClases::nuevo(),
             gestor_funciones: GestorFunciones::nuevo(),
             valor_retorno: None,
+            exportaciones: HashMap::new(),
         }
     }
 
@@ -42,6 +44,7 @@ impl Interpretador {
             Sentencia::Funcion(func) => self.registrar_funcion(func),
             Sentencia::Clase(clase) => self.registrar_clase(clase),
             Sentencia::LlamadoFuncion(llamado) => Some(self.evaluar_llamado_funcion(&llamado)),
+            Sentencia::Importacion(imp) => self.ejecutar_importacion(imp),
             Sentencia::Expresion(expr) => {
                 self.evaluar_expresion(expr);
                 None
@@ -56,13 +59,19 @@ impl Interpretador {
 
     fn ejecutar_declaracion_variable(&mut self, decl: DeclaracionVariable) -> Option<Valor> {
         let valor = self.evaluar_expresion(decl.valor);
-        self.entorno_actual.definir_variable(decl.nombre, valor);
+        self.entorno_actual.definir_variable(decl.nombre.clone(), valor);
+        if decl.exportado {
+            self.exportaciones.insert(decl.nombre, true);
+        }
         None
     }
 
     fn ejecutar_declaracion_constante(&mut self, decl: DeclaracionConstante) -> Option<Valor> {
         let valor = self.evaluar_expresion(decl.valor);
-        self.entorno_actual.definir_constante(decl.nombre, valor);
+        self.entorno_actual.definir_constante(decl.nombre.clone(), valor);
+        if decl.exportado {
+            self.exportaciones.insert(decl.nombre, true);
+        }
         None
     }
 
@@ -91,14 +100,108 @@ impl Interpretador {
     fn registrar_funcion(&mut self, func: DeclaracionFuncion) -> Option<Valor> {
         let parametros: Vec<String> = func.parametros.iter().map(|p| p.nombre.clone()).collect();
         let funcion = Funcion::nueva(func.nombre.clone(), parametros, func.cuerpo);
-        self.entorno_actual.definir_variable(func.nombre, Valor::Funcion(funcion));
+        self.entorno_actual.definir_variable(func.nombre.clone(), Valor::Funcion(funcion));
+        if func.exportado {
+            self.exportaciones.insert(func.nombre, true);
+        }
         None
     }
 
     fn registrar_clase(&mut self, clase: DeclaracionClase) -> Option<Valor> {
         let clase_obj = Clase::desde_declaracion(&clase);
+        let nombre_clase = clase_obj.nombre.clone();
         self.gestor_clases.registrar_clase(clase_obj);
+        if clase.exportado {
+            self.exportaciones.insert(nombre_clase, true);
+        }
         None
+    }
+
+    fn ejecutar_importacion(&mut self, imp: umbral_parser::ast::Importacion) -> Option<Valor> {
+        use std::fs;
+
+        let ruta_archivo = &imp.ruta;
+        let contenido = match fs::read_to_string(ruta_archivo) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Error al leer archivo '{}': {}", ruta_archivo, e);
+                return None;
+            }
+        };
+
+        let tokens = umbral_lexer::analizar(&contenido);
+        let programa = match umbral_parser::parsear_programa(tokens) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("Error al parsear archivo '{}': {:?}", ruta_archivo, e);
+                return None;
+            }
+        };
+
+        let mut interprete_modulo = Interpretador::nuevo();
+        for sentencia in programa.sentencias {
+            interprete_modulo.ejecutar_sentencia(sentencia);
+        }
+
+        for item in imp.items {
+            self.procesar_item_importacion(item, &interprete_modulo);
+        }
+
+        None
+    }
+
+    fn procesar_item_importacion(
+        &mut self,
+        item: umbral_parser::ast::ItemImportacion,
+        modulo: &Interpretador,
+    ) {
+        use umbral_parser::ast::ItemImportacion;
+
+        match item {
+            ItemImportacion::Todo(alias) => {
+                let alias_nombre = alias.unwrap_or_else(|| "mod".to_string());
+                
+                for (nombre, valor) in &modulo.entorno_actual.variables {
+                    if modulo.exportaciones.get(nombre).copied().unwrap_or(false) {
+                        let nombre_final = format!("{}_{}", alias_nombre, nombre);
+                        self.entorno_actual
+                            .definir_variable(nombre_final, valor.clone());
+                    }
+                }
+                
+                for (nombre, clase) in &modulo.gestor_clases.clases {
+                    if modulo.exportaciones.get(nombre).copied().unwrap_or(false) {
+                        let nombre_final = format!("{}_{}", alias_nombre, nombre);
+                        self.gestor_clases.clases.insert(nombre_final, clase.clone());
+                    }
+                }
+            }
+            ItemImportacion::Nombre(nombre, alias) => {
+                let nombre_final = alias.unwrap_or_else(|| nombre.clone());
+                
+                if !modulo.exportaciones.get(&nombre).copied().unwrap_or(false) {
+                    eprintln!("Advertencia: '{}' no está exportado en el módulo", nombre);
+                    return;
+                }
+                
+                if let Some(valor) = modulo.entorno_actual.obtener(&nombre) {
+                    self.entorno_actual.definir_variable(nombre_final, valor);
+                    return;
+                }
+                
+                if let Some(clase) = modulo.gestor_clases.clases.get(&nombre) {
+                    self.gestor_clases.clases.insert(nombre_final, clase.clone());
+                    return;
+                }
+                
+                eprintln!("Advertencia: '{}' no encontrado en el módulo", nombre);
+            }
+            ItemImportacion::ListaNombres(items) => {
+                for sub_item in items {
+                    self.procesar_item_importacion(sub_item, modulo);
+                }
+            }
+        }
     }
 
     pub fn evaluar_expresion(&mut self, expr: Expresion) -> Valor {

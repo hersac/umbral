@@ -1,0 +1,5 @@
+tprint('=== Sistema de Importaciones/Exportaciones ===');
+tprint('Consulta los comentarios para ver:');
+tprint('- 7 sintaxis de importación');
+tprint('- 6 tipos de exportación con out');
+tprint('- Elementos públicos vs privados');

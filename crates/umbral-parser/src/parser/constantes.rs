@@ -4,7 +4,7 @@ use crate::parser::Parser;
 use crate::parser::expresiones;
 use umbral_lexer::Token as LexToken;
 
-pub fn parsear_declaracion_constante(p: &mut Parser) -> Result<Sentencia, ParseError> {
+pub fn parsear_declaracion_constante(p: &mut Parser, exportado: bool) -> Result<Sentencia, ParseError> {
     let nombre = p.parsear_identificador_consumir()?;
 
     let tipo = if p.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
@@ -12,7 +12,7 @@ pub fn parsear_declaracion_constante(p: &mut Parser) -> Result<Sentencia, ParseE
             ParseError::nuevo("Tipo esperado despues de '->' en constante", p.posicion)
         })?)
     } else {
-        None // inferencia
+        None
     };
 
     if !p.coincidir(|t| matches!(t, LexToken::Asignacion)) {
@@ -31,6 +31,7 @@ pub fn parsear_declaracion_constante(p: &mut Parser) -> Result<Sentencia, ParseE
         nombre,
         tipo,
         valor,
+        exportado,
     }))
 }
 

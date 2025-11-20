@@ -3,7 +3,7 @@ use crate::error::ParseError;
 use crate::parser::Parser;
 use umbral_lexer::Token as LexToken;
 
-pub fn parsear_declaracion_interfaz(p: &mut Parser) -> Result<Sentencia, ParseError> {
+pub fn parsear_declaracion_interfaz(p: &mut Parser, exportado: bool) -> Result<Sentencia, ParseError> {
     let nombre = p.parsear_identificador_consumir()?;
     
     if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
@@ -50,5 +50,5 @@ pub fn parsear_declaracion_interfaz(p: &mut Parser) -> Result<Sentencia, ParseEr
         });
     }
     
-    Ok(Sentencia::Interfaz(DeclaracionInterfaz { nombre, metodos }))
+    Ok(Sentencia::Interfaz(DeclaracionInterfaz { nombre, metodos, exportado }))
 }

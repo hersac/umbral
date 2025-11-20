@@ -14,6 +14,11 @@ pub enum Token {
     Implementacion,
     Extension,
     DeclararEnum,
+    Equip,
+    Origin,
+    As,
+    Out,
+    Asterisco,
     If,
     ElseIf,
     Else,
@@ -284,6 +289,26 @@ pub fn analizar(texto: &str) -> Vec<Token> {
                         continue;
                     }
                 }
+            }
+
+            if palabra == "equip" {
+                lista.push(Token::Equip);
+                continue;
+            }
+
+            if palabra == "origin" {
+                lista.push(Token::Origin);
+                continue;
+            }
+
+            if palabra == "as" {
+                lista.push(Token::As);
+                continue;
+            }
+
+            if palabra == "out" {
+                lista.push(Token::Out);
+                continue;
             }
 
             if palabra == "true" {

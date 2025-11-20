@@ -22,6 +22,7 @@ pub enum Sentencia {
     Interfaz(DeclaracionInterfaz),
     Enum(DeclaracionEnum),
     LlamadoFuncion(LlamadoFuncion),
+    Importacion(Importacion),
 }
 
 #[derive(Debug, Clone)]
@@ -29,6 +30,7 @@ pub struct DeclaracionVariable {
     pub nombre: String,
     pub tipo: Option<Tipo>,
     pub valor: Expresion,
+    pub exportado: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -36,6 +38,7 @@ pub struct DeclaracionConstante {
     pub nombre: String,
     pub tipo: Option<Tipo>,
     pub valor: Expresion,
+    pub exportado: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -66,6 +69,7 @@ pub struct DeclaracionFuncion {
     pub parametros: Vec<Parametro>,
     pub tipo_retorno: Option<Tipo>,
     pub cuerpo: Vec<Sentencia>,
+    pub exportado: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -87,6 +91,7 @@ pub struct DeclaracionClase {
     pub implementaciones: Vec<String>,
     pub propiedades: Vec<Propiedad>,
     pub metodos: Vec<Metodo>,
+    pub exportado: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -110,12 +115,14 @@ pub struct Metodo {
 pub struct DeclaracionInterfaz {
     pub nombre: String,
     pub metodos: Vec<Metodo>,
+    pub exportado: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct DeclaracionEnum {
     pub nombre: String,
     pub variantes: Vec<String>,
+    pub exportado: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -205,4 +212,17 @@ pub struct While {
 pub struct DoWhile {
     pub bloque: Vec<Sentencia>,
     pub condicion: Expresion,
+}
+
+#[derive(Debug, Clone)]
+pub struct Importacion {
+    pub items: Vec<ItemImportacion>,
+    pub ruta: String,
+}
+
+#[derive(Debug, Clone)]
+pub enum ItemImportacion {
+    Todo(Option<String>),
+    Nombre(String, Option<String>),
+    ListaNombres(Vec<ItemImportacion>),
 }
