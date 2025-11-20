@@ -52,7 +52,7 @@ fn main() {
 
 fn mostrar_banner() {
     println!("╔════════════════════════════════════════╗");
-    println!("║     Umbral REPL v{}               ║", VERSION);
+    println!("║     Umbral REPL v{}                  ║", VERSION);
     println!("║     Lenguaje de Programación Umbral   ║");
     println!("╚════════════════════════════════════════╝");
     println!();

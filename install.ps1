@@ -2,7 +2,7 @@
 # Ejecutar con: PowerShell -ExecutionPolicy Bypass -File install.ps1
 
 Write-Host "╔════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║   Instalador de Umbral v0.1.0          ║" -ForegroundColor Cyan
+Write-Host "║   Instalador de Umbral v1.0.0          ║" -ForegroundColor Cyan
 Write-Host "╚════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
 
