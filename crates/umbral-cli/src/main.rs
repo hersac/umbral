@@ -1,44 +1,37 @@
 use std::env;
 use std::fs;
-use umbral_lexer::analizar;
-use umbral_parser::Parser;
-use umbral_runtime::Runtime;
+use std::process;
+use umbral_interpreter::Interpreter;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let ruta_archivo = if args.len() > 1 {
+    
+    let ruta_archivo = obtener_ruta_archivo(&args);
+    let codigo = leer_archivo(ruta_archivo);
+    
+    ejecutar_codigo(&codigo);
+}
+
+fn obtener_ruta_archivo(args: &[String]) -> &str {
+    if args.len() > 1 {
         &args[1]
     } else {
         "./codigo-ejemplo/main.um"
-    };
+    }
+}
 
-    let fuente = match fs::read_to_string(ruta_archivo) {
-        Ok(contenido) => contenido,
-        Err(e) => {
-            eprintln!("Error al leer el archivo {}: {}", ruta_archivo, e);
-            return;
-        }
-    };
+fn leer_archivo(ruta: &str) -> String {
+    fs::read_to_string(ruta).unwrap_or_else(|e| {
+        eprintln!("Error al leer el archivo {}: {}", ruta, e);
+        process::exit(1);
+    })
+}
 
-    let tokens = analizar(&fuente);
-
-    // Comentado para no mostrar todos los tokens
-    // println!("Tokens:");
-    // for (i, t) in tokens.iter().enumerate() {
-    //     println!("  [{}] {:?}", i, t);
-    // }
-
-    let mut parser = Parser::nuevo(tokens);
-
-    match parser.parsear_programa() {
-        Ok(ast) => {
-            // println!("\nAST generado correctamente.");
-
-            let mut runtime = Runtime::nuevo();
-            runtime.ejecutar(ast);
-        }
-        Err(e) => {
-            eprintln!("Error al parsear: {:?}", e);
-        }
+fn ejecutar_codigo(codigo: &str) {
+    let mut interprete = Interpreter::nuevo();
+    
+    if let Err(e) = interprete.ejecutar(codigo) {
+        eprintln!("{}", e);
+        process::exit(1);
     }
 }

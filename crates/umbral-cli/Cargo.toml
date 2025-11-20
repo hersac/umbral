@@ -1,9 +1,7 @@
 [package]
 name = "umbral-cli"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
-umbral-lexer = { path = "../umbral-lexer" }
-umbral-parser = { path = "../umbral-parser" }
-umbral-runtime = { path = "../umbral-runtime" }
+umbral-interpreter = { path = "../umbral-interpreter" }
