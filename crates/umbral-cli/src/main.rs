@@ -9,9 +9,9 @@ fn main() {
     let ruta_archivo = if args.len() > 1 {
         &args[1]
     } else {
-        "../codigo-ejemplo/main.um"
+        "./codigo-ejemplo/main.um"
     };
-    
+
     let fuente = match fs::read_to_string(ruta_archivo) {
         Ok(contenido) => contenido,
         Err(e) => {
@@ -22,20 +22,20 @@ fn main() {
 
     let tokens = analizar(&fuente);
 
-    println!("Tokens:");
-    for (i, t) in tokens.iter().enumerate() {
-        println!("  [{}] {:?}", i, t);
-    }
+    // Comentado para no mostrar todos los tokens
+    // println!("Tokens:");
+    // for (i, t) in tokens.iter().enumerate() {
+    //     println!("  [{}] {:?}", i, t);
+    // }
 
     let mut parser = Parser::nuevo(tokens);
 
     match parser.parsear_programa() {
         Ok(ast) => {
-            println!("\nAST generado correctamente.");
+            // println!("\nAST generado correctamente.");
 
             let mut runtime = Runtime::nuevo();
             runtime.ejecutar(ast);
-
         }
         Err(e) => {
             eprintln!("Error al parsear: {:?}", e);

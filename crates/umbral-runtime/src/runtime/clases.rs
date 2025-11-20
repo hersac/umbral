@@ -22,26 +22,28 @@ impl Clase {
 
     pub fn desde_declaracion(decl: &DeclaracionClase) -> Self {
         let mut clase = Self::nueva(&decl.nombre);
-        
-        // Agregar propiedades con valores iniciales
-        for prop in &decl.propiedades {
-            let valor_inicial = prop.valor_inicial.as_ref()
-                .map(|_| Valor::Nulo) // Se evaluará después
-                .unwrap_or(Valor::Nulo);
-            clase.propiedades.insert(prop.nombre.clone(), valor_inicial);
-        }
-        
-        // Agregar métodos
-        for metodo in &decl.metodos {
-            if metodo.nombre == decl.nombre {
-                // Es el constructor
-                clase.constructor = Some(metodo.clone());
-            } else {
-                clase.metodos.insert(metodo.nombre.clone(), metodo.clone());
-            }
-        }
-        
+
+        clase.registrar_propiedades(&decl.propiedades);
+        clase.registrar_metodos(&decl.metodos, &decl.nombre);
+
         clase
+    }
+
+    fn registrar_propiedades(&mut self, propiedades: &[umbral_parser::ast::Propiedad]) {
+        for prop in propiedades {
+            let valor_inicial = prop.valor_inicial.as_ref().map_or(Valor::Nulo, |_| Valor::Nulo);
+            self.propiedades.insert(prop.nombre.clone(), valor_inicial);
+        }
+    }
+
+    fn registrar_metodos(&mut self, metodos: &[Metodo], nombre_clase: &str) {
+        for metodo in metodos {
+            if metodo.nombre == nombre_clase {
+                self.constructor = Some(metodo.clone());
+                continue;
+            }
+            self.metodos.insert(metodo.nombre.clone(), metodo.clone());
+        }
     }
 
     pub fn crear_instancia(&self) -> Instancia {
@@ -50,7 +52,7 @@ impl Clase {
             propiedades: self.propiedades.clone(),
         }
     }
-    
+
     pub fn obtener_metodo(&self, nombre: &str) -> Option<&Metodo> {
         self.metodos.get(nombre)
     }
@@ -66,15 +68,15 @@ impl GestorClases {
             clases: HashMap::new(),
         }
     }
-    
+
     pub fn registrar_clase(&mut self, clase: Clase) {
         self.clases.insert(clase.nombre.clone(), clase);
     }
-    
+
     pub fn obtener_clase(&self, nombre: &str) -> Option<&Clase> {
         self.clases.get(nombre)
     }
-    
+
     pub fn crear_instancia(&self, nombre: &str) -> Option<Instancia> {
         self.clases.get(nombre).map(|c| c.crear_instancia())
     }

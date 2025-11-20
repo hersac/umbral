@@ -102,7 +102,11 @@ pub struct Funcion {
 }
 
 impl Funcion {
-    pub fn nueva(nombre: String, parametros: Vec<String>, cuerpo: Vec<umbral_parser::ast::Sentencia>) -> Self {
+    pub fn nueva(
+        nombre: String,
+        parametros: Vec<String>,
+        cuerpo: Vec<umbral_parser::ast::Sentencia>,
+    ) -> Self {
         Self {
             nombre,
             parametros,

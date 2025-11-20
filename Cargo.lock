@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
  "umbral-lexer",
  "umbral-parser",
+ "umbral-runtime",
 ]
 
 [[package]]
@@ -32,3 +33,6 @@ version = "0.1.0"
 [[package]]
 name = "umbral-runtime"
 version = "0.1.0"
+dependencies = [
+ "umbral-parser",
+]

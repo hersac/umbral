@@ -22,7 +22,6 @@ impl Runtime {
     pub fn ejecutar(&mut self, programa: Programa) {
         for sentencia in programa.sentencias {
             if self.interpretador.ejecutar_sentencia(sentencia).is_some() {
-                // Si una sentencia retorna un valor, detener la ejecución
                 break;
             }
         }

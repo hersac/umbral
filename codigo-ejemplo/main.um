@@ -130,7 +130,7 @@ cs: Persona {
 
 c: persona3 = n: Persona(3, "Otra persona buena mas", 57);
 
-tprint("Persona: &persona3.toString");
+tprint("Persona: &persona3.toString()");
 
 !! Interfaces e implementación
 

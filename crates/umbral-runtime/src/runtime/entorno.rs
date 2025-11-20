@@ -28,24 +28,20 @@ impl Entorno {
     pub fn asignar(&mut self, nombre: &str, valor: Valor) -> bool {
         if self.variables.contains_key(nombre) {
             self.variables.insert(nombre.to_string(), valor);
-            true
-        } else if let Some(parent) = &mut self.parent {
-            parent.asignar(nombre, valor)
-        } else {
-            false
+            return true;
         }
+
+        self.parent
+            .as_mut()
+            .map_or(false, |parent| parent.asignar(nombre, valor))
     }
 
     pub fn obtener(&self, nombre: &str) -> Option<Valor> {
-        if let Some(v) = self.variables.get(nombre) {
-            Some(v.clone())
-        } else if let Some(c) = self.constantes.get(nombre) {
-            Some(c.clone())
-        } else if let Some(parent) = &self.parent {
-            parent.obtener(nombre)
-        } else {
-            None
-        }
+        self.variables
+            .get(nombre)
+            .or_else(|| self.constantes.get(nombre))
+            .cloned()
+            .or_else(|| self.parent.as_ref().and_then(|p| p.obtener(nombre)))
     }
     
     pub fn existe(&self, nombre: &str) -> bool {
