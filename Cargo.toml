@@ -8,3 +8,24 @@ members = [
     "crates/umbral-cli",
     "crates/umbral-repl"
 ]
+
+[package]
+name = "umbral"
+version = "0.1.0"
+edition = "2021"
+authors = ["Heriberto Sánchez"]
+description = "Lenguaje de programación de propósito general"
+license = "MIT"
+repository = "https://github.com/hersac/umbral"
+
+[[bin]]
+name = "umbral"
+path = "crates/umbral-cli/src/main.rs"
+
+[[bin]]
+name = "umbral-repl"
+path = "crates/umbral-repl/src/main.rs"
+
+[dependencies]
+umbral-interpreter = { path = "crates/umbral-interpreter" }
+rustyline = "14.0"
