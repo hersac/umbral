@@ -243,6 +243,10 @@ fn parsear_primaria(parser: &mut Parser) -> Result<Expresion, ParseError> {
             parser.avanzar();
             Ok(Expresion::LiteralNulo)
         }
+        Some(LexToken::This) => {
+            parser.avanzar();
+            Ok(Expresion::This)
+        }
         Some(LexToken::Instanciar) => {
             parser.avanzar();
             let tipo = parser.parsear_identificador_consumir()?;

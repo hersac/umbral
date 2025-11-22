@@ -43,8 +43,14 @@ pub struct DeclaracionConstante {
 
 #[derive(Debug, Clone)]
 pub struct Asignacion {
-    pub nombre: String,
+    pub objetivo: ObjetivoAsignacion,
     pub valor: Expresion,
+}
+
+#[derive(Debug, Clone)]
+pub enum ObjetivoAsignacion {
+    Variable(String),
+    Propiedad { objeto: Box<Expresion>, propiedad: String },
 }
 
 #[derive(Debug, Clone)]
@@ -143,6 +149,7 @@ pub enum Expresion {
         expresion: Box<Expresion>,
     },
     Spread(Box<Expresion>),
+    This,
     Agrupada(Box<Expresion>),
     Array(Vec<Expresion>),
     Objeto(Vec<(String, Expresion)>),

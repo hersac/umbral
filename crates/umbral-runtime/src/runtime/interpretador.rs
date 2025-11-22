@@ -80,11 +80,36 @@ impl Interpretador {
     fn ejecutar_asignacion(&mut self, asig: Asignacion) -> Option<Valor> {
         let valor = self.evaluar_expresion(asig.valor);
 
-        if !self.entorno_actual.asignar(&asig.nombre, valor.clone()) {
-            self.entorno_actual.definir_variable(asig.nombre, valor);
+        match asig.objetivo {
+            umbral_parser::ast::ObjetivoAsignacion::Variable(nombre) => {
+                if !self.entorno_actual.asignar(&nombre, valor.clone()) {
+                    self.entorno_actual.definir_variable(nombre, valor);
+                }
+            }
+            umbral_parser::ast::ObjetivoAsignacion::Propiedad { objeto, propiedad } => {
+                self.asignar_propiedad_objeto(*objeto, propiedad, valor);
+            }
         }
 
         None
+    }
+    
+    fn asignar_propiedad_objeto(&mut self, objeto_expr: Expresion, propiedad: String, valor: Valor) {
+        let obj_valor = self.evaluar_expresion(objeto_expr.clone());
+        
+        match obj_valor {
+            Valor::Objeto(mut instancia) => {
+                instancia.propiedades.insert(propiedad.clone(), valor.clone());
+                if matches!(objeto_expr, Expresion::This) {
+                    if !self.entorno_actual.asignar("__this__", Valor::Objeto(instancia.clone())) {
+                        self.entorno_actual.definir_variable("__this__".to_string(), Valor::Objeto(instancia));
+                    }
+                }
+            }
+            _ => {
+                eprintln!("No se puede asignar propiedad a un valor que no es objeto");
+            }
+        }
     }
 
     fn ejecutar_tprint(&mut self, lt: LlamadoTPrint) -> Option<Valor> {
@@ -234,6 +259,15 @@ impl Interpretador {
                 expresion,
             } => self.evaluar_unaria(&operador, *expresion),
             Expresion::Agrupada(expr) => self.evaluar_expresion(*expr),
+            Expresion::This => {
+                // Buscar la instancia actual en el entorno
+                self.entorno_actual
+                    .obtener("__this__")
+                    .unwrap_or_else(|| {
+                        eprintln!("'th' solo puede usarse dentro de métodos o constructores de clase");
+                        Valor::Nulo
+                    })
+            }
             Expresion::Spread(expr) => {
                 // El spread solo tiene sentido dentro de un array
                 // Si se evalúa directamente, devolvemos el valor tal cual
@@ -699,16 +733,16 @@ impl Interpretador {
     }
 
     fn crear_y_inicializar_instancia(&mut self, tipo: &str, args: Vec<Valor>) -> Valor {
-        let Some(instancia) = self.gestor_clases.crear_instancia(tipo) else {
+        let Some(mut instancia) = self.gestor_clases.crear_instancia(tipo) else {
             eprintln!("Clase '{}' no encontrada", tipo);
             return Valor::Nulo;
         };
 
-        self.ejecutar_constructor_si_existe(tipo, &args);
+        self.ejecutar_constructor_si_existe(tipo, &args, &mut instancia);
         Valor::Objeto(instancia)
     }
 
-    fn ejecutar_constructor_si_existe(&mut self, tipo: &str, args: &[Valor]) {
+    fn ejecutar_constructor_si_existe(&mut self, tipo: &str, args: &[Valor], instancia: &mut crate::runtime::valores::Instancia) {
         let Some(constructor) = self.obtener_constructor(tipo) else {
             return;
         };
@@ -717,8 +751,11 @@ impl Interpretador {
         let entorno_anterior =
             std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(Some(parent)));
 
+        // Vincular 'th' (__this__) con la instancia actual
+        self.entorno_actual.definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
+
         self.vincular_parametros_constructor(&constructor.parametros, args);
-        self.ejecutar_cuerpo_constructor(constructor.cuerpo);
+        self.ejecutar_cuerpo_constructor(constructor.cuerpo, instancia);
 
         self.entorno_actual = entorno_anterior;
     }
@@ -742,9 +779,14 @@ impl Interpretador {
         }
     }
 
-    fn ejecutar_cuerpo_constructor(&mut self, cuerpo: Vec<umbral_parser::ast::Sentencia>) {
+    fn ejecutar_cuerpo_constructor(&mut self, cuerpo: Vec<umbral_parser::ast::Sentencia>, instancia: &mut crate::runtime::valores::Instancia) {
         for sentencia in cuerpo {
             self.ejecutar_sentencia(sentencia);
+        }
+        
+        // Actualizar la instancia con los cambios realizados en el constructor
+        if let Some(Valor::Objeto(inst_actualizada)) = self.entorno_actual.obtener("__this__") {
+            *instancia = inst_actualizada;
         }
     }
 
@@ -879,11 +921,8 @@ impl Interpretador {
         let entorno_anterior =
             std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(Some(parent)));
 
-        // Vincular 'th' (this) con las propiedades del objeto
-        for (nombre, valor) in &instancia.propiedades {
-            self.entorno_actual
-                .definir_variable(nombre.clone(), valor.clone());
-        }
+        // Vincular 'th' (__this__) con la instancia actual
+        self.entorno_actual.definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
 
         // Vincular parámetros
         for (i, param) in metodo_def.parametros.iter().enumerate() {
@@ -941,11 +980,16 @@ impl Interpretador {
 
     fn resolver_variable_interpolada(&mut self, nombre: &str) -> Valor {
         if !nombre.contains('.') {
-            return self.entorno_actual.obtener(nombre).unwrap_or(Valor::Nulo);
+            // Transformar 'th' a '__this__' si es necesario
+            let nombre_real = if nombre == "th" { "__this__" } else { nombre };
+            return self.entorno_actual.obtener(nombre_real).unwrap_or(Valor::Nulo);
         }
 
         let partes: Vec<&str> = nombre.split('.').collect();
-        let Some(mut valor_actual) = self.entorno_actual.obtener(partes[0]) else {
+        // Transformar 'th' a '__this__' si es la primera parte
+        let primera_parte = if partes[0] == "th" { "__this__" } else { partes[0] };
+        
+        let Some(mut valor_actual) = self.entorno_actual.obtener(primera_parte) else {
             return Valor::Nulo;
         };
 

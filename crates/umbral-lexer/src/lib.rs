@@ -30,6 +30,7 @@ pub enum Token {
     While,
     DoWhile,
     Return,
+    This,
     TPrint,
     OperadorTipo,
     FlechaDoble,
@@ -334,6 +335,11 @@ pub fn analizar(texto: &str) -> Vec<Token> {
 
             if palabra == "pu" {
                 lista.push(Token::PropPublica);
+                continue;
+            }
+
+            if palabra == "th" {
+                lista.push(Token::This);
                 continue;
             }
 

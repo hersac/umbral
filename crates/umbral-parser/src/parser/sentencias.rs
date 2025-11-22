@@ -45,6 +45,17 @@ pub fn parsear_llamado_funcion(p: &mut Parser) -> Result<Sentencia, ParseError> 
 
 pub fn parsear_asignacion(p: &mut Parser) -> Result<Sentencia, ParseError> {
     let nombre = p.parsear_identificador_consumir()?;
+    
+    let objetivo = if p.coincidir(|t| matches!(t, LexToken::Punto)) {
+        let propiedad = p.parsear_identificador_consumir()?;
+        ObjetivoAsignacion::Propiedad {
+            objeto: Box::new(Expresion::Identificador(nombre)),
+            propiedad,
+        }
+    } else {
+        ObjetivoAsignacion::Variable(nombre)
+    };
+    
     if !p.coincidir(|t| matches!(t, LexToken::Asignacion)) {
         return Err(ParseError::nuevo(
             "Se esperaba '=' en asignacion",
@@ -53,7 +64,7 @@ pub fn parsear_asignacion(p: &mut Parser) -> Result<Sentencia, ParseError> {
     }
     let valor = crate::parser::expresiones::parsear_expresion_principal(p)?;
     p.coincidir(|t| matches!(t, LexToken::PuntoYComa));
-    Ok(Sentencia::Asignacion(Asignacion { nombre, valor }))
+    Ok(Sentencia::Asignacion(Asignacion { objetivo, valor }))
 }
 
 pub fn parsear_return(p: &mut Parser) -> Result<Sentencia, ParseError> {

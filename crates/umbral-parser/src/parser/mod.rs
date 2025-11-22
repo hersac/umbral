@@ -23,21 +23,6 @@ pub struct Parser {
     pub posicion: usize,
 }
 
-fn expr_a_string(expr: &Expresion) -> String {
-    match expr {
-        Expresion::Identificador(n) => n.clone(),
-        Expresion::AccesoPropiedad { objeto, propiedad } => {
-            format!("{}.{}", expr_a_string(objeto), propiedad)
-        }
-        Expresion::AccesoIndice { objeto, indice } => {
-            format!("{}[{}]", expr_a_string(objeto), expr_a_string(indice))
-        }
-        Expresion::LiteralEntero(n) => n.to_string(),
-        Expresion::LiteralCadena(s) => s.clone(),
-        _ => "expr".to_string(),
-    }
-}
-
 impl Parser {
     pub fn nuevo(tokens: Vec<LexToken>) -> Self {
         Self {
@@ -142,18 +127,15 @@ impl Parser {
             let valor = parsear_expresion_principal(self)?;
             self.coincidir(|t| matches!(t, LexToken::PuntoYComa));
             
-            let nombre = match expr {
-                Expresion::Identificador(n) => n,
+            let objetivo = match expr {
+                Expresion::Identificador(n) => ObjetivoAsignacion::Variable(n),
                 Expresion::AccesoPropiedad { objeto, propiedad } => {
-                    format!("{}.{}", expr_a_string(&objeto), propiedad)
-                }
-                Expresion::AccesoIndice { objeto, indice } => {
-                    format!("{}[{}]", expr_a_string(&objeto), expr_a_string(&indice))
+                    ObjetivoAsignacion::Propiedad { objeto, propiedad }
                 }
                 _ => return Err(ParseError::nuevo("Objetivo de asignación inválido", self.posicion)),
             };
             
-            return Ok(Sentencia::Asignacion(Asignacion { nombre, valor }));
+            return Ok(Sentencia::Asignacion(Asignacion { objetivo, valor }));
         }
         
         self.coincidir(|t| matches!(t, LexToken::PuntoYComa));
