@@ -43,32 +43,37 @@ Write-Host "╔═════════════════════�
 Write-Host "║   ✓ Umbral instalado correctamente     ║" -ForegroundColor Green
 Write-Host "╚════════════════════════════════════════╝" -ForegroundColor Green
 Write-Host ""
+
+# Configurar PATH automáticamente
+Write-Host "🔧 Configurando PATH en las variables de entorno..." -ForegroundColor Yellow
+
+$cargoPath = "$env:USERPROFILE\.cargo\bin"
+$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+
+if ($currentPath -notlike "*$cargoPath*") {
+    # Agregar al PATH del usuario de forma permanente
+    $newPath = "$currentPath;$cargoPath"
+    [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
+    
+    Write-Host "✓ PATH agregado a las variables de entorno del usuario" -ForegroundColor Green
+    
+    # Actualizar PATH en la sesión actual
+    $env:Path = "$env:Path;$cargoPath"
+    Write-Host "✓ PATH actualizado en la sesión actual" -ForegroundColor Green
+} else {
+    Write-Host "✓ PATH ya está configurado en las variables de entorno" -ForegroundColor Green
+}
+
+Write-Host ""
 Write-Host "Comandos disponibles:" -ForegroundColor Cyan
 Write-Host "  umbral <archivo.um>    - Ejecutar un archivo" -ForegroundColor White
 Write-Host "  umbral-repl            - Iniciar REPL interactivo" -ForegroundColor White
 Write-Host ""
 Write-Host "Ejemplo:" -ForegroundColor Cyan
-Write-Host "  umbral codigo-ejemplo\main.um" -ForegroundColor White
+Write-Host "  umbral ejemplos\01_variables_y_constantes.um" -ForegroundColor White
 Write-Host ""
-
-# Verificar si .cargo\bin está en el PATH
-$cargoPath = "$env:USERPROFILE\.cargo\bin"
-$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
-
-if ($currentPath -notlike "*$cargoPath*") {
-    Write-Host "⚠️  Configurando PATH automáticamente..." -ForegroundColor Yellow
-    
-    # Agregar al PATH del usuario
-    $newPath = "$currentPath;$cargoPath"
-    [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
-    
-    Write-Host "✓ PATH configurado correctamente" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "⚠️  IMPORTANTE: Cierra y vuelve a abrir PowerShell/CMD para que los cambios surtan efecto" -ForegroundColor Yellow
-} else {
-    Write-Host "✓ PATH ya está configurado correctamente" -ForegroundColor Green
-}
-
+Write-Host "Nota: El PATH está configurado para todas las nuevas ventanas de PowerShell/CMD." -ForegroundColor Yellow
+Write-Host "      Para la ventana actual, los comandos ya están disponibles." -ForegroundColor Yellow
 Write-Host ""
 Write-Host "¡Disfruta programando en Umbral! 🎉" -ForegroundColor Cyan
 Write-Host ""
