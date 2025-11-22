@@ -90,10 +90,10 @@ c: persona2 = crearPersona('Ana', 30);
 persona2.presentarse();
 
 f: crearPersonas()->[]Persona {
-    v: arr = [];
-    arr = arr + [n: Persona('Luis', 28)];
-    arr = arr + [n: Persona('Sofia', 32)];
-    arr = arr + [n: Persona('Diego', 25)];
+    v: arr = {};
+    arr = arr + {n: Persona('Luis', 28)};
+    arr = arr + {n: Persona('Sofia', 32)};
+    arr = arr + {n: Persona('Diego', 25)};
     r: (arr);
 }
 
@@ -102,17 +102,17 @@ c: personas = crearPersonas();
 tprint('Array de personas creado con 3 elementos');
 
 f: crearMatrizPersonas()->[][]Persona {
-    v: fila1 = [];
-    fila1 = fila1 + [n: Persona('A1', 20)];
-    fila1 = fila1 + [n: Persona('A2', 21)];
+    v: fila1 = {};
+    fila1 = fila1 + {n: Persona('A1', 20)};
+    fila1 = fila1 + {n: Persona('A2', 21)};
     
-    v: fila2 = [];
-    fila2 = fila2 + [n: Persona('B1', 25)];
-    fila2 = fila2 + [n: Persona('B2', 26)];
+    v: fila2 = {};
+    fila2 = fila2 + {n: Persona('B1', 25)};
+    fila2 = fila2 + {n: Persona('B2', 26)};
     
-    v: matriz = [];
-    matriz = matriz + [fila1];
-    matriz = matriz + [fila2];
+    v: matriz = {};
+    matriz = matriz + {fila1};
+    matriz = matriz + {fila2};
     
     r: (matriz);
 }

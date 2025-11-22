@@ -15,16 +15,16 @@ cs: Estudiante {
     pu f: Estudiante(nombre->Str, edad->Int) {
         th.nombre = nombre;
         th.edad = edad;
-        th.notas = [];
+        th.notas = {};
         th.promedio = 0.0;
         th.aprobado = false;
     }
     
     pu f: agregarNota(nota->Int)->Void {
-        si ((nota >= 0) && (nota <= 100)) {
-            th.notas = th.notas + [nota];
+        i: ((nota >= 0) && (nota <= 100)) {
+            th.notas = th.notas + {nota};
             tprint('Nota agregada a &th.nombre: &nota');
-        } sino {
+        } e: {
             tprint('Error: Nota inválida');
         }
     }
@@ -34,20 +34,20 @@ cs: Estudiante {
         v: i = 0;
         v: cantidad = 5;
         
-        mientras (i < cantidad) {
+        wh: (i < cantidad) {
             suma = suma + th.notas[i];
             i = i + 1;
         }
         
-        si (cantidad > 0) {
+        i: (cantidad > 0) {
             th.promedio = suma / cantidad;
-        } sino {
+        } e: {
             th.promedio = 0.0;
         }
         
-        si (th.promedio >= NOTA_APROBATORIA) {
+        i: (th.promedio >= NOTA_APROBATORIA) {
             th.aprobado = true;
-        } sino {
+        } e: {
             th.aprobado = false;
         }
         
@@ -60,9 +60,9 @@ cs: Estudiante {
         tprint('Edad: &th.edad años');
         tprint('Promedio: &th.promedio');
         
-        si (th.aprobado) {
+        i: (th.aprobado) {
             tprint('Estado: APROBADO');
-        } sino {
+        } e: {
             tprint('Estado: REPROBADO');
         }
     }
@@ -77,17 +77,17 @@ cs: Curso {
     pu f: Curso(nombre->Str, codigo->Str) {
         th.nombre = nombre;
         th.codigo = codigo;
-        th.estudiantes = [];
+        th.estudiantes = {};
         th.totalEstudiantes = 0;
     }
     
     pu f: inscribirEstudiante(estudiante->Estudiante)->Bool {
-        si (th.totalEstudiantes < MAX_ESTUDIANTES) {
-            th.estudiantes = th.estudiantes + [estudiante];
+        i: (th.totalEstudiantes < MAX_ESTUDIANTES) {
+            th.estudiantes = th.estudiantes + {estudiante};
             th.totalEstudiantes = th.totalEstudiantes + 1;
             tprint('&estudiante.nombre inscrito en &th.nombre');
             r: (true);
-        } sino {
+        } e: {
             tprint('Error: Curso lleno');
             r: (false);
         }
@@ -102,10 +102,10 @@ cs: Curso {
         v: reprobados = 0;
         v: i = 0;
         
-        mientras (i < th.totalEstudiantes) {
-            si (th.estudiantes[i].aprobado) {
+        wh: (i < th.totalEstudiantes) {
+            i: (th.estudiantes[i].aprobado) {
                 aprobados = aprobados + 1;
-            } sino {
+            } e: {
                 reprobados = reprobados + 1;
             }
             i = i + 1;
@@ -126,14 +126,14 @@ f: calcularPromedioGeneral(curso->Curso)->Flo {
     v: sumaPromedios = 0.0;
     v: i = 0;
     
-    mientras (i < curso.totalEstudiantes) {
+    wh: (i < curso.totalEstudiantes) {
         sumaPromedios = sumaPromedios + curso.estudiantes[i].promedio;
         i = i + 1;
     }
     
-    si (curso.totalEstudiantes > 0) {
+    i: (curso.totalEstudiantes > 0) {
         r: (sumaPromedios / curso.totalEstudiantes);
-    } sino {
+    } e: {
         r: (0.0);
     }
 }
@@ -189,16 +189,16 @@ generarReporte(curso);
 
 tprint('=== Validaciones del Sistema ===');
 
-si (curso.totalEstudiantes < MAX_ESTUDIANTES) {
+i: (curso.totalEstudiantes < MAX_ESTUDIANTES) {
     c: disponibles = MAX_ESTUDIANTES - curso.totalEstudiantes;
     tprint('Cupos disponibles: &disponibles');
-} sino {
+} e: {
     tprint('Curso completo');
 }
 
-si (promedioGeneral >= NOTA_APROBATORIA) {
+i: (promedioGeneral >= NOTA_APROBATORIA) {
     tprint('Rendimiento del curso: SATISFACTORIO');
-} sino {
+} e: {
     tprint('Rendimiento del curso: NECESITA MEJORAS');
 }
 

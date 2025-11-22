@@ -59,7 +59,8 @@ impl Interpretador {
 
     fn ejecutar_declaracion_variable(&mut self, decl: DeclaracionVariable) -> Option<Valor> {
         let valor = self.evaluar_expresion(decl.valor);
-        self.entorno_actual.definir_variable(decl.nombre.clone(), valor);
+        self.entorno_actual
+            .definir_variable(decl.nombre.clone(), valor);
         if decl.exportado {
             self.exportaciones.insert(decl.nombre, true);
         }
@@ -68,7 +69,8 @@ impl Interpretador {
 
     fn ejecutar_declaracion_constante(&mut self, decl: DeclaracionConstante) -> Option<Valor> {
         let valor = self.evaluar_expresion(decl.valor);
-        self.entorno_actual.definir_constante(decl.nombre.clone(), valor);
+        self.entorno_actual
+            .definir_constante(decl.nombre.clone(), valor);
         if decl.exportado {
             self.exportaciones.insert(decl.nombre, true);
         }
@@ -77,11 +79,11 @@ impl Interpretador {
 
     fn ejecutar_asignacion(&mut self, asig: Asignacion) -> Option<Valor> {
         let valor = self.evaluar_expresion(asig.valor);
-        
+
         if !self.entorno_actual.asignar(&asig.nombre, valor.clone()) {
             self.entorno_actual.definir_variable(asig.nombre, valor);
         }
-        
+
         None
     }
 
@@ -100,7 +102,8 @@ impl Interpretador {
     fn registrar_funcion(&mut self, func: DeclaracionFuncion) -> Option<Valor> {
         let parametros: Vec<String> = func.parametros.iter().map(|p| p.nombre.clone()).collect();
         let funcion = Funcion::nueva(func.nombre.clone(), parametros, func.cuerpo);
-        self.entorno_actual.definir_variable(func.nombre.clone(), Valor::Funcion(funcion));
+        self.entorno_actual
+            .definir_variable(func.nombre.clone(), Valor::Funcion(funcion));
         if func.exportado {
             self.exportaciones.insert(func.nombre, true);
         }
@@ -160,7 +163,7 @@ impl Interpretador {
         match item {
             ItemImportacion::Todo(alias) => {
                 let alias_nombre = alias.unwrap_or_else(|| "mod".to_string());
-                
+
                 for (nombre, valor) in &modulo.entorno_actual.variables {
                     if modulo.exportaciones.get(nombre).copied().unwrap_or(false) {
                         let nombre_final = format!("{}_{}", alias_nombre, nombre);
@@ -168,32 +171,36 @@ impl Interpretador {
                             .definir_variable(nombre_final, valor.clone());
                     }
                 }
-                
+
                 for (nombre, clase) in &modulo.gestor_clases.clases {
                     if modulo.exportaciones.get(nombre).copied().unwrap_or(false) {
                         let nombre_final = format!("{}_{}", alias_nombre, nombre);
-                        self.gestor_clases.clases.insert(nombre_final, clase.clone());
+                        self.gestor_clases
+                            .clases
+                            .insert(nombre_final, clase.clone());
                     }
                 }
             }
             ItemImportacion::Nombre(nombre, alias) => {
                 let nombre_final = alias.unwrap_or_else(|| nombre.clone());
-                
+
                 if !modulo.exportaciones.get(&nombre).copied().unwrap_or(false) {
                     eprintln!("Advertencia: '{}' no está exportado en el módulo", nombre);
                     return;
                 }
-                
+
                 if let Some(valor) = modulo.entorno_actual.obtener(&nombre) {
                     self.entorno_actual.definir_variable(nombre_final, valor);
                     return;
                 }
-                
+
                 if let Some(clase) = modulo.gestor_clases.clases.get(&nombre) {
-                    self.gestor_clases.clases.insert(nombre_final, clase.clone());
+                    self.gestor_clases
+                        .clases
+                        .insert(nombre_final, clase.clone());
                     return;
                 }
-                
+
                 eprintln!("Advertencia: '{}' no encontrado en el módulo", nombre);
             }
             ItemImportacion::ListaNombres(items) => {
@@ -250,6 +257,23 @@ impl Interpretador {
             }
             Expresion::AccesoIndice { objeto, indice } => {
                 self.evaluar_acceso_indice(*objeto, *indice)
+            }
+            Expresion::LlamadoMetodo {
+                objeto,
+                metodo,
+                argumentos,
+            } => self.evaluar_llamado_metodo(*objeto, &metodo, argumentos),
+            Expresion::LlamadoFuncion { nombre, argumentos } => {
+                let args: Vec<Valor> = argumentos
+                    .iter()
+                    .map(|arg| self.evaluar_expresion(arg.clone()))
+                    .collect();
+
+                if self.es_funcion_builtin(&nombre) {
+                    self.ejecutar_funcion_builtin(&nombre, args)
+                } else {
+                    self.ejecutar_funcion_usuario(&nombre, args)
+                }
             }
         }
     }
@@ -350,6 +374,10 @@ impl Interpretador {
     fn sumar(&self, izq: Valor, der: Valor) -> Valor {
         match (izq, der) {
             (Valor::Texto(a), Valor::Texto(b)) => Valor::Texto(format!("{}{}", a, b)),
+            (Valor::Lista(mut a), Valor::Lista(b)) => {
+                a.extend(b);
+                Valor::Lista(a)
+            }
             (a, b) => self.operar_numeros(a, b, |x, y| x + y, |x, y| x + y),
         }
     }
@@ -480,7 +508,9 @@ impl Interpretador {
             }
         }
 
-        switch.default.and_then(|bloque| self.ejecutar_bloque(bloque))
+        switch
+            .default
+            .and_then(|bloque| self.ejecutar_bloque(bloque))
     }
 
     fn ejecutar_for(&mut self, for_loop: For) -> Option<Valor> {
@@ -514,10 +544,12 @@ impl Interpretador {
         };
 
         let parent = self.entorno_actual.clone();
-        let entorno_anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(Some(parent)));
+        let entorno_anterior =
+            std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(Some(parent)));
 
         for item in items {
-            self.entorno_actual.definir_variable(foreach.variable.clone(), item);
+            self.entorno_actual
+                .definir_variable(foreach.variable.clone(), item);
 
             if let Some(valor) = self.ejecutar_bloque(foreach.bloque.clone()) {
                 self.entorno_actual = entorno_anterior;
@@ -663,7 +695,8 @@ impl Interpretador {
         };
 
         let parent = self.entorno_actual.clone();
-        let entorno_anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(Some(parent)));
+        let entorno_anterior =
+            std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(Some(parent)));
 
         self.vincular_parametros_constructor(&constructor.parametros, args);
         self.ejecutar_cuerpo_constructor(constructor.cuerpo);
@@ -677,7 +710,11 @@ impl Interpretador {
             .and_then(|c| c.constructor.clone())
     }
 
-    fn vincular_parametros_constructor(&mut self, parametros: &[umbral_parser::ast::Parametro], args: &[Valor]) {
+    fn vincular_parametros_constructor(
+        &mut self,
+        parametros: &[umbral_parser::ast::Parametro],
+        args: &[Valor],
+    ) {
         for (i, param) in parametros.iter().enumerate() {
             if let Some(valor) = args.get(i) {
                 self.entorno_actual
@@ -703,7 +740,11 @@ impl Interpretador {
         }
     }
 
-    fn acceder_propiedad_objeto(&mut self, instancia: &crate::runtime::valores::Instancia, propiedad: &str) -> Valor {
+    fn acceder_propiedad_objeto(
+        &mut self,
+        instancia: &crate::runtime::valores::Instancia,
+        propiedad: &str,
+    ) -> Valor {
         if let Some(valor) = instancia.propiedades.get(propiedad) {
             return valor.clone();
         }
@@ -712,20 +753,18 @@ impl Interpretador {
             .unwrap_or_else(|| self.error_propiedad_no_encontrada(propiedad))
     }
 
-    fn buscar_metodo_como_funcion(&self, instancia: &crate::runtime::valores::Instancia, propiedad: &str) -> Option<Valor> {
+    fn buscar_metodo_como_funcion(
+        &self,
+        instancia: &crate::runtime::valores::Instancia,
+        propiedad: &str,
+    ) -> Option<Valor> {
         let clase = self.gestor_clases.obtener_clase(&instancia.clase)?;
         let metodo = clase.obtener_metodo(propiedad)?;
-        
-        let parametros: Vec<String> = metodo.parametros.iter()
-            .map(|p| p.nombre.clone())
-            .collect();
-        
-        let funcion = Funcion::nueva(
-            propiedad.to_string(),
-            parametros,
-            metodo.cuerpo.clone()
-        );
-        
+
+        let parametros: Vec<String> = metodo.parametros.iter().map(|p| p.nombre.clone()).collect();
+
+        let funcion = Funcion::nueva(propiedad.to_string(), parametros, metodo.cuerpo.clone());
+
         Some(Valor::Funcion(funcion))
     }
 
@@ -742,7 +781,10 @@ impl Interpretador {
     }
 
     fn error_acceso_propiedad_invalido(&self, propiedad: &str, valor: &Valor) -> Valor {
-        eprintln!("No se puede acceder a la propiedad '{}' de {:?}", propiedad, valor);
+        eprintln!(
+            "No se puede acceder a la propiedad '{}' de {:?}",
+            propiedad, valor
+        );
         Valor::Nulo
     }
 
@@ -764,9 +806,87 @@ impl Interpretador {
 
         items[indice as usize].clone()
     }
-
     fn es_indice_valido(&self, indice: i64, longitud: usize) -> bool {
         indice >= 0 && (indice as usize) < longitud
+    }
+
+    fn evaluar_llamado_metodo(
+        &mut self,
+        objeto: Expresion,
+        metodo: &str,
+        argumentos: Vec<Expresion>,
+    ) -> Valor {
+        let obj_valor = self.evaluar_expresion(objeto);
+
+        let instancia = match obj_valor {
+            Valor::Objeto(inst) => inst,
+            _ => {
+                eprintln!(
+                    "No se puede llamar método '{}' en un valor que no es objeto",
+                    metodo
+                );
+                return Valor::Nulo;
+            }
+        };
+
+        // Buscar el método en la clase
+        let clase = match self.gestor_clases.obtener_clase(&instancia.clase) {
+            Some(c) => c,
+            None => {
+                eprintln!("Clase '{}' no encontrada", instancia.clase);
+                return Valor::Nulo;
+            }
+        };
+
+        let metodo_def = match clase.obtener_metodo(metodo) {
+            Some(m) => m.clone(),
+            None => {
+                eprintln!(
+                    "Método '{}' no encontrado en clase '{}'",
+                    metodo, instancia.clase
+                );
+                return Valor::Nulo;
+            }
+        };
+
+        // Evaluar argumentos
+        let args: Vec<Valor> = argumentos
+            .into_iter()
+            .map(|arg| self.evaluar_expresion(arg))
+            .collect();
+
+        // Crear nuevo entorno para el método
+        let parent = self.entorno_actual.clone();
+        let entorno_anterior =
+            std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(Some(parent)));
+
+        // Vincular 'th' (this) con las propiedades del objeto
+        for (nombre, valor) in &instancia.propiedades {
+            self.entorno_actual
+                .definir_variable(nombre.clone(), valor.clone());
+        }
+
+        // Vincular parámetros
+        for (i, param) in metodo_def.parametros.iter().enumerate() {
+            if let Some(valor) = args.get(i) {
+                self.entorno_actual
+                    .definir_variable(param.nombre.clone(), valor.clone());
+            }
+        }
+
+        // Ejecutar cuerpo del método
+        self.valor_retorno = None;
+        for sentencia in metodo_def.cuerpo {
+            if let Some(valor) = self.ejecutar_sentencia(sentencia) {
+                self.entorno_actual = entorno_anterior;
+                self.valor_retorno = None;
+                return valor;
+            }
+        }
+
+        self.entorno_actual = entorno_anterior;
+        self.valor_retorno = None;
+        Valor::Nulo
     }
 
     fn interpolar_cadena(&mut self, s: &str) -> Valor {
@@ -828,7 +948,11 @@ impl Interpretador {
         }
     }
 
-    fn acceder_objeto(&mut self, instancia: &crate::runtime::valores::Instancia, propiedad: &str) -> Valor {
+    fn acceder_objeto(
+        &mut self,
+        instancia: &crate::runtime::valores::Instancia,
+        propiedad: &str,
+    ) -> Valor {
         if let Some(prop_valor) = instancia.propiedades.get(propiedad) {
             return prop_valor.clone();
         }
@@ -836,7 +960,11 @@ impl Interpretador {
         self.ejecutar_metodo_objeto(instancia, propiedad)
     }
 
-    fn ejecutar_metodo_objeto(&mut self, instancia: &crate::runtime::valores::Instancia, nombre_metodo: &str) -> Valor {
+    fn ejecutar_metodo_objeto(
+        &mut self,
+        instancia: &crate::runtime::valores::Instancia,
+        nombre_metodo: &str,
+    ) -> Valor {
         let Some(clase) = self.gestor_clases.obtener_clase(&instancia.clase) else {
             return Valor::Nulo;
         };
@@ -845,20 +973,14 @@ impl Interpretador {
             return Valor::Nulo;
         };
 
-        let parametros: Vec<String> = metodo.parametros.iter()
-            .map(|p| p.nombre.clone())
-            .collect();
-        
-        let funcion = Funcion::nueva(
-            nombre_metodo.to_string(),
-            parametros,
-            metodo.cuerpo.clone()
-        );
+        let parametros: Vec<String> = metodo.parametros.iter().map(|p| p.nombre.clone()).collect();
+
+        let funcion = Funcion::nueva(nombre_metodo.to_string(), parametros, metodo.cuerpo.clone());
 
         self.valor_retorno = None;
         let resultado = GestorFunciones::ejecutar_funcion(&funcion, vec![], self);
         self.valor_retorno = None;
-        
+
         resultado
     }
 
@@ -966,7 +1088,10 @@ impl Interpretador {
         salida
     }
 
-    fn leer_expresion_interpolacion(&self, chars: &mut std::iter::Peekable<std::str::Chars>) -> String {
+    fn leer_expresion_interpolacion(
+        &self,
+        chars: &mut std::iter::Peekable<std::str::Chars>,
+    ) -> String {
         let mut expr = String::new();
         while let Some(&ch) = chars.peek() {
             if !self.es_caracter_expresion(ch) {
@@ -1024,7 +1149,11 @@ impl Interpretador {
 
     fn navegar_propiedad(&self, valor: Valor, propiedad: &str) -> Valor {
         match valor {
-            Valor::Objeto(ref inst) => inst.propiedades.get(propiedad).cloned().unwrap_or(Valor::Nulo),
+            Valor::Objeto(ref inst) => inst
+                .propiedades
+                .get(propiedad)
+                .cloned()
+                .unwrap_or(Valor::Nulo),
             Valor::Diccionario(ref mapa) => mapa.get(propiedad).cloned().unwrap_or(Valor::Nulo),
             _ => Valor::Nulo,
         }

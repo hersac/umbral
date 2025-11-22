@@ -11,7 +11,7 @@ out f: multiplicar(a->Int, b->Int)->Int {
 }
 
 out f: dividir(a->Int, b->Int)->Int {
-    si (b == 0) {
+    i: (b == 0) {
         tprint('Error: División por cero');
         r: (0);
     }
@@ -22,7 +22,7 @@ out f: potencia(base->Int, exponente->Int)->Int {
     v: resultado = 1;
     v: i = 0;
     
-    mientras (i < exponente) {
+    wh: (i < exponente) {
         resultado = resultado * base;
         i = i + 1;
     }

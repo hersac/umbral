@@ -1,6 +1,6 @@
 use crate::ast::*;
 use crate::error::ParseError;
-use crate::parser::{Parser, instancias, objetos};
+use crate::parser::{Parser, objetos};
 use umbral_lexer::Token as LexToken;
 
 pub fn parsear_expresion_principal(parser: &mut Parser) -> Result<Expresion, ParseError> {
@@ -121,12 +121,64 @@ fn parsear_postfija(parser: &mut Parser) -> Result<Expresion, ParseError> {
     let mut expr = parsear_primaria(parser)?;
 
     loop {
+        // Verificar si es una llamada a función (identificador seguido de paréntesis)
+        if matches!(expr, Expresion::Identificador(_)) 
+            && parser.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) 
+        {
+            let nombre = match expr {
+                Expresion::Identificador(n) => n,
+                _ => unreachable!(),
+            };
+            
+            let mut argumentos = Vec::new();
+            if !parser.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
+                loop {
+                    argumentos.push(parsear_expresion_principal(parser)?);
+                    if parser.coincidir(|t| matches!(t, LexToken::Coma)) {
+                        continue;
+                    }
+                    if parser.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
+                        break;
+                    }
+                    return Err(ParseError::nuevo("Se esperaba ',' o ')'", parser.posicion));
+                }
+            }
+            expr = Expresion::LlamadoFuncion {
+                nombre,
+                argumentos,
+            };
+            continue;
+        }
+        
         if parser.coincidir(|t| matches!(t, LexToken::Punto)) {
             let propiedad = parser.parsear_identificador_consumir()?;
-            expr = Expresion::AccesoPropiedad {
-                objeto: Box::new(expr),
-                propiedad,
-            };
+
+            // Verificar si es una llamada a método (tiene paréntesis)
+            if parser.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
+                let mut argumentos = Vec::new();
+                if !parser.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
+                    loop {
+                        argumentos.push(parsear_expresion_principal(parser)?);
+                        if parser.coincidir(|t| matches!(t, LexToken::Coma)) {
+                            continue;
+                        }
+                        if parser.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
+                            break;
+                        }
+                        return Err(ParseError::nuevo("Se esperaba ',' o ')'", parser.posicion));
+                    }
+                }
+                expr = Expresion::LlamadoMetodo {
+                    objeto: Box::new(expr),
+                    metodo: propiedad,
+                    argumentos,
+                };
+            } else {
+                expr = Expresion::AccesoPropiedad {
+                    objeto: Box::new(expr),
+                    propiedad,
+                };
+            }
             continue;
         }
         if parser.coincidir(|t| matches!(t, LexToken::CorcheteIzq)) {
@@ -192,7 +244,10 @@ fn parsear_primaria(parser: &mut Parser) -> Result<Expresion, ParseError> {
             parser.avanzar();
             let tipo = parser.parsear_identificador_consumir()?;
             if !parser.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
-                return Err(ParseError::nuevo("Se esperaba '(' después del tipo", parser.posicion));
+                return Err(ParseError::nuevo(
+                    "Se esperaba '(' después del tipo",
+                    parser.posicion,
+                ));
             }
             let mut argumentos = Vec::new();
             while !parser.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
@@ -202,9 +257,6 @@ fn parsear_primaria(parser: &mut Parser) -> Result<Expresion, ParseError> {
             Ok(Expresion::Instanciacion { tipo, argumentos })
         }
         Some(LexToken::Identificador(_)) => {
-            if let Ok(instancia) = instancias::intentar_parsear_instancia_inline(parser) {
-                return Ok(instancia);
-            }
             if let Some(LexToken::Identificador(nombre)) = parser.peekear() {
                 let nombre = nombre.clone();
                 parser.avanzar();

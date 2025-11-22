@@ -1,31 +1,31 @@
 v: edad = 18;
 
 tprint('=== Condicional Simple ===');
-si (edad >= 18) {
+i: (edad >= 18) {
     tprint('Eres mayor de edad');
 }
 
 v: temperatura = 25;
 
-tprint('=== Si-Sino ===');
-si (temperatura > 30) {
+tprint('=== Si-e: ===');
+i: (temperatura > 30) {
     tprint('Hace calor');
-} sino {
+} e: {
     tprint('Temperatura agradable');
 }
 
 v: nota = 85;
 
 tprint('=== Condicionales Anidados ===');
-si (nota >= 90) {
+i: (nota >= 90) {
     tprint('Calificación: A');
-} sino {
-    si (nota >= 80) {
+} e: {
+    i: (nota >= 80) {
         tprint('Calificación: B');
-    } sino {
-        si (nota >= 70) {
+    } e: {
+        i: (nota >= 70) {
             tprint('Calificación: C');
-        } sino {
+        } e: {
             tprint('Calificación: F');
         }
     }
@@ -36,21 +36,21 @@ v: b = 20;
 
 tprint('=== Operadores de Comparación ===');
 
-si (a == b) {
+i: (a == b) {
     tprint('a es igual a b');
-} sino {
+} e: {
     tprint('a NO es igual a b');
 }
 
-si (a != b) {
+i: (a != b) {
     tprint('a es diferente de b');
 }
 
-si (a < b) {
+i: (a < b) {
     tprint('a es menor que b');
 }
 
-si (b > a) {
+i: (b > a) {
     tprint('b es mayor que a');
 }
 
@@ -60,25 +60,25 @@ v: tieneAuto = false;
 
 tprint('=== Operadores Lógicos ===');
 
-si (tieneLicencia && mayorDeEdad) {
+i: (tieneLicencia && mayorDeEdad) {
     tprint('Puede conducir');
 }
 
-si (tieneAuto || tieneLicencia) {
+i: (tieneAuto || tieneLicencia) {
     tprint('Tiene algún requisito');
 }
 
-si (!tieneAuto) {
+i: (!tieneAuto) {
     tprint('NO tiene auto');
 }
 
 f: clasificarEdad(edad->Int)->Str {
-    si (edad < 13) {
+    i: (edad < 13) {
         r: ('Niño');
-    } sino {
-        si (edad < 18) {
+    } e: {
+        i: (edad < 18) {
             r: ('Adolescente');
-        } sino {
+        } e: {
             r: ('Adulto');
         }
     }

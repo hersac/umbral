@@ -29,3 +29,15 @@ path = "crates/umbral-repl/src/main.rs"
 [dependencies]
 umbral-interpreter = { path = "crates/umbral-interpreter" }
 rustyline = "14.0"
+
+[package.metadata.deb]
+maintainer = "Heriberto Sánchez"
+depends = ""
+section = "utils"
+priority = "optional"
+
+assets = [
+    ["target/release/umbral", "/usr/bin/umbral", "755"],
+    ["target/release/umbral-repl", "/usr/bin/umbral-repl", "755"],
+    ["install.sh", "/usr/share/umbral/install.sh", "755"]
+]

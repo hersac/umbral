@@ -29,9 +29,9 @@ saludar('Juan');
 saludar('María');
 
 f: esPositivo(numero->Int)->Bool {
-    si (numero > 0) {
+    i: (numero > 0) {
         r: (true);
-    } sino {
+    } e: {
         r: (false);
     }
 }
@@ -46,7 +46,7 @@ f: factorial(n->Int)->Int {
     v: resultado = 1;
     v: i = 1;
     
-    mientras (i <= n) {
+    wh: (i <= n) {
         resultado = resultado * i;
         i = i + 1;
     }
@@ -59,11 +59,11 @@ c: fact5 = factorial(5);
 tprint('5! = &fact5');
 
 f: crearArray(tamanio->Int)->[]Int {
-    v: arr = [];
+    v: arr = {};
     v: i = 0;
     
-    mientras (i < tamanio) {
-        arr = arr + [i + 1];
+    wh: (i < tamanio) {
+        arr = arr + {i + 1};
         i = i + 1;
     }
     

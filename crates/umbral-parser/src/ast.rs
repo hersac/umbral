@@ -157,6 +157,15 @@ pub enum Expresion {
         objeto: Box<Expresion>,
         indice: Box<Expresion>,
     },
+    LlamadoMetodo {
+        objeto: Box<Expresion>,
+        metodo: String,
+        argumentos: Vec<Expresion>,
+    },
+    LlamadoFuncion {
+        nombre: String,
+        argumentos: Vec<Expresion>,
+    },
 }
 
 #[derive(Debug, Clone)]

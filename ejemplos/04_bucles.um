@@ -1,7 +1,7 @@
 tprint('=== Bucle Mientras Básico ===');
 v: contador = 0;
 
-mientras (contador < 5) {
+wh: (contador < 5) {
     tprint('Contador: &contador');
     contador = contador + 1;
 }
@@ -10,7 +10,7 @@ tprint('=== Suma Acumulativa ===');
 v: suma = 0;
 v: i = 1;
 
-mientras (i <= 10) {
+wh: (i <= 10) {
     suma = suma + i;
     i = i + 1;
 }
@@ -18,10 +18,10 @@ mientras (i <= 10) {
 tprint('Suma de 1 a 10: &suma');
 
 tprint('=== Iteración sobre Arrays ===');
-v: frutas = ['Manzana', 'Banana', 'Naranja'];
+v: frutas = {'Manzana', 'Banana', 'Naranja'};
 v: indice = 0;
 
-mientras (indice < 3) {
+wh: (indice < 3) {
     c: fruta = frutas[indice];
     tprint('Fruta &indice: &fruta');
     indice = indice + 1;
@@ -30,7 +30,7 @@ mientras (indice < 3) {
 tprint('=== Tabla del 5 ===');
 v: multiplicando = 1;
 
-mientras (multiplicando <= 10) {
+wh: (multiplicando <= 10) {
     c: resultado = 5 * multiplicando;
     tprint('5 x &multiplicando = &resultado');
     multiplicando = multiplicando + 1;
@@ -40,7 +40,7 @@ f: factorial(n->Int)->Int {
     v: resultado = 1;
     v: i = 1;
     
-    mientras (i <= n) {
+    wh: (i <= n) {
         resultado = resultado * i;
         i = i + 1;
     }
@@ -55,7 +55,7 @@ tprint('5! = &fact5');
 tprint('6! = &fact6');
 
 f: fibonacci(n->Int)->Int {
-    si (n <= 1) {
+    i: (n <= 1) {
         r: (n);
     }
     
@@ -63,7 +63,7 @@ f: fibonacci(n->Int)->Int {
     v: b = 1;
     v: i = 2;
     
-    mientras (i <= n) {
+    wh: (i <= n) {
         c: temp = a + b;
         a = b;
         b = temp;
@@ -75,19 +75,19 @@ f: fibonacci(n->Int)->Int {
 
 tprint('=== Secuencia de Fibonacci ===');
 v: fib = 0;
-mientras (fib < 8) {
+wh: (fib < 8) {
     c: valor = fibonacci(fib);
     tprint('Fibonacci(&fib) = &valor');
     fib = fib + 1;
 }
 
 f: crearArrayCuadrados(tamanio->Int)->[]Int {
-    v: arr = [];
+    v: arr = {};
     v: i = 1;
     
-    mientras (i <= tamanio) {
+    wh: (i <= tamanio) {
         c: cuadrado = i * i;
-        arr = arr + [cuadrado];
+        arr = arr + {cuadrado};
         i = i + 1;
     }
     
@@ -101,7 +101,7 @@ tprint('Cuadrados: &cuadrados');
 tprint('=== Countdown ===');
 v: cuenta = 5;
 
-mientras (cuenta > 0) {
+wh: (cuenta > 0) {
     tprint('&cuenta...');
     cuenta = cuenta - 1;
 }
