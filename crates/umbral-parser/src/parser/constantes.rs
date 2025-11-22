@@ -43,7 +43,7 @@ fn inferir_tipo(valor: &Expresion) -> Tipo {
         Expresion::LiteralFloat(_) => Tipo {
             nombre: "Flo".to_string(),
         },
-        Expresion::LiteralCadena(_) => Tipo {
+        Expresion::LiteralCadena(_) | Expresion::LiteralCadenaLiteral(_) => Tipo {
             nombre: "Str".to_string(),
         },
         Expresion::LiteralBool(_) => Tipo {

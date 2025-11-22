@@ -47,6 +47,7 @@ pub enum Token {
     Interpolacion,
     Numero(String),
     Cadena(String),
+    CadenaLiteral(String),
     CadenaMultilinea(String),
     Identificador(String),
     Tipo(String),
@@ -169,7 +170,7 @@ pub fn analizar(texto: &str) -> Vec<Token> {
 
         if ch == '\'' {
             let val = leer_cadena_simple(&mut iterador);
-            lista.push(Token::Cadena(val));
+            lista.push(Token::CadenaLiteral(val));
             continue;
         }
 

@@ -242,6 +242,7 @@ impl Interpretador {
             Expresion::LiteralFloat(f) => Valor::Flotante(f),
             Expresion::LiteralBool(b) => Valor::Booleano(b),
             Expresion::LiteralCadena(s) => self.interpolar_cadena(&s),
+            Expresion::LiteralCadenaLiteral(s) => Valor::Texto(s),
             Expresion::LiteralNulo => Valor::Nulo,
             Expresion::Identificador(nombre) => {
                 self.entorno_actual.obtener(&nombre).unwrap_or_else(|| {
@@ -260,7 +261,6 @@ impl Interpretador {
             } => self.evaluar_unaria(&operador, *expresion),
             Expresion::Agrupada(expr) => self.evaluar_expresion(*expr),
             Expresion::This => {
-                // Buscar la instancia actual en el entorno
                 self.entorno_actual
                     .obtener("__this__")
                     .unwrap_or_else(|| {
@@ -269,8 +269,6 @@ impl Interpretador {
                     })
             }
             Expresion::Spread(expr) => {
-                // El spread solo tiene sentido dentro de un array
-                // Si se evalúa directamente, devolvemos el valor tal cual
                 self.evaluar_expresion(*expr)
             }
             Expresion::Array(items) => {
@@ -278,12 +276,10 @@ impl Interpretador {
                 for item in items {
                     match item {
                         Expresion::Spread(expr) => {
-                            // Expandir el array
                             let valor = self.evaluar_expresion(*expr);
                             if let Valor::Lista(elementos) = valor {
                                 valores.extend(elementos);
                             } else {
-                                // Si no es un array, agregarlo como valor individual
                                 valores.push(valor);
                             }
                         }
@@ -751,7 +747,6 @@ impl Interpretador {
         let entorno_anterior =
             std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(Some(parent)));
 
-        // Vincular 'th' (__this__) con la instancia actual
         self.entorno_actual.definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
 
         self.vincular_parametros_constructor(&constructor.parametros, args);
@@ -784,7 +779,6 @@ impl Interpretador {
             self.ejecutar_sentencia(sentencia);
         }
         
-        // Actualizar la instancia con los cambios realizados en el constructor
         if let Some(Valor::Objeto(inst_actualizada)) = self.entorno_actual.obtener("__this__") {
             *instancia = inst_actualizada;
         }
@@ -890,7 +884,6 @@ impl Interpretador {
             }
         };
 
-        // Buscar el método en la clase
         let clase = match self.gestor_clases.obtener_clase(&instancia.clase) {
             Some(c) => c,
             None => {
@@ -910,21 +903,17 @@ impl Interpretador {
             }
         };
 
-        // Evaluar argumentos
         let args: Vec<Valor> = argumentos
             .into_iter()
             .map(|arg| self.evaluar_expresion(arg))
             .collect();
 
-        // Crear nuevo entorno para el método
         let parent = self.entorno_actual.clone();
         let entorno_anterior =
             std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(Some(parent)));
 
-        // Vincular 'th' (__this__) con la instancia actual
         self.entorno_actual.definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
 
-        // Vincular parámetros
         for (i, param) in metodo_def.parametros.iter().enumerate() {
             if let Some(valor) = args.get(i) {
                 self.entorno_actual
@@ -932,7 +921,6 @@ impl Interpretador {
             }
         }
 
-        // Ejecutar cuerpo del método
         self.valor_retorno = None;
         for sentencia in metodo_def.cuerpo {
             if let Some(valor) = self.ejecutar_sentencia(sentencia) {
@@ -980,13 +968,11 @@ impl Interpretador {
 
     fn resolver_variable_interpolada(&mut self, nombre: &str) -> Valor {
         if !nombre.contains('.') {
-            // Transformar 'th' a '__this__' si es necesario
             let nombre_real = if nombre == "th" { "__this__" } else { nombre };
             return self.entorno_actual.obtener(nombre_real).unwrap_or(Valor::Nulo);
         }
 
         let partes: Vec<&str> = nombre.split('.').collect();
-        // Transformar 'th' a '__this__' si es la primera parte
         let primera_parte = if partes[0] == "th" { "__this__" } else { partes[0] };
         
         let Some(mut valor_actual) = self.entorno_actual.obtener(primera_parte) else {

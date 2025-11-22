@@ -11,7 +11,7 @@ pub fn parsear_objeto_principal(parser: &mut Parser) -> Result<Expresion, ParseE
     loop {
         let clave = match parser.peekear() {
             Some(LexToken::Identificador(n)) => Some(n.clone()),
-            Some(LexToken::Cadena(s)) => Some(s.clone()),
+            Some(LexToken::Cadena(s) | LexToken::CadenaLiteral(s)) => Some(s.clone()),
             _ => None,
         };
         if let Some(k) = clave {

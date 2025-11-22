@@ -136,6 +136,7 @@ pub enum Expresion {
     LiteralEntero(i64),
     LiteralFloat(f64),
     LiteralCadena(String),
+    LiteralCadenaLiteral(String),
     LiteralBool(bool),
     LiteralNulo,
     Identificador(String),

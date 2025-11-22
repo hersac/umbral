@@ -231,6 +231,10 @@ fn parsear_primaria(parser: &mut Parser) -> Result<Expresion, ParseError> {
             parser.avanzar();
             Ok(Expresion::LiteralCadena(s.clone()))
         }
+        Some(LexToken::CadenaLiteral(ref s)) => {
+            parser.avanzar();
+            Ok(Expresion::LiteralCadenaLiteral(s.clone()))
+        }
         Some(LexToken::Verdadero) => {
             parser.avanzar();
             Ok(Expresion::LiteralBool(true))

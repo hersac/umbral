@@ -124,7 +124,7 @@ fn parsear_item_normal(p: &mut Parser, items: &mut Vec<ItemImportacion>) -> Resu
 }
 
 fn parsear_ruta(p: &mut Parser) -> Result<String, ParseError> {
-    let Some(LexToken::Cadena(ruta)) = p.peekear() else {
+    let Some(LexToken::Cadena(ruta) | LexToken::CadenaLiteral(ruta)) = p.peekear() else {
         return Err(ParseError::nuevo(
             "Se esperaba una ruta de archivo como cadena después de 'origin'",
             p.posicion,

@@ -6,5 +6,5 @@ pub fn error(mensaje: &str, posicion: usize) -> ParseError {
 }
 
 pub fn token_es_identificador_o_cadena(t: &LexToken) -> bool {
-    matches!(t, LexToken::Identificador(_) | LexToken::Cadena(_))
+    matches!(t, LexToken::Identificador(_) | LexToken::Cadena(_) | LexToken::CadenaLiteral(_))
 }
