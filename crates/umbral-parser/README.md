@@ -60,6 +60,7 @@ pub struct Programa {
 - `Identificador` - Nombre de variable
 - `Binaria` - Operación binaria (a + b)
 - `Unaria` - Operación unaria (!a, -a)
+- `Spread` - Operador spread (&array) para expandir arrays
 - `Agrupada` - Expresión entre paréntesis
 - `Array` - Array literal
 - `Objeto` - Objeto literal

@@ -204,6 +204,7 @@ fn main() {
 - ✅ Arrays con acceso por índice
 - ✅ Objetos/Diccionarios
 - ✅ Propiedad `.length` en arrays
+- ✅ Operador spread (`&`) para expandir arrays
 
 ### Strings
 - ✅ Strings simples (`'texto'`)

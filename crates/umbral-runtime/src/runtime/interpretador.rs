@@ -234,11 +234,30 @@ impl Interpretador {
                 expresion,
             } => self.evaluar_unaria(&operador, *expresion),
             Expresion::Agrupada(expr) => self.evaluar_expresion(*expr),
+            Expresion::Spread(expr) => {
+                // El spread solo tiene sentido dentro de un array
+                // Si se evalúa directamente, devolvemos el valor tal cual
+                self.evaluar_expresion(*expr)
+            }
             Expresion::Array(items) => {
-                let valores: Vec<Valor> = items
-                    .into_iter()
-                    .map(|e| self.evaluar_expresion(e))
-                    .collect();
+                let mut valores: Vec<Valor> = Vec::new();
+                for item in items {
+                    match item {
+                        Expresion::Spread(expr) => {
+                            // Expandir el array
+                            let valor = self.evaluar_expresion(*expr);
+                            if let Valor::Lista(elementos) = valor {
+                                valores.extend(elementos);
+                            } else {
+                                // Si no es un array, agregarlo como valor individual
+                                valores.push(valor);
+                            }
+                        }
+                        _ => {
+                            valores.push(self.evaluar_expresion(item));
+                        }
+                    }
+                }
                 Valor::Lista(valores)
             }
             Expresion::Objeto(pares) => {

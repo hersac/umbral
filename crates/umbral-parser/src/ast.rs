@@ -142,6 +142,7 @@ pub enum Expresion {
         operador: String,
         expresion: Box<Expresion>,
     },
+    Spread(Box<Expresion>),
     Agrupada(Box<Expresion>),
     Array(Vec<Expresion>),
     Objeto(Vec<(String, Expresion)>),

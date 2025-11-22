@@ -114,6 +114,9 @@ fn parsear_unaria(parser: &mut Parser) -> Result<Expresion, ParseError> {
             expresion: Box::new(parsear_unaria(parser)?),
         });
     }
+    if parser.coincidir(|t| matches!(t, LexToken::Spread)) {
+        return Ok(Expresion::Spread(Box::new(parsear_unaria(parser)?)));
+    }
     parsear_postfija(parser)
 }
 

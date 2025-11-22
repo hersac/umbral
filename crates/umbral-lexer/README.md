@@ -56,6 +56,7 @@ for token in tokens {
 - Asignación: `=`
 - Incremento/Decremento: `++`, `--`
 - Acceso: `.`, `=>`
+- Spread: `&` - Expansión de arrays dentro de literales
 
 ### Delimitadores
 - `{`, `}` - Bloques

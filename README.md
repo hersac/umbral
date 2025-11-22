@@ -148,6 +148,12 @@ v: activo->Bool = true;      !! Declaración con tipo Bool
 v: numeros = {1, 2, 3, 4, 5};                    !! Inferido como array
 v: nombres->[]Str = {'Ana', 'Luis', 'María'};    !! Array tipado de strings
 
+!! Operador Spread (&) para expandir arrays
+c: arr1 = {1, 2, 3};
+c: arr2 = {4, 5, 6};
+c: combinado = { &arr1, &arr2 };                 !! Resultado: {1, 2, 3, 4, 5, 6}
+c: mixto = { 0, &arr1, 99, &arr2 };              !! Resultado: {0, 1, 2, 3, 99, 4, 5, 6}
+
 !! Objetos/Diccionarios
 v: persona = [                                   !! Inferido como objeto
     "nombre" => "Juan",
@@ -186,6 +192,12 @@ v: no = !true;             !! false
 v: contador = 0;
 contador++;                 !! 1
 contador--;                 !! 0
+
+!! Spread (expansión de arrays)
+v: a = {1, 2};
+v: b = {3, 4};
+v: c = { &a, &b };         !! {1, 2, 3, 4} - Expande ambos arrays
+v: d = a + b;              !! {1, 2, 3, 4} - Concatenación equivalente
 ```
 
 ### Control de flujo

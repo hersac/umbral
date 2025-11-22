@@ -1,0 +1,193 @@
+!! Ejemplo 10: Operador Spread (&) para Arrays
+!! Este ejemplo muestra el uso del operador spread para expandir arrays
+
+tprint('========================================');
+tprint('   OPERADOR SPREAD (&) EN ARRAYS');
+tprint('========================================');
+
+!! =====================================
+!! 1. Spread Básico
+!! =====================================
+tprint('');
+tprint('=== 1. Spread Básico ===');
+c: frutas = { 'manzana', 'pera' };
+c: verduras = { 'lechuga', 'tomate' };
+c: alimentos = { &frutas, &verduras };
+
+tprint('Frutas:');
+tprint(frutas);
+tprint('Verduras:');
+tprint(verduras);
+tprint('Alimentos (con spread):');
+tprint(alimentos);
+
+!! =====================================
+!! 2. Spread con Valores Mixtos
+!! =====================================
+tprint('');
+tprint('=== 2. Spread con Valores Mixtos ===');
+c: inicio = { 1, 2, 3 };
+c: fin = { 8, 9, 10 };
+c: secuencia = { &inicio, 4, 5, 6, 7, &fin };
+
+tprint('Secuencia completa:');
+tprint(secuencia);
+
+!! =====================================
+!! 3. Múltiples Spreads
+!! =====================================
+tprint('');
+tprint('=== 3. Múltiples Spreads ===');
+c: grupo1 = { 'a', 'b' };
+c: grupo2 = { 'c', 'd' };
+c: grupo3 = { 'e', 'f' };
+c: alfabeto = { &grupo1, &grupo2, &grupo3 };
+
+tprint('Alfabeto completo:');
+tprint(alfabeto);
+
+!! =====================================
+!! 4. Comparación: Spread vs Concatenación
+!! =====================================
+tprint('');
+tprint('=== 4. Comparación: Spread vs Concatenación ===');
+c: arr1 = { 10, 20 };
+c: arr2 = { 30, 40 };
+
+c: conSpread = { &arr1, &arr2 };
+c: conPlus = arr1 + arr2;
+
+tprint('Con spread { &arr1, &arr2 }:');
+tprint(conSpread);
+tprint('Con concatenación arr1 + arr2:');
+tprint(conPlus);
+tprint('Ambos producen el mismo resultado!');
+
+!! =====================================
+!! 5. Spread con Arrays Vacíos
+!! =====================================
+tprint('');
+tprint('=== 5. Spread con Arrays Vacíos ===');
+c: vacio = {};
+c: conDatos = { 1, 2, 3 };
+c: resultado = { &vacio, &conDatos, 4, 5 };
+
+tprint('Resultado (el array vacío no afecta):');
+tprint(resultado);
+
+!! =====================================
+!! 6. Función que Retorna Arrays Expandidos
+!! =====================================
+tprint('');
+tprint('=== 6. Función que Retorna Arrays Expandidos ===');
+
+f: crearRango(inicio->Int, fin->Int)->[]Int {
+    v: resultado = {};
+    v: i = inicio;
+    wh: (i <= fin) {
+        resultado = resultado + {i};
+        i++;
+    }
+    r: (resultado);
+}
+
+c: rango1 = crearRango(1, 5);
+c: rango2 = crearRango(10, 15);
+c: rangosCombinados = { &rango1, &rango2 };
+
+tprint('Rango 1 (1-5):');
+tprint(rango1);
+tprint('Rango 2 (10-15):');
+tprint(rango2);
+tprint('Rangos combinados con spread:');
+tprint(rangosCombinados);
+
+!! =====================================
+!! 7. Spread Anidado
+!! =====================================
+tprint('');
+tprint('=== 7. Spread Anidado ===');
+c: base = { 'x', 'y' };
+c: nivel2 = { &base, 'z' };
+c: nivel3 = { 'inicio', &nivel2, 'fin' };
+
+tprint('Spread anidado:');
+tprint(nivel3);
+
+!! =====================================
+!! 8. Construir Arrays Dinámicamente
+!! =====================================
+tprint('');
+tprint('=== 8. Construir Arrays Dinámicamente ===');
+
+f: construirSecuencia(n->Int)->[]Int {
+    v: pares = {};
+    v: impares = {};
+    v: i = 1;
+    
+    wh: (i <= n) {
+        i: (i % 2 == 0) {
+            pares = pares + {i};
+        } e: {
+            impares = impares + {i};
+        }
+        i++;
+    }
+    
+    !! Combinar ambos arrays con spread
+    v: resultado = { &pares, &impares };
+    r: (resultado);
+}
+
+c: secuenciaOrdenada = construirSecuencia(10);
+tprint('Secuencia (primero pares, luego impares):');
+tprint(secuenciaOrdenada);
+
+!! =====================================
+!! 9. Uso Práctico: Concatenar Múltiples Listas
+!! =====================================
+tprint('');
+tprint('=== 9. Uso Práctico: Concatenar Múltiples Listas ===');
+
+c: enero = { 'Año Nuevo', 'Reyes' };
+c: diciembre = { 'Navidad', 'Nochebuena' };
+c: festivos = { 'Día del Trabajo', 'Día Nacional' };
+
+c: todasLasFestividades = { &enero, &festivos, &diciembre };
+
+tprint('Todas las festividades del año:');
+tprint(todasLasFestividades);
+
+!! =====================================
+!! 10. Clonar y Extender Arrays
+!! =====================================
+tprint('');
+tprint('=== 10. Clonar y Extender Arrays ===');
+
+c: original = { 1, 2, 3 };
+c: extendido = { &original, 4, 5, 6 };
+c: clon = { &original };
+
+tprint('Array original:');
+tprint(original);
+tprint('Array extendido (clonado + nuevos elementos):');
+tprint(extendido);
+tprint('Clon del original:');
+tprint(clon);
+
+!! =====================================
+!! Resumen
+!! =====================================
+tprint('');
+tprint('========================================');
+tprint('   RESUMEN DEL OPERADOR SPREAD');
+tprint('========================================');
+tprint('');
+tprint('El operador & expande arrays dentro de literales:');
+tprint('  - { &array1, &array2 } combina arrays');
+tprint('  - Puede mezclarse con valores literales');
+tprint('  - Funciona con múltiples arrays');
+tprint('  - Arrays vacíos no afectan el resultado');
+tprint('  - Alternativa: usar + para concatenación');
+tprint('');
+tprint('========================================');

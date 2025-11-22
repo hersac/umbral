@@ -69,6 +69,7 @@ pub enum Token {
     Not,
     Rango,
     RangoIncluyente,
+    Spread,
     Verdadero,
     Falso,
     Nulo,
@@ -437,6 +438,7 @@ pub fn analizar(texto: &str) -> Vec<Token> {
                     lista.push(Token::And);
                     continue;
                 }
+                lista.push(Token::Spread);
                 continue;
             }
             '|' => {

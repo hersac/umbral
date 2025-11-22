@@ -181,6 +181,27 @@ umbral 09_uso_importaciones.um
 
 ---
 
+### 🔟 Operador Spread
+**Archivo:** `10_operador_spread.um`
+
+Aprende sobre:
+- Operador spread (`&`) para expandir arrays
+- Combinar múltiples arrays
+- Mezclar spread con valores literales
+- Spread múltiple en un solo array
+- Comparación con concatenación (`+`)
+- Arrays vacíos y spread
+- Funciones que retornan arrays expandidos
+- Spread anidado
+- Construcción dinámica de arrays
+- Clonar y extender arrays
+
+```bash
+umbral 10_operador_spread.um
+```
+
+---
+
 ## 📦 Módulos
 
 ### modulos/matematicas.um
