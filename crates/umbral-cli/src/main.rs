@@ -25,7 +25,7 @@ fn main() {
         ruta_archivo => {
             // Ejecutar el archivo proporcionado
             let codigo = leer_archivo(ruta_archivo);
-            ejecutar_codigo(&codigo);
+            ejecutar_codigo(&codigo, ruta_archivo);
         }
     }
 }
@@ -72,8 +72,14 @@ fn leer_archivo(ruta: &str) -> String {
     })
 }
 
-fn ejecutar_codigo(codigo: &str) {
+fn ejecutar_codigo(codigo: &str, ruta_archivo: &str) {
     let mut interprete = Interpreter::nuevo();
+    
+    if let Ok(ruta_abs) = fs::canonicalize(ruta_archivo) {
+        if let Some(parent) = ruta_abs.parent() {
+            interprete.establecer_directorio_base(parent.to_path_buf());
+        }
+    }
     
     if let Err(e) = interprete.ejecutar(codigo) {
         eprintln!("Error de ejecución:");

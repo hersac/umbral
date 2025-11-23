@@ -7,6 +7,7 @@ pub mod valores;
 
 use crate::runtime::interpretador::Interpretador;
 use umbral_parser::ast::Programa;
+use std::path::PathBuf;
 
 pub struct Runtime {
     pub interpretador: Interpretador,
@@ -17,6 +18,10 @@ impl Runtime {
         Self {
             interpretador: Interpretador::nuevo(),
         }
+    }
+
+    pub fn establecer_directorio_base(&mut self, ruta: PathBuf) {
+        self.interpretador.establecer_directorio_base(ruta);
     }
 
     pub fn ejecutar(&mut self, programa: Programa) {

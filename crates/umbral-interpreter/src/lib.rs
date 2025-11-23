@@ -1,6 +1,7 @@
 use umbral_lexer::analizar;
 use umbral_parser::Parser;
 use umbral_runtime::Runtime;
+use std::path::PathBuf;
 
 pub mod error;
 pub use error::{InterpreterError, InterpreterResult};
@@ -14,6 +15,10 @@ impl Interpreter {
         Self {
             runtime: Runtime::nuevo(),
         }
+    }
+
+    pub fn establecer_directorio_base(&mut self, ruta: PathBuf) {
+        self.runtime.establecer_directorio_base(ruta);
     }
 
     pub fn ejecutar(&mut self, codigo: &str) -> InterpreterResult<()> {
