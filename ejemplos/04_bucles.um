@@ -87,7 +87,7 @@ f: crearArrayCuadrados(tamanio->Int)->[]Int {
     
     wh: (i <= tamanio) {
         c: cuadrado = i * i;
-        arr = arr + {cuadrado};
+        arr = arr + { cuadrado };
         i = i + 1;
     }
     
@@ -96,13 +96,13 @@ f: crearArrayCuadrados(tamanio->Int)->[]Int {
 
 tprint('=== Array de Cuadrados ===');
 c: cuadrados = crearArrayCuadrados(5);
-tprint('Cuadrados: &cuadrados');
+tprint("Cuadrados: &cuadrados");
 
 tprint('=== Countdown ===');
 v: cuenta = 5;
 
 wh: (cuenta > 0) {
-    tprint('&cuenta...');
+    tprint("&cuenta...");
     cuenta = cuenta - 1;
 }
 

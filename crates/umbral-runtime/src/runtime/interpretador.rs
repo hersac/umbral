@@ -3,6 +3,7 @@ use crate::runtime::entorno::Entorno;
 use crate::runtime::funciones::GestorFunciones;
 use crate::runtime::valores::{Funcion, Valor};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use umbral_parser::ast::*;
 
 pub struct Interpretador {
@@ -11,6 +12,7 @@ pub struct Interpretador {
     pub gestor_funciones: GestorFunciones,
     pub valor_retorno: Option<Valor>,
     pub exportaciones: HashMap<String, bool>,
+    pub directorio_base: PathBuf,
 }
 
 impl Interpretador {
@@ -21,7 +23,12 @@ impl Interpretador {
             gestor_funciones: GestorFunciones::nuevo(),
             valor_retorno: None,
             exportaciones: HashMap::new(),
+            directorio_base: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
         }
+    }
+
+    pub fn establecer_directorio_base(&mut self, ruta: PathBuf) {
+        self.directorio_base = ruta;
     }
 
     pub fn ejecutar_sentencia(&mut self, sentencia: Sentencia) -> Option<Valor> {
@@ -93,16 +100,27 @@ impl Interpretador {
 
         None
     }
-    
-    fn asignar_propiedad_objeto(&mut self, objeto_expr: Expresion, propiedad: String, valor: Valor) {
+
+    fn asignar_propiedad_objeto(
+        &mut self,
+        objeto_expr: Expresion,
+        propiedad: String,
+        valor: Valor,
+    ) {
         let obj_valor = self.evaluar_expresion(objeto_expr.clone());
-        
+
         match obj_valor {
             Valor::Objeto(mut instancia) => {
-                instancia.propiedades.insert(propiedad.clone(), valor.clone());
+                instancia
+                    .propiedades
+                    .insert(propiedad.clone(), valor.clone());
                 if matches!(objeto_expr, Expresion::This) {
-                    if !self.entorno_actual.asignar("__this__", Valor::Objeto(instancia.clone())) {
-                        self.entorno_actual.definir_variable("__this__".to_string(), Valor::Objeto(instancia));
+                    if !self
+                        .entorno_actual
+                        .asignar("__this__", Valor::Objeto(instancia.clone()))
+                    {
+                        self.entorno_actual
+                            .definir_variable("__this__".to_string(), Valor::Objeto(instancia));
                     }
                 }
             }
@@ -148,11 +166,13 @@ impl Interpretador {
     fn ejecutar_importacion(&mut self, imp: umbral_parser::ast::Importacion) -> Option<Valor> {
         use std::fs;
 
-        let ruta_archivo = &imp.ruta;
-        let contenido = match fs::read_to_string(ruta_archivo) {
+        let ruta_relativa = PathBuf::from(&imp.ruta);
+        let ruta_archivo = self.directorio_base.join(&ruta_relativa);
+
+        let contenido = match fs::read_to_string(&ruta_archivo) {
             Ok(c) => c,
             Err(e) => {
-                eprintln!("Error al leer archivo '{}': {}", ruta_archivo, e);
+                eprintln!("Error al leer archivo '{}': {}", ruta_archivo.display(), e);
                 return None;
             }
         };
@@ -161,12 +181,20 @@ impl Interpretador {
         let programa = match umbral_parser::parsear_programa(tokens) {
             Ok(p) => p,
             Err(e) => {
-                eprintln!("Error al parsear archivo '{}': {:?}", ruta_archivo, e);
+                eprintln!(
+                    "Error al parsear archivo '{}': {:?}",
+                    ruta_archivo.display(),
+                    e
+                );
                 return None;
             }
         };
 
         let mut interprete_modulo = Interpretador::nuevo();
+        if let Some(parent) = ruta_archivo.parent() {
+            interprete_modulo.establecer_directorio_base(parent.to_path_buf());
+        }
+
         for sentencia in programa.sentencias {
             interprete_modulo.ejecutar_sentencia(sentencia);
         }
@@ -261,16 +289,13 @@ impl Interpretador {
             } => self.evaluar_unaria(&operador, *expresion),
             Expresion::Agrupada(expr) => self.evaluar_expresion(*expr),
             Expresion::This => {
-                self.entorno_actual
-                    .obtener("__this__")
-                    .unwrap_or_else(|| {
-                        eprintln!("'th' solo puede usarse dentro de métodos o constructores de clase");
-                        Valor::Nulo
-                    })
+                // Buscar la instancia actual en el entorno
+                self.entorno_actual.obtener("__this__").unwrap_or_else(|| {
+                    eprintln!("'th' solo puede usarse dentro de métodos o constructores de clase");
+                    Valor::Nulo
+                })
             }
-            Expresion::Spread(expr) => {
-                self.evaluar_expresion(*expr)
-            }
+            Expresion::Spread(expr) => self.evaluar_expresion(*expr),
             Expresion::Array(items) => {
                 let mut valores: Vec<Valor> = Vec::new();
                 for item in items {
@@ -738,7 +763,12 @@ impl Interpretador {
         Valor::Objeto(instancia)
     }
 
-    fn ejecutar_constructor_si_existe(&mut self, tipo: &str, args: &[Valor], instancia: &mut crate::runtime::valores::Instancia) {
+    fn ejecutar_constructor_si_existe(
+        &mut self,
+        tipo: &str,
+        args: &[Valor],
+        instancia: &mut crate::runtime::valores::Instancia,
+    ) {
         let Some(constructor) = self.obtener_constructor(tipo) else {
             return;
         };
@@ -747,7 +777,9 @@ impl Interpretador {
         let entorno_anterior =
             std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(Some(parent)));
 
-        self.entorno_actual.definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
+        // Vincular 'th' (__this__) con la instancia actual
+        self.entorno_actual
+            .definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
 
         self.vincular_parametros_constructor(&constructor.parametros, args);
         self.ejecutar_cuerpo_constructor(constructor.cuerpo, instancia);
@@ -774,11 +806,16 @@ impl Interpretador {
         }
     }
 
-    fn ejecutar_cuerpo_constructor(&mut self, cuerpo: Vec<umbral_parser::ast::Sentencia>, instancia: &mut crate::runtime::valores::Instancia) {
+    fn ejecutar_cuerpo_constructor(
+        &mut self,
+        cuerpo: Vec<umbral_parser::ast::Sentencia>,
+        instancia: &mut crate::runtime::valores::Instancia,
+    ) {
         for sentencia in cuerpo {
             self.ejecutar_sentencia(sentencia);
         }
-        
+
+        // Actualizar la instancia con los cambios realizados en el constructor
         if let Some(Valor::Objeto(inst_actualizada)) = self.entorno_actual.obtener("__this__") {
             *instancia = inst_actualizada;
         }
@@ -912,7 +949,9 @@ impl Interpretador {
         let entorno_anterior =
             std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(Some(parent)));
 
-        self.entorno_actual.definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
+        // Vincular 'th' (__this__) con la instancia actual
+        self.entorno_actual
+            .definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
 
         for (i, param) in metodo_def.parametros.iter().enumerate() {
             if let Some(valor) = args.get(i) {
@@ -937,44 +976,90 @@ impl Interpretador {
 
     fn interpolar_cadena(&mut self, s: &str) -> Valor {
         let mut resultado = String::new();
-        let mut chars = s.chars().peekable();
+        let chars: Vec<char> = s.chars().collect();
+        let mut i = 0;
 
-        while let Some(c) = chars.next() {
+        while i < chars.len() {
+            let c = chars[i];
             if c == '&' {
-                let var_name = self.leer_nombre_variable(&mut chars);
+                let (var_name, nuevo_i) = self.leer_nombre_variable(&chars, i + 1);
                 if !var_name.is_empty() {
                     let valor_interpolado = self.resolver_variable_interpolada(&var_name);
                     resultado.push_str(&format!("{}", valor_interpolado));
+                    i = nuevo_i;
+                    continue;
                 }
-                continue;
             }
             resultado.push(c);
+            i += 1;
         }
 
         Valor::Texto(resultado)
     }
 
-    fn leer_nombre_variable(&self, chars: &mut std::iter::Peekable<std::str::Chars>) -> String {
+    fn leer_nombre_variable(&self, chars: &[char], mut i: usize) -> (String, usize) {
         let mut nombre = String::new();
-        while let Some(&ch) = chars.peek() {
-            if ch.is_alphanumeric() || ch == '_' || ch == '.' {
-                nombre.push(chars.next().unwrap());
-                continue;
+
+        // Leer primera parte
+        while i < chars.len() {
+            let ch = chars[i];
+            if ch.is_alphanumeric() || ch == '_' {
+                nombre.push(ch);
+                i += 1;
+            } else {
+                break;
+            }
+        }
+
+        if nombre.is_empty() {
+            return (nombre, i);
+        }
+
+        // Leer propiedades encadenadas
+        while i < chars.len() {
+            if chars[i] == '.' {
+                if i + 1 < chars.len() {
+                    let next = chars[i + 1];
+                    if next.is_alphanumeric() || next == '_' {
+                        nombre.push('.');
+                        nombre.push(next);
+                        i += 2;
+
+                        while i < chars.len() {
+                            let ch = chars[i];
+                            if ch.is_alphanumeric() || ch == '_' {
+                                nombre.push(ch);
+                                i += 1;
+                            } else {
+                                break;
+                            }
+                        }
+                        continue;
+                    }
+                }
             }
             break;
         }
-        nombre
+
+        (nombre, i)
     }
 
     fn resolver_variable_interpolada(&mut self, nombre: &str) -> Valor {
         if !nombre.contains('.') {
             let nombre_real = if nombre == "th" { "__this__" } else { nombre };
-            return self.entorno_actual.obtener(nombre_real).unwrap_or(Valor::Nulo);
+            return self
+                .entorno_actual
+                .obtener(nombre_real)
+                .unwrap_or(Valor::Nulo);
         }
 
         let partes: Vec<&str> = nombre.split('.').collect();
-        let primera_parte = if partes[0] == "th" { "__this__" } else { partes[0] };
-        
+        let primera_parte = if partes[0] == "th" {
+            "__this__"
+        } else {
+            partes[0]
+        };
+
         let Some(mut valor_actual) = self.entorno_actual.obtener(primera_parte) else {
             return Valor::Nulo;
         };
