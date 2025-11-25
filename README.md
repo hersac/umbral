@@ -403,6 +403,53 @@ v: x = 10; !! Comentario al final de línea
 
 ---
 
+## 📚 Biblioteca Estándar (StdLib)
+
+Umbral incluye una biblioteca estándar mínima con funciones esenciales accesibles mediante el objeto global `Std`.
+
+### Manipulación de Strings
+
+```umbral
+v: texto = "  Hola  ";
+v: limpio = Std.trim(texto);               !! "Hola"
+v: partes = Std.split("a,b,c", ",");       !! ["a", "b", "c"]
+v: nuevo = Std.replace("hola", "o", "0");  !! "h0la"
+v: mayus = Std.to_upper("umbral");         !! "UMBRAL"
+v: minus = Std.to_lower("UMBRAL");         !! "umbral"
+```
+
+### Operaciones Numéricas
+
+```umbral
+v: numero = Std.parse_int("42");           !! 42
+v: decimal = Std.parse_float("3.14");      !! 3.14
+v: texto = Std.to_string(123);             !! "123"
+v: aleatorio = Std.random();               !! 0.0 - 1.0
+v: absoluto = Std.abs(-10);                !! 10
+```
+
+### Sistema de Archivos
+
+```umbral
+v: ok = Std.write_file("datos.txt", "contenido");
+v: existe = Std.exists("datos.txt");       !! true
+v: contenido = Std.read_file("datos.txt");
+```
+
+### Colecciones
+
+```umbral
+v: lista = {1, 2, 3};
+v: longitud = Std.len(lista);              !! 3
+v: nueva = Std.push(lista, 4);             !! {1, 2, 3, 4}
+v: sin_ultimo = Std.pop(lista);            !! {1, 2}
+
+v: dict = ["a" => 1, "b" => 2];
+v: claves = Std.keys(dict);                !! ["a", "b"]
+```
+
+---
+
 ---
 
 ## 📜 Especificación Formal (v1.0.0)

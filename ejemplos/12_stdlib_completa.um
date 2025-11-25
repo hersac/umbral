@@ -1,0 +1,76 @@
+!! Ejemplo 12: Biblioteca Estándar (StdLib)
+!! Prueba de todos los módulos de la biblioteca estándar
+
+tprint("=== Prueba de Std (strings) ===");
+v: texto = "  Hola Mundo  ";
+v: limpio = Std.trim(texto);
+tprint("trim: &limpio");
+
+v: palabras = Std.split("rojo,verde,azul", ",");
+tprint("split: &palabras");
+
+v: reemplazado = Std.replace("Hola mundo", "mundo", "Umbral");
+tprint("replace: &reemplazado");
+
+v: mayusculas = Std.to_upper("umbral");
+tprint("to_upper: &mayusculas");
+
+v: minusculas = Std.to_lower("UMBRAL");
+tprint("to_lower: &minusculas");
+
+tprint("\n=== Prueba de Std (números) ===");
+v: numero_str = "42";
+v: numero_int = Std.parse_int(numero_str);
+tprint("parse_int: &numero_int");
+
+v: float_str = "3.14";
+v: numero_float = Std.parse_float(float_str);
+tprint("parse_float: &numero_float");
+
+v: numero_a_texto = Std.to_string(123);
+tprint("to_string: &numero_a_texto");
+
+v: aleatorio = Std.random();
+tprint("random: &aleatorio");
+
+v: absoluto = Std.abs(-42);
+tprint("abs(-42): &absoluto");
+
+tprint("\n=== Prueba de Std (archivos) ===");
+v: contenido_test = "Este es un archivo de prueba\ncon múltiples líneas.";
+v: escrito = Std.write_file("test_stdlib.txt", contenido_test);
+tprint("write_file: &escrito");
+
+v: existe = Std.exists("test_stdlib.txt");
+tprint("exists: &existe");
+
+v: leido = Std.read_file("test_stdlib.txt");
+tprint("read_file: &leido");
+
+tprint("\n=== Prueba de Std (colecciones) ===");
+v: lista = {1, 2, 3, 4, 5};
+v: longitud = Std.len(lista);
+tprint("len de lista: &longitud");
+
+v: nueva_lista = Std.push(lista, 6);
+tprint("push: &nueva_lista");
+
+v: lista_sin_ultimo = Std.pop(nueva_lista);
+tprint("pop: &lista_sin_ultimo");
+
+v: diccionario = [
+    "nombre" => "Umbral",
+    "version" => "1.0",
+    "tipo" => "lenguaje"
+];
+
+v: claves = Std.keys(diccionario);
+tprint("keys: &claves");
+
+v: len_dict = Std.len(diccionario);
+tprint("len de diccionario: &len_dict");
+
+v: len_texto = Std.len("Hola");
+tprint("len de texto: &len_texto");
+
+tprint("\n=== StdLib Verificada ===");

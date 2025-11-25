@@ -11,8 +11,11 @@ pub enum Valor {
     Diccionario(HashMap<String, Valor>),
     Objeto(Instancia),
     Funcion(Funcion),
+    FuncionNativa(String, NativeFn),
     Nulo,
 }
+
+pub type NativeFn = fn(Vec<Valor>) -> Valor;
 
 impl Valor {
     pub fn es_verdadero(&self) -> bool {
@@ -69,6 +72,7 @@ impl fmt::Display for Valor {
             }
             Valor::Objeto(inst) => write!(f, "{}", inst),
             Valor::Funcion(func) => write!(f, "<función {}>", func.nombre),
+            Valor::FuncionNativa(nombre, _) => write!(f, "<función nativa {}>", nombre),
         }
     }
 }

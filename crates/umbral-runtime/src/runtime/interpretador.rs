@@ -17,14 +17,17 @@ pub struct Interpretador {
 
 impl Interpretador {
     pub fn nuevo() -> Self {
-        Self {
+        let mut inter = Self {
             entorno_actual: Entorno::nuevo(None),
             gestor_clases: GestorClases::nuevo(),
             gestor_funciones: GestorFunciones::nuevo(),
             valor_retorno: None,
             exportaciones: HashMap::new(),
             directorio_base: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
-        }
+        };
+
+        crate::runtime::stdlib::registrar_stdlib(&mut inter);
+        inter
     }
 
     pub fn establecer_directorio_base(&mut self, ruta: PathBuf) {
@@ -725,15 +728,24 @@ impl Interpretador {
     }
 
     fn ejecutar_funcion_usuario(&mut self, nombre: &str, argumentos: Vec<Valor>) -> Valor {
-        let Some(Valor::Funcion(func)) = self.entorno_actual.obtener(nombre) else {
+        let Some(valor_funcion) = self.entorno_actual.obtener(nombre) else {
             eprintln!("Función '{}' no encontrada", nombre);
             return Valor::Nulo;
         };
 
-        self.valor_retorno = None;
-        let resultado = GestorFunciones::ejecutar_funcion(&func, argumentos, self);
-        self.valor_retorno = None;
-        resultado
+        match valor_funcion {
+            Valor::Funcion(func) => {
+                self.valor_retorno = None;
+                let resultado = GestorFunciones::ejecutar_funcion(&func, argumentos, self);
+                self.valor_retorno = None;
+                resultado
+            }
+            Valor::FuncionNativa(_, native_fn) => native_fn(argumentos),
+            _ => {
+                eprintln!("'{}' no es una función", nombre);
+                Valor::Nulo
+            }
+        }
     }
 
     fn evaluar_instanciacion(&mut self, tipo: &str, argumentos: Vec<Expresion>) -> Valor {
@@ -940,6 +952,32 @@ impl Interpretador {
     ) -> Valor {
         let obj_valor = self.evaluar_expresion(objeto);
 
+        if let Valor::Diccionario(mapa) = obj_valor {
+            if let Some(funcion_val) = mapa.get(metodo) {
+                let args: Vec<Valor> = argumentos
+                    .into_iter()
+                    .map(|arg| self.evaluar_expresion(arg))
+                    .collect();
+
+                return match funcion_val {
+                    Valor::FuncionNativa(_, native_fn) => native_fn(args),
+                    Valor::Funcion(func) => {
+                        self.valor_retorno = None;
+                        let resultado = GestorFunciones::ejecutar_funcion(func, args, self);
+                        self.valor_retorno = None;
+                        resultado
+                    }
+                    _ => {
+                        eprintln!("'{}' no es una función", metodo);
+                        Valor::Nulo
+                    }
+                };
+            } else {
+                eprintln!("Método '{}' no encontrado en el diccionario", metodo);
+                return Valor::Nulo;
+            }
+        }
+
         let instancia = match obj_valor {
             Valor::Objeto(inst) => inst,
             _ => {
@@ -1048,7 +1086,6 @@ impl Interpretador {
             return (nombre, i);
         }
 
-        // Leer propiedades encadenadas
         while i < chars.len() {
             if chars[i] == '.' {
                 if i + 1 < chars.len() {

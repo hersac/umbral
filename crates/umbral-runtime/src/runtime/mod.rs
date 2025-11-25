@@ -3,11 +3,12 @@ pub mod entorno;
 pub mod errores;
 pub mod funciones;
 pub mod interpretador;
+pub mod stdlib;
 pub mod valores;
 
 use crate::runtime::interpretador::Interpretador;
-use umbral_parser::ast::Programa;
 use std::path::PathBuf;
+use umbral_parser::ast::Programa;
 
 pub struct Runtime {
     pub interpretador: Interpretador,
