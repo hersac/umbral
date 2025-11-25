@@ -1,0 +1,34 @@
+!! Ejemplo 11: Alcance y Shadowing
+!! Demuestra el manejo de scopes y las advertencias de shadowing
+
+v: global = "Soy global";
+
+f: pruebaScope() {
+    tprint("--- Inicio de función ---");
+    tprint(global);  !! Acceso a variable global
+    
+    v: local = "Soy local";
+    tprint(local);
+    
+    i: (true) {
+        tprint("\n--- Bloque interno ---");
+        !! Modificación de variable externa
+        local = "Modificado en bloque";
+        
+        !! Shadowing (generará advertencia)
+        v: global = "Soy global oculta por local";
+        tprint(global);
+    }
+    
+    tprint("\n--- Vuelta al scope de función ---");
+    tprint("Local: &local");   !! Debe imprimir "Modificado en bloque"
+    tprint("Global (aquí sigue siendo la original del archivo? No, es la global del archivo): &global"); 
+    !! Nota: En Umbral, las variables globales son accesibles, pero si se hizo shadowing dentro del if, 
+    !! esa variable 'global' del if murió al terminar el bloque.
+    !! Aquí 'global' se refiere a la variable del archivo.
+}
+
+pruebaScope();
+
+tprint("\n--- Scope Global Final ---");
+tprint(global);

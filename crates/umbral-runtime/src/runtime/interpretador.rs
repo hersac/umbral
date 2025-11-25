@@ -66,6 +66,14 @@ impl Interpretador {
 
     fn ejecutar_declaracion_variable(&mut self, decl: DeclaracionVariable) -> Option<Valor> {
         let valor = self.evaluar_expresion(decl.valor);
+
+        if self.entorno_actual.existe(&decl.nombre) {
+            eprintln!(
+                "Advertencia: La variable '{}' ya existe en este ámbito o superior (shadowing).",
+                decl.nombre
+            );
+        }
+
         self.entorno_actual
             .definir_variable(decl.nombre.clone(), valor);
         if decl.exportado {
@@ -90,7 +98,10 @@ impl Interpretador {
         match asig.objetivo {
             umbral_parser::ast::ObjetivoAsignacion::Variable(nombre) => {
                 if !self.entorno_actual.asignar(&nombre, valor.clone()) {
-                    self.entorno_actual.definir_variable(nombre, valor);
+                    eprintln!(
+                        "Error: Variable '{}' no definida. Use 'v:' para declarar.",
+                        nombre
+                    );
                 }
             }
             umbral_parser::ast::ObjetivoAsignacion::Propiedad { objeto, propiedad } => {
@@ -504,7 +515,9 @@ impl Interpretador {
     fn son_iguales(&self, a: &Valor, b: &Valor) -> bool {
         match (a, b) {
             (Valor::Entero(x), Valor::Entero(y)) => x == y,
-            (Valor::Flotante(x), Valor::Flotante(y)) => x == y,
+            (Valor::Flotante(x), Valor::Flotante(y)) => (x - y).abs() < f64::EPSILON,
+            (Valor::Entero(x), Valor::Flotante(y)) => (*x as f64 - y).abs() < f64::EPSILON,
+            (Valor::Flotante(x), Valor::Entero(y)) => (x - *y as f64).abs() < f64::EPSILON,
             (Valor::Booleano(x), Valor::Booleano(y)) => x == y,
             (Valor::Texto(x), Valor::Texto(y)) => x == y,
             (Valor::Nulo, Valor::Nulo) => true,
@@ -564,12 +577,22 @@ impl Interpretador {
     }
 
     fn ejecutar_bloque(&mut self, bloque: Vec<Sentencia>) -> Option<Valor> {
+        let anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(None));
+        self.entorno_actual = Entorno::nuevo(Some(anterior));
+
+        let mut resultado = None;
         for sentencia in bloque {
             if let Some(valor) = self.ejecutar_sentencia(sentencia) {
-                return Some(valor);
+                resultado = Some(valor);
+                break;
             }
         }
-        None
+
+        if let Some(parent) = self.entorno_actual.parent.take() {
+            self.entorno_actual = *parent;
+        }
+
+        resultado
     }
 
     fn ejecutar_switch(&mut self, switch: Switch) -> Option<Valor> {
@@ -588,9 +611,8 @@ impl Interpretador {
     }
 
     fn ejecutar_for(&mut self, for_loop: For) -> Option<Valor> {
-        let parent = self.entorno_actual.clone();
-        let entorno_anterior =
-            std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(Some(parent)));
+        let anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(None));
+        self.entorno_actual = Entorno::nuevo(Some(anterior));
 
         self.ejecutar_sentencia(*for_loop.inicializacion);
 
@@ -601,14 +623,18 @@ impl Interpretador {
             }
 
             if let Some(valor) = self.ejecutar_bloque(for_loop.bloque.clone()) {
-                self.entorno_actual = entorno_anterior;
+                if let Some(parent) = self.entorno_actual.parent.take() {
+                    self.entorno_actual = *parent;
+                }
                 return Some(valor);
             }
 
             self.evaluar_expresion(for_loop.incremento.clone());
         }
 
-        self.entorno_actual = entorno_anterior;
+        if let Some(parent) = self.entorno_actual.parent.take() {
+            self.entorno_actual = *parent;
+        }
         None
     }
 
@@ -617,21 +643,24 @@ impl Interpretador {
             return None;
         };
 
-        let parent = self.entorno_actual.clone();
-        let entorno_anterior =
-            std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(Some(parent)));
+        let anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(None));
+        self.entorno_actual = Entorno::nuevo(Some(anterior));
 
         for item in items {
             self.entorno_actual
                 .definir_variable(foreach.variable.clone(), item);
 
             if let Some(valor) = self.ejecutar_bloque(foreach.bloque.clone()) {
-                self.entorno_actual = entorno_anterior;
+                if let Some(parent) = self.entorno_actual.parent.take() {
+                    self.entorno_actual = *parent;
+                }
                 return Some(valor);
             }
         }
 
-        self.entorno_actual = entorno_anterior;
+        if let Some(parent) = self.entorno_actual.parent.take() {
+            self.entorno_actual = *parent;
+        }
         None
     }
 
@@ -773,9 +802,8 @@ impl Interpretador {
             return;
         };
 
-        let parent = self.entorno_actual.clone();
-        let entorno_anterior =
-            std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(Some(parent)));
+        let anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(None));
+        self.entorno_actual = Entorno::nuevo(Some(anterior));
 
         // Vincular 'th' (__this__) con la instancia actual
         self.entorno_actual
@@ -784,7 +812,9 @@ impl Interpretador {
         self.vincular_parametros_constructor(&constructor.parametros, args);
         self.ejecutar_cuerpo_constructor(constructor.cuerpo, instancia);
 
-        self.entorno_actual = entorno_anterior;
+        if let Some(parent) = self.entorno_actual.parent.take() {
+            self.entorno_actual = *parent;
+        }
     }
 
     fn obtener_constructor(&self, tipo: &str) -> Option<umbral_parser::ast::Metodo> {
@@ -945,9 +975,8 @@ impl Interpretador {
             .map(|arg| self.evaluar_expresion(arg))
             .collect();
 
-        let parent = self.entorno_actual.clone();
-        let entorno_anterior =
-            std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(Some(parent)));
+        let anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(None));
+        self.entorno_actual = Entorno::nuevo(Some(anterior));
 
         // Vincular 'th' (__this__) con la instancia actual
         self.entorno_actual
@@ -963,13 +992,17 @@ impl Interpretador {
         self.valor_retorno = None;
         for sentencia in metodo_def.cuerpo {
             if let Some(valor) = self.ejecutar_sentencia(sentencia) {
-                self.entorno_actual = entorno_anterior;
+                if let Some(parent) = self.entorno_actual.parent.take() {
+                    self.entorno_actual = *parent;
+                }
                 self.valor_retorno = None;
                 return valor;
             }
         }
 
-        self.entorno_actual = entorno_anterior;
+        if let Some(parent) = self.entorno_actual.parent.take() {
+            self.entorno_actual = *parent;
+        }
         self.valor_retorno = None;
         Valor::Nulo
     }

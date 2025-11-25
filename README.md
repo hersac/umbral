@@ -403,6 +403,81 @@ v: x = 10; !! Comentario al final de línea
 
 ---
 
+---
+
+## 📜 Especificación Formal (v1.0.0)
+
+### Sistema de Tipos
+
+#### Tipos Primitivos
+*   **Int**: Entero con signo de 64 bits (`i64`).
+*   **Flo**: Punto flotante de doble precisión (`f64`).
+*   **Bool**: Booleano (`true`, `false`).
+*   **Str**: Cadena de caracteres UTF-8.
+*   **Null**: Representa la ausencia de valor (`null`).
+*   **Void**: Tipo de retorno para funciones sin valor.
+
+#### Tipos Compuestos
+*   **List**: Secuencia ordenada de valores (`[]`).
+*   **Dict**: Colección de pares clave-valor (`HashMap`).
+*   **Obj**: Instancia de una clase.
+*   **Func**: Referencia a una función.
+
+#### Reglas de Tipado
+*   **Inferencia**: El tipo se infiere en la asignación si no se especifica.
+*   **Anotación**: `v: nombre->Tipo = valor;` fuerza la validación del tipo.
+*   **Coerción**: No existe coerción implícita entre tipos incompatibles (ej. `Int` + `Str` es error, excepto en interpolación).
+
+### Gramática (EBNF Simplificado)
+
+```ebnf
+programa ::= sentencia*
+
+sentencia ::= declaracion_var
+            | declaracion_const
+            | asignacion
+            | definicion_func
+            | definicion_clase
+            | control_flujo
+            | expresion ';'
+
+declaracion_var ::= 'v:' identificador ('->' tipo)? '=' expresion ';'
+declaracion_const ::= 'c:' identificador ('->' tipo)? '=' expresion ';'
+
+asignacion ::= identificador '=' expresion ';'
+
+definicion_func ::= 'f:' identificador '(' parametros? ')' ('->' tipo)? bloque
+
+definicion_clase ::= 'cs:' identificador '{' miembro_clase* '}'
+
+control_flujo ::= if_stmt | while_stmt | for_stmt | switch_stmt
+
+bloque ::= '{' sentencia* '}'
+```
+
+### Reglas Semánticas
+
+#### Igualdad
+*   **Igualdad Numérica**: `Int` y `Flo` son comparables. `10 == 10.0` es `true`.
+*   **Igualdad Estricta por Tipo**: Tipos diferentes (salvo numéricos) nunca son iguales. `10 == "10"` es `false`.
+*   **Identidad**: Objetos y Listas se comparan por referencia.
+
+#### Alcance y Variables
+*   **Declaración Explícita**: Toda variable debe ser declarada con `v:` o `c:` antes de usarse.
+*   **Asignación**: Asignar a una variable no declarada es un **ERROR**. No existe declaración implícita.
+*   **Shadowing**: Declarar una variable con el mismo nombre que una existente en un ámbito superior generará una **ADVERTENCIA** (Warning).
+*   **Ámbito**: Léxico (bloques `{}`).
+
+#### Truthiness
+Los siguientes valores se evalúan como `false`: `false`, `null`, `0`, `0.0`, `""`, `[]`. Todo lo demás es `true`.
+
+### Sistema de Módulos
+*   **Importación**: `equip [item] origin 'ruta';`
+*   **Exportación**: `out` prefijo en declaraciones.
+*   **Rutas**: Relativas al archivo actual.
+
+---
+
 ## 🏗️ Arquitectura
 
 Umbral está construido como un intérprete modular en Rust:

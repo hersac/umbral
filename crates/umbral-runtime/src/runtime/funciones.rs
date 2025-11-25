@@ -15,9 +15,8 @@ impl GestorFunciones {
         argumentos: Vec<Valor>,
         interprete: &mut crate::runtime::interpretador::Interpretador,
     ) -> Valor {
-        let parent = interprete.entorno_actual.clone();
-        let entorno_anterior =
-            std::mem::replace(&mut interprete.entorno_actual, Entorno::nuevo(Some(parent)));
+        let anterior = std::mem::replace(&mut interprete.entorno_actual, Entorno::nuevo(None));
+        interprete.entorno_actual = Entorno::nuevo(Some(anterior));
 
         for (i, param) in funcion.parametros.iter().enumerate() {
             let valor = argumentos.get(i).cloned().unwrap_or(Valor::Nulo);
@@ -34,7 +33,9 @@ impl GestorFunciones {
             }
         }
 
-        interprete.entorno_actual = entorno_anterior;
+        if let Some(parent) = interprete.entorno_actual.parent.take() {
+            interprete.entorno_actual = *parent;
+        }
 
         resultado
     }

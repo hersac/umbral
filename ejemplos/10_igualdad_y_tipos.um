@@ -1,0 +1,38 @@
+!! Ejemplo 10: Igualdad y Tipos
+!! Demuestra las reglas de igualdad y coerción de tipos en Umbral v1.0
+
+tprint("--- Igualdad Numérica ---");
+v: entero = 10;
+v: flotante = 10.0;
+
+i: (entero == flotante) {
+    tprint("10 (Int) es igual a 10.0 (Flo) -> Correcto");
+} e: {
+    tprint("Error: Deberían ser iguales");
+}
+
+tprint("\n--- Igualdad Estricta de Tipos ---");
+v: texto = "10";
+
+i: (entero == texto) {
+    tprint("Error: Int y Str no deberían ser iguales");
+} e: {
+    tprint("10 (Int) es diferente de '10' (Str) -> Correcto");
+}
+
+tprint("\n--- Truthiness (Valores Falsy) ---");
+f: verificar(valor, nombre->Str) {
+    i: (valor) {
+        tprint("&nombre es verdadero");
+    } e: {
+        tprint("&nombre es falso");
+    }
+}
+
+verificar(0, "0");
+verificar(0.0, "0.0");
+verificar("", "String vacío");
+verificar(null, "null");
+verificar({}, "Lista vacía");
+verificar(1, "1");
+verificar("hola", "String lleno");
