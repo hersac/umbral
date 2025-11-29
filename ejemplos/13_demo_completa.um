@@ -1,0 +1,463 @@
+!! ============================================================
+!! DEMOSTRACIÓN COMPLETA DEL LENGUAJE UMBRAL
+!! Este archivo muestra todas las características del lenguaje
+!! ============================================================
+
+equip { suma, multiplica } origin 'modulos/matematicas.um';
+
+!! ============================================================
+!! 1. VARIABLES Y CONSTANTES
+!! ============================================================
+
+v: nombre = "Carlos";
+v: edad->Int = 30;
+v: activo->Bool = true;
+v: saldo->Flo = 1500.75;
+
+c: PI = 3.14159;
+c: VERSION = "1.0.0";
+c: MAX_INTENTOS = 3;
+
+tprint("=== Variables y Constantes ===");
+tprint("Nombre: &nombre");
+tprint("Edad: &edad");
+tprint("PI: &PI");
+
+!! ============================================================
+!! 2. INTERPOLACIÓN DE STRINGS
+!! ============================================================
+
+tprint("\n=== Interpolación de Strings ===");
+
+!! Interpolación con comillas dobles
+v: mensaje = "Hola, mi nombre es &nombre y tengo &edad años";
+tprint(mensaje);
+
+!! Interpolación con triple comilla simple
+v: textoMultilinea = '''
+Bienvenido a Umbral v&VERSION
+Usuario: &nombre
+Estado: Activo
+Saldo disponible: $&saldo
+''';
+tprint(textoMultilinea);
+
+!! ============================================================
+!! 3. ARREGLOS
+!! ============================================================
+
+tprint("\n=== Arreglos ===");
+
+v: numeros = {1, 2, 3, 4, 5};
+v: frutas = {'manzana', 'banana', 'naranja', 'uva'};
+v: mixto = {1, 'texto', true, 3.14, null};
+
+tprint("Números: &numeros");
+tprint("Primera fruta: &frutas[0]");
+tprint("Última fruta: &frutas[3]");
+tprint("Arreglo mixto: &mixto");
+
+!! Modificar arreglos
+frutas[1] = 'pera';
+numeros[0] = 10;
+tprint("Frutas modificadas: &frutas");
+
+!! Operador Spread
+c: arr1 = {1, 2, 3};
+c: arr2 = {4, 5, 6};
+c: combinado = { &arr1, &arr2 };
+tprint("Arrays combinados con spread: &combinado");
+
+!! ============================================================
+!! 4. OBJETOS/DICCIONARIOS
+!! ============================================================
+
+tprint("\n=== Objetos ===");
+
+v: persona = [
+    "nombre" => "Ana García",
+    "edad" => 28,
+    "profesion" => "Desarrolladora",
+    "activo" => true,
+    "ciudad" => "Madrid"
+];
+
+tprint("Persona: &persona.nombre");
+tprint("Profesión: &persona.profesion");
+tprint("Ciudad: &persona.ciudad");
+tprint("Edad: &persona.edad");
+
+!! Modificar objetos
+persona.edad = 29;
+persona.ciudad = "Barcelona";
+tprint("Nueva edad: &persona.edad");
+tprint("Nueva ciudad: &persona.ciudad");
+
+!! ============================================================
+!! 5. FUNCIONES
+!! ============================================================
+
+tprint("\n=== Funciones ===");
+
+!! Función simple
+f: saludar(nombre->Str)->Str {
+    r: ("¡Hola, &nombre!");
+}
+
+tprint(saludar("María"));
+
+!! Función con múltiples parámetros
+f: calcularAreaRectangulo(base->Int, altura->Int)->Int {
+    r: (base * altura);
+}
+
+v: area = calcularAreaRectangulo(5, 3);
+tprint("Área del rectángulo: &area");
+
+!! Función con lógica compleja
+f: clasificarEdad(edad->Int)->Str {
+    i: (edad < 13) {
+        r: ("Niño");
+    } ie: (edad < 18) {
+        r: ("Adolescente");
+    } ie: (edad < 65) {
+        r: ("Adulto");
+    } e: {
+        r: ("Adulto mayor");
+    }
+}
+
+tprint("Clasificación para 10 años: &clasificarEdad(10)");
+tprint("Clasificación para 25 años: &clasificarEdad(25)");
+tprint("Clasificación para 70 años: &clasificarEdad(70)");
+
+!! Función recursiva (factorial)
+f: factorial(n->Int)->Int {
+    i: (n <= 1) {
+        r: (1);
+    }
+    r: (n * factorial(n - 1));
+}
+
+tprint("Factorial de 5: &factorial(5)");
+
+!! ============================================================
+!! 6. CONDICIONALES
+!! ============================================================
+
+tprint("\n=== Condicionales ===");
+
+v: temperatura->Int = 25;
+v: esDiaSoleado->Bool = true;
+
+i: (temperatura > 30) {
+    tprint("Hace mucho calor");
+} ie: (temperatura > 20) {
+    tprint("Temperatura agradable");
+} e: {
+    tprint("Hace frío");
+}
+
+!! Condicional con operadores lógicos
+i: (esDiaSoleado && temperatura > 20) {
+    tprint("¡Perfecto para ir a la playa!");
+}
+
+!! ============================================================
+!! 7. ITERACIONES (BUCLES)
+!! ============================================================
+
+tprint("\n=== Iteraciones ===");
+
+!! Bucle mientras
+tprint("Bucle mientras (1 a 5):");
+v: contador->Int = 1;
+wh: (contador <= 5) {
+    tprint("  Contador: &contador");
+    contador = contador + 1;
+}
+
+!! Bucle for
+tprint("\nBucle for (0 a 4):");
+fo: (v: i = 0; i < 5; i++) {
+    tprint("  Iteración: &i");
+}
+
+!! Iterar sobre arreglo
+tprint("\nIterando sobre frutas:");
+fo: (v: i = 0; i < 4; i++) {
+    tprint("  Fruta &i: &frutas[i]");
+}
+
+!! Bucle anidado
+tprint("\nTabla de multiplicar del 3:");
+fo: (v: i = 1; i <= 5; i++) {
+    v: resultado = 3 * i;
+    tprint("  3 x &i = &resultado");
+}
+
+!! ============================================================
+!! 8. CLASES Y OBJETOS
+!! ============================================================
+
+tprint("\n=== Clases y Objetos ===");
+
+cs: CuentaBancaria {
+    pr: titular->Str;
+    pr: saldo->Flo;
+    pr: numTransacciones->Int;
+
+    pu f: CuentaBancaria(titular->Str, saldoInicial->Flo) {
+        th.titular = titular;
+        th.saldo = saldoInicial;
+        th.numTransacciones = 0;
+    }
+
+    pu f: depositar(monto->Flo)->Void {
+        th.saldo = th.saldo + monto;
+        th.numTransacciones = th.numTransacciones + 1;
+        tprint("  Depósito exitoso. Nuevo saldo: $&th.saldo");
+    }
+
+    pu f: retirar(monto->Flo)->Bool {
+        i: (monto > th.saldo) {
+            tprint("  Error: Saldo insuficiente");
+            r: (false);
+        }
+        th.saldo = th.saldo - monto;
+        th.numTransacciones = th.numTransacciones + 1;
+        tprint("  Retiro exitoso. Nuevo saldo: $&th.saldo");
+        r: (true);
+    }
+
+    pu f: obtenerSaldo()->Flo {
+        r: (th.saldo);
+    }
+
+    pu f: mostrarInfo()->Void {
+        tprint("\n--- Información de Cuenta ---");
+        tprint("Titular: &th.titular");
+        tprint("Saldo actual: $&th.saldo");
+        tprint("Total de transacciones: &th.numTransacciones");
+    }
+}
+
+c: miCuenta = n: CuentaBancaria("Carlos Pérez", 1000.0);
+miCuenta.depositar(500.0);
+miCuenta.retirar(200.0);
+miCuenta.retirar(2000.0);
+miCuenta.mostrarInfo();
+
+!! ============================================================
+!! 9. IMPORTACIÓN DE MÓDULOS
+!! ============================================================
+
+tprint("\n=== Importación de Módulos ===");
+
+v: resultadoSuma = suma(15, 25);
+v: resultadoMultiplicacion = multiplica(7, 8);
+
+tprint("Suma importada (15 + 25): &resultadoSuma");
+tprint("Multiplicación importada (7 × 8): &resultadoMultiplicacion");
+
+!! ============================================================
+!! 10. UTILIZACIÓN DE LIBRERÍA STD
+!! ============================================================
+
+tprint("\n=== Librería Estándar (STD) ===");
+
+!! Funciones de String
+tprint("\nFunciones de cadenas:");
+v: texto = "  Hola Umbral  ";
+v: textoLimpio = Std.trim(texto);
+tprint("Std.trim('  Hola Umbral  '): '&textoLimpio'");
+
+v: textoMayus = Std.to_upper("umbral");
+tprint("Std.to_upper('umbral'): &textoMayus");
+
+v: textoMinus = Std.to_lower("UMBRAL");
+tprint("Std.to_lower('UMBRAL'): &textoMinus");
+
+v: reemplazo = Std.replace("hola", "o", "0");
+tprint("Std.replace('hola', 'o', '0'): &reemplazo");
+
+!! Funciones numéricas
+tprint("\nFunciones numéricas:");
+v: numeroTexto = Std.parse_int("42");
+tprint("Std.parse_int('42'): &numeroTexto");
+
+v: decimalTexto = Std.parse_float("3.14");
+tprint("Std.parse_float('3.14'): &decimalTexto");
+
+v: textoNum = Std.to_string(123);
+tprint("Std.to_string(123): &textoNum");
+
+v: valorAbs = Std.abs(-10);
+tprint("Std.abs(-10): &valorAbs");
+
+!! Funciones de colecciones
+tprint("\nFunciones de colecciones:");
+v: miArreglo = {5, 2, 8, 1, 9};
+v: longitud = Std.len(miArreglo);
+tprint("Std.len(arreglo): &longitud");
+
+v: nuevaLista = Std.push(miArreglo, 15);
+tprint("Std.push(arreglo, 15): lista actualizada");
+
+v: sinUltimo = Std.pop(miArreglo);
+tprint("Std.pop(arreglo): lista sin último elemento");
+
+!! ============================================================
+!! 11. OPERACIONES AVANZADAS
+!! ============================================================
+
+tprint("\n=== Operaciones Avanzadas ===");
+
+!! Funciones como parámetros
+f: aplicarOperacion(a->Int, b->Int, operacion)->Int {
+    r: (operacion(a, b));
+}
+
+f: sumar2(a->Int, b->Int)->Int { r: (a + b); }
+f: restar2(a->Int, b->Int)->Int { r: (a - b); }
+
+v: resOpSuma = aplicarOperacion(10, 5, sumar2);
+v: resOpResta = aplicarOperacion(10, 5, restar2);
+tprint("Aplicar suma: &resOpSuma");
+tprint("Aplicar resta: &resOpResta");
+
+!! Función que procesa arreglos
+f: procesarArreglo(arr, fn)->[]Int {
+    v: resultado = {};
+    v: len = Std.len(arr);
+    fo: (v: i = 0; i < len; i++) {
+        resultado = Std.push(resultado, fn(arr[i]));
+    }
+    r: (resultado);
+}
+
+f: duplicar(n->Int)->Int { r: (n * 2); }
+v: numerosOriginales = {1, 2, 3, 4, 5};
+v: numerosDuplicados = procesarArreglo(numerosOriginales, duplicar);
+tprint("Números originales: &numerosOriginales");
+tprint("Números duplicados: &numerosDuplicados");
+
+!! ============================================================
+!! 12. MANEJO DE ERRORES Y VALIDACIONES
+!! ============================================================
+
+tprint("\n=== Validaciones ===");
+
+f: dividir(a->Int, b->Int)->Flo {
+    i: (b == 0) {
+        tprint("Error: No se puede dividir por cero");
+        r: (0.0);
+    }
+    r: (a / b);
+}
+
+v: resultado1 = dividir(10, 2);
+v: resultado2 = dividir(10, 0);
+tprint("10 / 2 = &resultado1");
+tprint("10 / 0 = &resultado2");
+
+!! ============================================================
+!! 13. EJEMPLO PRÁCTICO: GESTIÓN DE INVENTARIO
+!! ============================================================
+
+tprint("\n=== Ejemplo Práctico: Sistema de Inventario ===");
+
+cs: Producto {
+    pr: id->Int;
+    pr: nombre->Str;
+    pr: precio->Flo;
+    pr: cantidad->Int;
+
+    pu f: Producto(id->Int, nombre->Str, precio->Flo, cantidad->Int) {
+        th.id = id;
+        th.nombre = nombre;
+        th.precio = precio;
+        th.cantidad = cantidad;
+    }
+
+    pu f: valorTotal()->Flo {
+        r: (th.precio * th.cantidad);
+    }
+
+    pu f: mostrar()->Void {
+        v: total = th.valorTotal();
+        tprint("  [&th.id] &th.nombre - $&th.precio x &th.cantidad = $&total");
+    }
+}
+
+cs: Inventario {
+    pr: numProductos->Int;
+    pr: producto1->Producto;
+    pr: producto2->Producto;
+    pr: producto3->Producto;
+    pr: producto4->Producto;
+
+    pu f: Inventario() {
+        th.numProductos = 0;
+    }
+
+    pu f: agregar(producto->Producto)->Void {
+        th.numProductos = th.numProductos + 1;
+        i: (th.numProductos == 1) { th.producto1 = producto; }
+        i: (th.numProductos == 2) { th.producto2 = producto; }
+        i: (th.numProductos == 3) { th.producto3 = producto; }
+        i: (th.numProductos == 4) { th.producto4 = producto; }
+        tprint("✓ Producto agregado");
+    }
+
+    pu f: valorTotal()->Flo {
+        v: total->Flo = 0.0;
+        i: (th.numProductos >= 1) { total = total + th.producto1.valorTotal(); }
+        i: (th.numProductos >= 2) { total = total + th.producto2.valorTotal(); }
+        i: (th.numProductos >= 3) { total = total + th.producto3.valorTotal(); }
+        i: (th.numProductos >= 4) { total = total + th.producto4.valorTotal(); }
+        r: (total);
+    }
+
+    pu f: mostrarTodo()->Void {
+        tprint("\n--- Inventario Completo ---");
+        i: (th.numProductos >= 1) { th.producto1.mostrar(); }
+        i: (th.numProductos >= 2) { th.producto2.mostrar(); }
+        i: (th.numProductos >= 3) { th.producto3.mostrar(); }
+        i: (th.numProductos >= 4) { th.producto4.mostrar(); }
+        v: total = th.valorTotal();
+        tprint("\nValor total del inventario: $&total");
+    }
+}
+
+c: inventario = n: Inventario();
+inventario.agregar(n: Producto(1, "Laptop", 1200.0, 5));
+inventario.agregar(n: Producto(2, "Mouse", 25.0, 20));
+inventario.agregar(n: Producto(3, "Teclado", 75.0, 15));
+inventario.agregar(n: Producto(4, "Monitor", 300.0, 8));
+inventario.mostrarTodo();
+
+!! ============================================================
+!! 14. RESUMEN FINAL
+!! ============================================================
+
+tprint("\n============================================================");
+tprint("=== DEMOSTRACIÓN COMPLETA FINALIZADA ===");
+tprint("============================================================");
+tprint('''
+Este archivo demostró:
+✓ Variables y constantes (v:, c:)
+✓ Interpolación de strings (& con comillas dobles y triples)
+✓ Arreglos y operador spread ({}, &array)
+✓ Objetos/Diccionarios (["clave" => valor])
+✓ Funciones (f:, con tipos y retorno)
+✓ Condicionales (i:, ie:, e:)
+✓ Iteraciones (wh:, fo:)
+✓ Clases con POO (cs:, pr:, pu:, th.)
+✓ Importación de módulos (equip/origin)
+✓ Librería estándar (Std.*)
+✓ Operaciones avanzadas (funciones de orden superior)
+✓ Ejemplo práctico real (sistema de inventario)
+
+¡Umbral es un lenguaje completo y poderoso!
+''');
