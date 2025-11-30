@@ -3,7 +3,7 @@ use std::fs;
 use std::process;
 use umbral_interpreter::Interpreter;
 
-const VERSION: &str = "1.0.0";
+const VERSION: &str = "1.1.5";
 
 fn main() {
     let args: Vec<String> = env::args().collect();

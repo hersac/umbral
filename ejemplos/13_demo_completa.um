@@ -15,7 +15,7 @@ v: activo->Bool = true;
 v: saldo->Flo = 1500.75;
 
 c: PI = 3.14159;
-c: VERSION = "1.0.0";
+c: VERSION = "1.1.5";
 c: MAX_INTENTOS = 3;
 
 tprint("=== Variables y Constantes ===");

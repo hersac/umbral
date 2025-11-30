@@ -1,6 +1,6 @@
 # Umbral
 
-**Versión 1.0.0**
+**Versión 1.1.5**
 
 Lenguaje de programación de propósito general con sintaxis expresiva y moderna. Diseñado para ser fácil de aprender y productivo de usar.
 
@@ -536,7 +536,7 @@ v: claves = Std.keys(dict);                !! ["a", "b"]
 
 ---
 
-## 📜 Especificación Formal (v1.0.0)
+## 📜 Especificación Formal (v1.1.5)
 
 ### Sistema de Tipos
 
@@ -858,7 +858,7 @@ umbral ejemplos/09_uso_importaciones.um
 
 ## 🗺️ Roadmap
 
-### ✅ Versión 1.0.0 (Actual)
+### ✅ Versión 1.1.5 (Actual)
 
 - ✅ Lexer completo
 - ✅ Parser con AST

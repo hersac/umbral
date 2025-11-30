@@ -1,4 +1,4 @@
-c: VERSION = '1.0.0';
+c: VERSION = "1.1.5";
 c: MAX_ESTUDIANTES = 50;
 c: NOTA_APROBATORIA = 60;
 

@@ -6,7 +6,7 @@
 set -e
 
 echo "╔════════════════════════════════════════╗"
-echo "║   Instalador de Umbral v1.0.0          ║"
+echo "║   Instalador de Umbral v1.1.5          ║"
 echo "╚════════════════════════════════════════╝"
 echo ""
 
