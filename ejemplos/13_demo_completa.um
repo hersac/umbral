@@ -57,16 +57,21 @@ tprint("Primera fruta: &frutas[0]");
 tprint("Última fruta: &frutas[3]");
 tprint("Arreglo mixto: &mixto");
 
-!! Modificar arreglos
-frutas[1] = 'pera';
-numeros[0] = 10;
-tprint("Frutas modificadas: &frutas");
+!! Los arreglos en Umbral son inmutables
+!! Usar métodos como push() y pop() para crear nuevos arreglos
 
 !! Operador Spread
 c: arr1 = {1, 2, 3};
 c: arr2 = {4, 5, 6};
 c: combinado = { &arr1, &arr2 };
 tprint("Arrays combinados con spread: &combinado");
+
+!! Métodos de arreglos
+v: listaMetodos = {10, 20};
+v: conPush = listaMetodos.push(30);
+tprint("Después de push(30): &conPush");
+v: longMetodo = conPush.len();
+tprint("Longitud con .len(): &longMetodo");
 
 !! ============================================================
 !! 4. OBJETOS/DICCIONARIOS
@@ -87,11 +92,16 @@ tprint("Profesión: &persona.profesion");
 tprint("Ciudad: &persona.ciudad");
 tprint("Edad: &persona.edad");
 
-!! Modificar objetos
-persona.edad = 29;
-persona.ciudad = "Barcelona";
-tprint("Nueva edad: &persona.edad");
-tprint("Nueva ciudad: &persona.ciudad");
+!! Los diccionarios en Umbral son inmutables
+!! Para modificar, crear un nuevo diccionario
+v: personaActualizada = [
+    "nombre" => "Ana García",
+    "edad" => 29,
+    "profesion" => "Desarrolladora",
+    "activo" => true,
+    "ciudad" => "Barcelona"
+];
+tprint("Ciudad actualizada: &personaActualizada.ciudad");
 
 !! ============================================================
 !! 5. FUNCIONES
@@ -177,23 +187,29 @@ wh: (contador <= 5) {
     contador = contador + 1;
 }
 
-!! Bucle for
-tprint("\nBucle for (0 a 4):");
-fo: (v: i = 0; i < 5; i++) {
+!! Bucle mientras (estilo for)
+tprint("\nBucle mientras (0 a 4):");
+v: i->Int = 0;
+wh: (i < 5) {
     tprint("  Iteración: &i");
+    i = i + 1;
 }
 
 !! Iterar sobre arreglo
 tprint("\nIterando sobre frutas:");
-fo: (v: i = 0; i < 4; i++) {
-    tprint("  Fruta &i: &frutas[i]");
+v: j->Int = 0;
+wh: (j < 4) {
+    tprint("  Fruta &j: &frutas[j]");
+    j = j + 1;
 }
 
 !! Bucle anidado
 tprint("\nTabla de multiplicar del 3:");
-fo: (v: i = 1; i <= 5; i++) {
-    v: resultado = 3 * i;
-    tprint("  3 x &i = &resultado");
+v: k->Int = 1;
+wh: (k <= 5) {
+    v: resultado = 3 * k;
+    tprint("  3 x &k = &resultado");
+    k = k + 1;
 }
 
 !! ============================================================
@@ -298,14 +314,23 @@ tprint("Std.abs(-10): &valorAbs");
 !! Funciones de colecciones
 tprint("\nFunciones de colecciones:");
 v: miArreglo = {5, 2, 8, 1, 9};
+
+!! Usando Std (forma tradicional)
 v: longitud = Std.len(miArreglo);
 tprint("Std.len(arreglo): &longitud");
 
 v: nuevaLista = Std.push(miArreglo, 15);
 tprint("Std.push(arreglo, 15): lista actualizada");
 
-v: sinUltimo = Std.pop(miArreglo);
-tprint("Std.pop(arreglo): lista sin último elemento");
+!! Usando métodos directos (forma nueva)
+v: longitudDirecta = miArreglo.len();
+tprint("arreglo.len(): &longitudDirecta");
+
+v: nuevaListaDirecta = miArreglo.push(99);
+tprint("arreglo.push(99): lista con nuevo elemento");
+
+v: listaReducida = miArreglo.pop();
+tprint("arreglo.pop(): lista sin último elemento");
 
 !! ============================================================
 !! 11. OPERACIONES AVANZADAS
@@ -330,8 +355,10 @@ tprint("Aplicar resta: &resOpResta");
 f: procesarArreglo(arr, fn)->[]Int {
     v: resultado = {};
     v: len = Std.len(arr);
-    fo: (v: i = 0; i < len; i++) {
-        resultado = Std.push(resultado, fn(arr[i]));
+    v: idx->Int = 0;
+    wh: (idx < len) {
+        resultado = Std.push(resultado, fn(arr[idx]));
+        idx = idx + 1;
     }
     r: (resultado);
 }
@@ -449,6 +476,7 @@ Este archivo demostró:
 ✓ Variables y constantes (v:, c:)
 ✓ Interpolación de strings (& con comillas dobles y triples)
 ✓ Arreglos y operador spread ({}, &array)
+✓ Métodos de arreglos (.push(), .pop(), .len(), .length)
 ✓ Objetos/Diccionarios (["clave" => valor])
 ✓ Funciones (f:, con tipos y retorno)
 ✓ Condicionales (i:, ie:, e:)

@@ -375,6 +375,15 @@ v: numeros = {10, 20, 30};
 tprint(numeros[0]);        !! 10
 tprint(numeros.length);    !! 3
 
+!! Métodos de arrays
+v: lista = {1, 2, 3};
+v: nuevaLista = lista.push(4);      !! {1, 2, 3, 4}
+v: sinUltimo = lista.pop();         !! {1, 2}
+v: longitud = lista.len();          !! 3
+
+!! Encadenamiento de métodos
+v: resultado = {1, 2}.push(3).push(4).pop();  !! {1, 2, 3}
+
 !! Objetos
 v: config = [
     "host" => "localhost",
@@ -439,11 +448,19 @@ v: contenido = Std.read_file("datos.txt");
 ### Colecciones
 
 ```umbral
+!! Métodos de Std (también disponibles directamente en arrays)
 v: lista = {1, 2, 3};
 v: longitud = Std.len(lista);              !! 3
 v: nueva = Std.push(lista, 4);             !! {1, 2, 3, 4}
 v: sin_ultimo = Std.pop(lista);            !! {1, 2}
 
+!! Equivalente usando métodos directos
+v: lista2 = {1, 2, 3};
+v: longitud2 = lista2.len();               !! 3
+v: nueva2 = lista2.push(4);                !! {1, 2, 3, 4}
+v: sin_ultimo2 = lista2.pop();             !! {1, 2}
+
+!! Diccionarios
 v: dict = ["a" => 1, "b" => 2];
 v: claves = Std.keys(dict);                !! ["a", "b"]
 ```

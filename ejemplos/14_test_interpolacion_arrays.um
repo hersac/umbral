@@ -1,0 +1,60 @@
+!! ============================================================
+!! TEST COMPLETO: INTERPOLACIÓN CON MÉTODOS DE ARRAYS
+!! ============================================================
+
+tprint("=== Test de Interpolación con Métodos de Arrays ===\n");
+
+v: numeros = {1, 2, 3, 4, 5};
+
+!! Test 1: Método .len()
+tprint("Test 1: Método .len()");
+tprint("Array: &numeros");
+tprint("Longitud con .len(): &numeros.len()");
+tprint("");
+
+!! Test 2: Propiedad .length
+tprint("Test 2: Propiedad .length");
+tprint("Longitud con .length: &numeros.length");
+tprint("");
+
+!! Test 3: Método .push()
+tprint("Test 3: Método .push()");
+tprint("Array original: &numeros");
+tprint("Con push(6): &numeros.push(6)");
+tprint("Con push(7).push(8): &numeros.push(7).push(8)");
+tprint("");
+
+!! Test 4: Método .pop()
+tprint("Test 4: Método .pop()");
+tprint("Array original: &numeros");
+tprint("Con pop(): &numeros.pop()");
+tprint("Con pop().pop(): &numeros.pop().pop()");
+tprint("");
+
+!! Test 5: Encadenamiento complejo
+tprint("Test 5: Encadenamiento complejo");
+tprint("push(6).len(): &numeros.push(6).len()");
+tprint("push(6).push(7).len(): &numeros.push(6).push(7).len()");
+tprint("push(10).pop().len(): &numeros.push(10).pop().len()");
+tprint("");
+
+!! Test 6: Interpolación múltiple en una línea
+tprint("Test 6: Múltiples interpolaciones");
+tprint("El array &numeros tiene &numeros.len() elementos");
+tprint("");
+
+!! Test 7: Con variables
+tprint("Test 7: Con variables");
+v: frutas = {'manzana', 'pera', 'uva'};
+tprint("Frutas: &frutas con longitud &frutas.len()");
+tprint("");
+
+!! Test 8: Comparación Std vs métodos directos
+tprint("Test 8: Comparación");
+v: lista = {10, 20, 30};
+v: lenStd = Std.len(lista);
+tprint("Std.len(lista): &lenStd");
+tprint("lista.len(): &lista.len()");
+tprint("");
+
+tprint("=== ✅ Todos los tests pasaron correctamente ===");

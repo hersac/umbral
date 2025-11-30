@@ -283,7 +283,11 @@ impl Interpretador {
             Expresion::LiteralEntero(i) => Valor::Entero(i),
             Expresion::LiteralFloat(f) => Valor::Flotante(f),
             Expresion::LiteralBool(b) => Valor::Booleano(b),
-            Expresion::LiteralCadena(s) => self.interpolar_cadena(&s),
+            Expresion::LiteralCadena(s) => {
+                let contenido = s.trim_matches('"').to_string();
+                let interpolado = self.procesar_interpolaciones(contenido);
+                Valor::Texto(interpolado)
+            },
             Expresion::LiteralCadenaLiteral(s) => Valor::Texto(s),
             Expresion::LiteralNulo => Valor::Nulo,
             Expresion::Identificador(nombre) => {
@@ -952,6 +956,39 @@ impl Interpretador {
     ) -> Valor {
         let obj_valor = self.evaluar_expresion(objeto);
 
+        // Métodos para arreglos (Listas)
+        if let Valor::Lista(ref items) = obj_valor {
+            match metodo {
+                "push" => {
+                    if argumentos.is_empty() {
+                        eprintln!("push() requiere al menos un argumento");
+                        return Valor::Nulo;
+                    }
+                    let mut nueva_lista = items.clone();
+                    for arg in argumentos {
+                        let valor = self.evaluar_expresion(arg);
+                        nueva_lista.push(valor);
+                    }
+                    return Valor::Lista(nueva_lista);
+                }
+                "pop" => {
+                    if !items.is_empty() {
+                        let mut nueva_lista = items.clone();
+                        nueva_lista.pop();
+                        return Valor::Lista(nueva_lista);
+                    }
+                    return Valor::Lista(vec![]);
+                }
+                "len" => {
+                    return Valor::Entero(items.len() as i64);
+                }
+                _ => {
+                    eprintln!("Método '{}' no existe para arreglos", metodo);
+                    return Valor::Nulo;
+                }
+            }
+        }
+
         if let Valor::Diccionario(mapa) = obj_valor {
             if let Some(funcion_val) = mapa.get(metodo) {
                 let args: Vec<Valor> = argumentos
@@ -1297,16 +1334,47 @@ impl Interpretador {
         chars: &mut std::iter::Peekable<std::str::Chars>,
     ) -> String {
         let mut expr = String::new();
+        let mut nivel_parentesis = 0;
+        
         while let Some(&ch) = chars.peek() {
-            if !self.es_caracter_expresion(ch) {
+            // Si encontramos un paréntesis de apertura, incrementamos el nivel
+            if ch == '(' {
+                nivel_parentesis += 1;
+                expr.push(chars.next().unwrap());
+                continue;
+            }
+            
+            // Si encontramos un paréntesis de cierre, decrementamos el nivel
+            if ch == ')' {
+                nivel_parentesis -= 1;
+                expr.push(chars.next().unwrap());
+                // Si llegamos a nivel 0, continuamos para permitir encadenamiento
+                if nivel_parentesis == 0 {
+                    // Verificar si hay más encadenamiento (.método)
+                    if chars.peek() == Some(&'.') {
+                        continue;
+                    }
+                }
+                continue;
+            }
+            
+            // Dentro de paréntesis, permitir espacios y números
+            if nivel_parentesis > 0 {
+                expr.push(chars.next().unwrap());
+                continue;
+            }
+            
+            // Fuera de paréntesis, usar la lógica estándar
+            if !self.es_caracter_expresion_basico(ch) {
                 break;
             }
+            
             expr.push(chars.next().unwrap());
         }
         expr
     }
 
-    fn es_caracter_expresion(&self, c: char) -> bool {
+    fn es_caracter_expresion_basico(&self, c: char) -> bool {
         c.is_alphanumeric() || c == '_' || c == '.'
     }
 
@@ -1318,6 +1386,11 @@ impl Interpretador {
     fn parsear_expresion_interpolacion(&mut self, expr: String) -> Valor {
         if self.es_literal_numerico(&expr) {
             return self.parsear_entero(&expr);
+        }
+
+        // Si contiene paréntesis, es una llamada a método
+        if expr.contains('(') {
+            return self.resolver_llamada_metodo_interpolacion(&expr);
         }
 
         if expr.contains('.') {
@@ -1333,6 +1406,107 @@ impl Interpretador {
 
     fn parsear_entero(&self, expr: &str) -> Valor {
         Valor::Entero(expr.parse::<i64>().unwrap_or(0))
+    }
+
+    fn resolver_llamada_metodo_interpolacion(&mut self, expr: &str) -> Valor {
+        // Parsear expresión como: lista.push(6) o lista.len() o lista.push(6).len()
+        let partes: Vec<&str> = expr.split('.').collect();
+        
+        // Obtener el valor base (variable inicial)
+        let Some(mut valor_actual) = self.entorno_actual.obtener(partes[0]) else {
+            return Valor::Nulo;
+        };
+
+        // Procesar cada parte del encadenamiento
+        for &parte in &partes[1..] {
+            if parte.contains('(') {
+                // Es una llamada a método
+                let metodo_fin = parte.find('(').unwrap_or(parte.len());
+                let metodo = &parte[..metodo_fin];
+                
+                // Extraer argumentos entre paréntesis
+                let args_str = if parte.contains('(') && parte.contains(')') {
+                    let inicio = parte.find('(').unwrap() + 1;
+                    let fin = parte.rfind(')').unwrap();
+                    &parte[inicio..fin]
+                } else {
+                    ""
+                };
+
+                // Ejecutar método según el tipo de valor
+                valor_actual = self.ejecutar_metodo_interpolacion(valor_actual, metodo, args_str);
+            } else {
+                // Es una propiedad simple
+                valor_actual = self.navegar_propiedad(valor_actual, parte);
+            }
+            
+            if matches!(valor_actual, Valor::Nulo) {
+                break;
+            }
+        }
+
+        valor_actual
+    }
+
+    fn ejecutar_metodo_interpolacion(&mut self, valor: Valor, metodo: &str, args_str: &str) -> Valor {
+        match valor {
+            Valor::Lista(ref items) => {
+                match metodo {
+                    "len" => Valor::Entero(items.len() as i64),
+                    "push" => {
+                        if args_str.is_empty() {
+                            return valor;
+                        }
+                        let mut nueva_lista = items.clone();
+                        // Parsear el argumento (puede ser número, string, etc)
+                        let arg_valor = self.parsear_argumento_simple(args_str);
+                        nueva_lista.push(arg_valor);
+                        Valor::Lista(nueva_lista)
+                    }
+                    "pop" => {
+                        if !items.is_empty() {
+                            let mut nueva_lista = items.clone();
+                            nueva_lista.pop();
+                            Valor::Lista(nueva_lista)
+                        } else {
+                            Valor::Lista(vec![])
+                        }
+                    }
+                    _ => Valor::Nulo
+                }
+            }
+            _ => Valor::Nulo
+        }
+    }
+
+    fn parsear_argumento_simple(&self, arg: &str) -> Valor {
+        let arg_limpio = arg.trim();
+        
+        // Intentar parsear como número
+        if let Ok(n) = arg_limpio.parse::<i64>() {
+            return Valor::Entero(n);
+        }
+        
+        if let Ok(f) = arg_limpio.parse::<f64>() {
+            return Valor::Flotante(f);
+        }
+        
+        // Si está entre comillas, es un string
+        if (arg_limpio.starts_with('"') && arg_limpio.ends_with('"')) ||
+           (arg_limpio.starts_with('\'') && arg_limpio.ends_with('\'')) {
+            return Valor::Texto(arg_limpio[1..arg_limpio.len()-1].to_string());
+        }
+        
+        // Booleanos
+        if arg_limpio == "true" {
+            return Valor::Booleano(true);
+        }
+        if arg_limpio == "false" {
+            return Valor::Booleano(false);
+        }
+        
+        // Por defecto, intentar obtener variable
+        self.entorno_actual.obtener(arg_limpio).unwrap_or(Valor::Nulo)
     }
 
     fn resolver_acceso_encadenado(&mut self, expr: &str) -> Valor {
@@ -1359,6 +1533,7 @@ impl Interpretador {
                 .cloned()
                 .unwrap_or(Valor::Nulo),
             Valor::Diccionario(ref mapa) => mapa.get(propiedad).cloned().unwrap_or(Valor::Nulo),
+            Valor::Lista(ref items) if propiedad == "length" => Valor::Entero(items.len() as i64),
             _ => Valor::Nulo,
         }
     }
