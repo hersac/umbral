@@ -12,10 +12,7 @@ pub fn parsear_importacion(p: &mut Parser) -> Result<Sentencia, ParseError> {
     loop {
         if p.coincidir(|t| matches!(t, LexToken::Equip)) {
             if tiene_equip {
-                return Err(ParseError::nuevo(
-                    "Palabra clave 'equip' duplicada en importación",
-                    p.posicion,
-                ));
+                return Err(p.crear_error("Palabra clave 'equip' duplicada en importación"));
             }
             tiene_equip = true;
             items = parsear_items_importacion(p)?;
@@ -24,10 +21,7 @@ pub fn parsear_importacion(p: &mut Parser) -> Result<Sentencia, ParseError> {
         
         if p.coincidir(|t| matches!(t, LexToken::Origin)) {
             if tiene_origin {
-                return Err(ParseError::nuevo(
-                    "Palabra clave 'origin' duplicada en importación",
-                    p.posicion,
-                ));
+                return Err(p.crear_error("Palabra clave 'origin' duplicada en importación"));
             }
             tiene_origin = true;
             ruta = parsear_ruta(p)?;
@@ -38,10 +32,7 @@ pub fn parsear_importacion(p: &mut Parser) -> Result<Sentencia, ParseError> {
     }
 
     if !tiene_equip || !tiene_origin {
-        return Err(ParseError::nuevo(
-            "Se requieren las palabras clave 'equip' y 'origin' en la importación",
-            p.posicion,
-        ));
+        return Err(p.crear_error("Se requieren las palabras clave 'equip' y 'origin' en la importación"));
     }
 
     p.coincidir(|t| matches!(t, LexToken::PuntoYComa));
@@ -95,10 +86,7 @@ fn parsear_lista_items(p: &mut Parser) -> Result<Vec<ItemImportacion>, ParseErro
     }
 
     if !p.coincidir(|t| matches!(t, LexToken::LlaveDer)) {
-        return Err(ParseError::nuevo(
-            "Se esperaba '}' al final de la lista de importación",
-            p.posicion,
-        ));
+        return Err(p.crear_error("Se esperaba '}' al final de la lista de importación"));
     }
 
     Ok(vec![ItemImportacion::ListaNombres(items)])
@@ -106,10 +94,7 @@ fn parsear_lista_items(p: &mut Parser) -> Result<Vec<ItemImportacion>, ParseErro
 
 fn parsear_item_asterisco(p: &mut Parser, items: &mut Vec<ItemImportacion>) -> Result<(), ParseError> {
     if !p.coincidir(|t| matches!(t, LexToken::As)) {
-        return Err(ParseError::nuevo(
-            "Se esperaba 'as' después de '*' en importación",
-            p.posicion,
-        ));
+        return Err(p.crear_error("Se esperaba 'as' después de '*' en importación"));
     }
     let alias = parsear_identificador(p)?;
     items.push(ItemImportacion::Todo(Some(alias)));
@@ -125,10 +110,7 @@ fn parsear_item_normal(p: &mut Parser, items: &mut Vec<ItemImportacion>) -> Resu
 
 fn parsear_ruta(p: &mut Parser) -> Result<String, ParseError> {
     let Some(LexToken::Cadena(ruta) | LexToken::CadenaLiteral(ruta)) = p.peekear() else {
-        return Err(ParseError::nuevo(
-            "Se esperaba una ruta de archivo como cadena después de 'origin'",
-            p.posicion,
-        ));
+        return Err(p.crear_error("Se esperaba una ruta de archivo como cadena después de 'origin'"));
     };
     
     let ruta = ruta.clone();
@@ -138,10 +120,7 @@ fn parsear_ruta(p: &mut Parser) -> Result<String, ParseError> {
 
 fn parsear_identificador(p: &mut Parser) -> Result<String, ParseError> {
     let Some(LexToken::Identificador(nombre)) = p.peekear() else {
-        return Err(ParseError::nuevo(
-            "Se esperaba un identificador",
-            p.posicion,
-        ));
+        return Err(p.crear_error("Se esperaba un identificador"));
     };
     
     let nombre = nombre.clone();

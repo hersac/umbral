@@ -27,7 +27,7 @@ pub fn parsear_declaracion_clase(p: &mut Parser, exportado: bool) -> Result<Sent
     }
     
     if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
-        return Err(ParseError::nuevo("Se esperaba '{'", p.posicion));
+        return Err(p.crear_error("Se esperaba '{'"));
     }
 
     let mut propiedades = Vec::new();
@@ -39,7 +39,7 @@ pub fn parsear_declaracion_clase(p: &mut Parser, exportado: bool) -> Result<Sent
         } else if p.coincidir(|t| matches!(t, LexToken::PropPrivada)) {
             false
         } else {
-            return Err(ParseError::nuevo("Se esperaba 'pr' o 'pu' en el cuerpo de la clase", p.posicion));
+            return Err(p.crear_error("Se esperaba 'pr' o 'pu' en el cuerpo de la clase"));
         };
 
         if p.coincidir(|t| matches!(t, LexToken::DeclararFuncion)) {

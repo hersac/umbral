@@ -9,17 +9,14 @@ pub fn parsear_declaracion_constante(p: &mut Parser, exportado: bool) -> Result<
 
     let tipo = if p.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
         Some(p.parsear_tipo()?.ok_or_else(|| {
-            ParseError::nuevo("Tipo esperado despues de '->' en constante", p.posicion)
+            p.crear_error("Tipo esperado despues de '->' en constante")
         })?)
     } else {
         None
     };
 
     if !p.coincidir(|t| matches!(t, LexToken::Asignacion)) {
-        return Err(ParseError::nuevo(
-            "Se esperaba '=' en declaracion constante",
-            p.posicion,
-        ));
+        return Err(p.crear_error("Se esperaba '=' en declaracion constante"));
     }
 
     let valor = expresiones::parsear_expresion_principal(p)?;

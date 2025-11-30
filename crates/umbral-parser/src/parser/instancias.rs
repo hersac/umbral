@@ -8,7 +8,6 @@ pub fn intentar_parsear_instancia_inline(parser: &mut Parser) -> Result<Expresio
 
     let tipo = match parser.peekear().cloned() {
         Some(LexToken::Identificador(t)) => {
-            // Solo considerar identificadores que empiecen con mayúscula como posibles clases
             if t.chars().next().map_or(false, |c| c.is_uppercase())
                 && parser.posicion + 1 < parser.tokens.len()
                 && matches!(parser.tokens[parser.posicion + 1], LexToken::ParentesisIzq)
@@ -26,10 +25,7 @@ pub fn intentar_parsear_instancia_inline(parser: &mut Parser) -> Result<Expresio
         Some(t) => t,
         None => {
             parser.posicion = inicio_pos;
-            return Err(ParseError::nuevo(
-                "No es una instancia inline",
-                parser.posicion,
-            ));
+            return Err(parser.crear_error("No es una instancia inline"));
         }
     };
 

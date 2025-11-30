@@ -4,24 +4,24 @@ f: sumar(a->Int, b->Int)->Int {
 
 tprint('=== Funciones con Retorno ===');
 c: resultado1 = sumar(10, 5);
-tprint('10 + 5 = &resultado1');
+tprint("10 + 5 = &resultado1");
 
 f: calcularArea(base->Flo, altura->Flo)->Flo {
     r: (base * altura);
 }
 
 c: area = calcularArea(5.5, 3.2);
-tprint('Área del rectángulo: &area');
+tprint("Área del rectángulo: &area");
 
 f: esMayor(a->Int, b->Int)->Bool {
     r: (a > b);
 }
 
 c: comparacion = esMayor(10, 5);
-tprint('¿10 es mayor que 5?: &comparacion');
+tprint("¿10 es mayor que 5?: &comparacion");
 
 f: saludar(nombre->Str)->Void {
-    tprint('¡Hola, &nombre!');
+    tprint("¡Hola, &nombre!");
 }
 
 tprint('=== Funciones Void ===');
@@ -39,8 +39,8 @@ f: esPositivo(numero->Int)->Bool {
 tprint('=== Lógica Condicional ===');
 c: check1 = esPositivo(15);
 c: check2 = esPositivo(-5);
-tprint('¿15 es positivo?: &check1');
-tprint('¿-5 es positivo?: &check2');
+tprint("¿15 es positivo?: &check1");
+tprint("¿-5 es positivo?: &check2");
 
 f: factorial(n->Int)->Int {
     v: resultado = 1;
@@ -56,7 +56,7 @@ f: factorial(n->Int)->Int {
 
 tprint('=== Factorial ===');
 c: fact5 = factorial(5);
-tprint('5! = &fact5');
+tprint("5! = &fact5");
 
 f: crearArray(tamanio->Int)->[]Int {
     v: arr = {};
@@ -72,7 +72,7 @@ f: crearArray(tamanio->Int)->[]Int {
 
 c: miArray = crearArray(5);
 tprint('=== Retorno de Arrays ===');
-tprint('Array generado: &miArray');
+tprint("Array generado: &miArray");
 
 f: multiplicar(a->Int, b->Int)->Int {
     r: (a * b);
@@ -84,4 +84,4 @@ f: cuadrado(n->Int)->Int {
 
 tprint('=== Funciones Anidadas ===');
 c: cuad = cuadrado(7);
-tprint('7² = &cuad');
+tprint("7² = &cuad");

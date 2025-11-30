@@ -11,10 +11,7 @@ pub fn parsear_declaracion_variable(p: &mut Parser, exportado: bool) -> Result<S
         None
     };
     if !p.coincidir(|t| matches!(t, LexToken::Asignacion)) {
-        return Err(ParseError::nuevo(
-            "Se esperaba '=' en declaracion variable",
-            p.posicion,
-        ));
+        return Err(p.crear_error("Se esperaba '=' en declaracion variable"));
     }
     let valor = crate::parser::expresiones::parsear_expresion_principal(p)?;
     p.coincidir(|t| matches!(t, LexToken::PuntoYComa));

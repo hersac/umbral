@@ -286,7 +286,7 @@ tprint("\n=== Librería Estándar (STD) ===");
 tprint("\nFunciones de cadenas:");
 v: texto = "  Hola Umbral  ";
 v: textoLimpio = Std.trim(texto);
-tprint("Std.trim('  Hola Umbral  '): '&textoLimpio'");
+tprint("Std.trim('  Hola Umbral  '): "&textoLimpio"");
 
 v: textoMayus = Std.to_upper("umbral");
 tprint("Std.to_upper('umbral'): &textoMayus");

@@ -7,7 +7,7 @@ pub fn parsear_declaracion_interfaz(p: &mut Parser, exportado: bool) -> Result<S
     let nombre = p.parsear_identificador_consumir()?;
     
     if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
-        return Err(ParseError::nuevo("Se esperaba '{'", p.posicion));
+        return Err(p.crear_error("Se esperaba '{'"));
     }
 
     let mut metodos = Vec::new();
@@ -16,19 +16,19 @@ pub fn parsear_declaracion_interfaz(p: &mut Parser, exportado: bool) -> Result<S
         p.coincidir(|t| matches!(t, LexToken::PropPublica));
         
         if !p.coincidir(|t| matches!(t, LexToken::DeclararFuncion)) {
-            return Err(ParseError::nuevo("Se esperaba declaración de función en interfaz", p.posicion));
+            return Err(p.crear_error("Se esperaba declaración de función en interfaz"));
         }
         
         let nombre_metodo = p.parsear_identificador_consumir()?;
         
         if !p.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
-            return Err(ParseError::nuevo("Se esperaba '('", p.posicion));
+            return Err(p.crear_error("Se esperaba '('"));
         }
         
         let parametros = crate::parser::funciones::parsear_parametros(p)?;
         
         if !p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
-            return Err(ParseError::nuevo("Se esperaba ')'", p.posicion));
+            return Err(p.crear_error("Se esperaba ')'"));
         }
         
         let tipo_retorno = if p.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
@@ -38,7 +38,7 @@ pub fn parsear_declaracion_interfaz(p: &mut Parser, exportado: bool) -> Result<S
         };
         
         if !p.coincidir(|t| matches!(t, LexToken::PuntoYComa)) {
-            return Err(ParseError::nuevo("Se esperaba ';' después de la firma del método", p.posicion));
+            return Err(p.crear_error("Se esperaba ';' después de la firma del método"));
         }
         
         metodos.push(Metodo {

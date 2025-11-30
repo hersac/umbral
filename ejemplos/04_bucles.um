@@ -2,7 +2,7 @@ tprint('=== Bucle Mientras Básico ===');
 v: contador = 0;
 
 wh: (contador < 5) {
-    tprint('Contador: &contador');
+    tprint("Contador: &contador");
     contador = contador + 1;
 }
 
@@ -15,7 +15,7 @@ wh: (i <= 10) {
     i = i + 1;
 }
 
-tprint('Suma de 1 a 10: &suma');
+tprint("Suma de 1 a 10: &suma");
 
 tprint('=== Iteración sobre Arrays ===');
 v: frutas = {'Manzana', 'Banana', 'Naranja'};
@@ -23,7 +23,7 @@ v: indice = 0;
 
 wh: (indice < 3) {
     c: fruta = frutas[indice];
-    tprint('Fruta &indice: &fruta');
+    tprint("Fruta &indice: &fruta");
     indice = indice + 1;
 }
 
@@ -32,7 +32,7 @@ v: multiplicando = 1;
 
 wh: (multiplicando <= 10) {
     c: resultado = 5 * multiplicando;
-    tprint('5 x &multiplicando = &resultado');
+    tprint("5 x &multiplicando = &resultado");
     multiplicando = multiplicando + 1;
 }
 
@@ -51,8 +51,8 @@ f: factorial(n->Int)->Int {
 tprint('=== Factorial ===');
 c: fact5 = factorial(5);
 c: fact6 = factorial(6);
-tprint('5! = &fact5');
-tprint('6! = &fact6');
+tprint("5! = &fact5");
+tprint("6! = &fact6");
 
 f: fibonacci(n->Int)->Int {
     i: (n <= 1) {
@@ -77,7 +77,7 @@ tprint('=== Secuencia de Fibonacci ===');
 v: fib = 0;
 wh: (fib < 8) {
     c: valor = fibonacci(fib);
-    tprint('Fibonacci(&fib) = &valor');
+    tprint("Fibonacci(&fib) = &valor");
     fib = fib + 1;
 }
 

@@ -16,18 +16,83 @@ pub mod variables;
 use crate::ast::*;
 use crate::error::ParseError;
 use expresiones::parsear_expresion_principal;
-use umbral_lexer::Token as LexToken;
+use umbral_lexer::{Token as LexToken, TokenConPosicion};
 
 pub struct Parser {
     pub tokens: Vec<LexToken>,
+    pub posiciones: Vec<usize>,
     pub posicion: usize,
+    pub codigo_fuente: String,
 }
 
 impl Parser {
     pub fn nuevo(tokens: Vec<LexToken>) -> Self {
         Self {
             tokens,
+            posiciones: Vec::new(),
             posicion: 0,
+            codigo_fuente: String::new(),
+        }
+    }
+
+    pub fn nuevo_con_codigo(tokens: Vec<LexToken>, codigo_fuente: String) -> Self {
+        Self {
+            tokens,
+            posiciones: Vec::new(),
+            posicion: 0,
+            codigo_fuente,
+        }
+    }
+
+    pub fn nuevo_con_posiciones(tokens_con_pos: Vec<TokenConPosicion>, codigo_fuente: String) -> Self {
+        let tokens: Vec<LexToken> = tokens_con_pos.iter().map(|tp| tp.token.clone()).collect();
+        let posiciones: Vec<usize> = tokens_con_pos.iter().map(|tp| tp.posicion).collect();
+        Self {
+            tokens,
+            posiciones,
+            posicion: 0,
+            codigo_fuente,
+        }
+    }
+
+    pub fn crear_error(&self, mensaje: impl Into<String>) -> ParseError {
+        match self.codigo_fuente.is_empty() {
+            true => ParseError::nuevo(mensaje, self.posicion),
+            false => {
+                let tiene_posiciones_validas = !self.posiciones.is_empty() 
+                    && self.posicion < self.posiciones.len();
+                
+                let posicion_char = match tiene_posiciones_validas {
+                    true => self.posiciones[self.posicion],
+                    false => self.estimar_posicion_caracter(),
+                };
+                
+                ParseError::con_contexto(mensaje, posicion_char, &self.codigo_fuente)
+            }
+        }
+    }
+
+    fn estimar_posicion_caracter(&self) -> usize {
+        let mut pos = 0;
+        for i in 0..self.posicion.min(self.tokens.len()) {
+            pos += self.estimar_longitud_token(&self.tokens[i]);
+            pos += 1; // Espacio entre tokens
+        }
+        pos.min(self.codigo_fuente.len().saturating_sub(1))
+    }
+
+    fn estimar_longitud_token(&self, token: &LexToken) -> usize {
+        use LexToken::*;
+        match token {
+            Numero(s) | Cadena(s) | CadenaLiteral(s) | CadenaMultilinea(s) | Identificador(s) | Tipo(s) => s.len(),
+            DeclararVariable => 2, // "v:"
+            DeclararConstante => 2, // "c:"
+            DeclararFuncion => 2, // "f:"
+            Instanciar => 2, // "n:"
+            DeclararClase => 3, // "cs:"
+            DeclararInterfaz => 3, // "in:"
+            DeclararEnum => 3, // "em:"
+            _ => 2,
         }
     }
 
@@ -71,7 +136,6 @@ impl Parser {
     }
 
     fn parsear_sentencia(&mut self) -> Result<Sentencia, ParseError> {
-        // Detectar out antes de cualquier declaración
         let exportado = self.coincidir(|t| matches!(t, LexToken::Out));
         
         if self.coincidir(|t| matches!(t, LexToken::Equip)) || self.coincidir(|t| matches!(t, LexToken::Origin)) {
@@ -132,7 +196,7 @@ impl Parser {
                 Expresion::AccesoPropiedad { objeto, propiedad } => {
                     ObjetivoAsignacion::Propiedad { objeto, propiedad }
                 }
-                _ => return Err(ParseError::nuevo("Objetivo de asignación inválido", self.posicion)),
+                _ => return Err(self.crear_error("Objetivo de asignación inválido")),
             };
             
             return Ok(Sentencia::Asignacion(Asignacion { objetivo, valor }));
@@ -149,10 +213,7 @@ impl Parser {
                 self.avanzar();
                 Ok(nombre)
             }
-            _ => Err(ParseError::nuevo(
-                "Se esperaba identificador",
-                self.posicion,
-            )),
+            _ => Err(self.crear_error("Se esperaba identificador")),
         }
     }
 
@@ -160,7 +221,7 @@ impl Parser {
         let mut prefijo = String::new();
         while self.coincidir(|t| matches!(t, LexToken::CorcheteIzq)) {
             if !self.coincidir(|t| matches!(t, LexToken::CorcheteDer)) {
-                return Err(ParseError::nuevo("Se esperaba ']'", self.posicion));
+                return Err(self.crear_error("Se esperaba ']'"));
             }
             prefijo.push_str("[]");
         }
@@ -179,7 +240,7 @@ impl Parser {
                 Ok(Some(Tipo { nombre }))
             }
             _ if !prefijo.is_empty() => {
-                Err(ParseError::nuevo("Se esperaba nombre de tipo después de []", self.posicion))
+                Err(self.crear_error("Se esperaba nombre de tipo después de []"))
             }
             _ => Ok(None),
         }

@@ -3,7 +3,7 @@ c: MAX_ESTUDIANTES = 50;
 c: NOTA_APROBATORIA = 60;
 
 tprint('=== Sistema de Gestión Académica ===');
-tprint('Versión: &VERSION');
+tprint("Versión: &VERSION");
 
 cs: Estudiante {
     pr: nombre->Str;
@@ -23,7 +23,7 @@ cs: Estudiante {
     pu f: agregarNota(nota->Int)->Void {
         i: ((nota >= 0) && (nota <= 100)) {
             th.notas = th.notas + {nota};
-            tprint('Nota agregada a &th.nombre: &nota');
+            tprint("Nota agregada a &th.nombre: &nota");
         } e: {
             tprint('Error: Nota inválida');
         }
@@ -56,9 +56,9 @@ cs: Estudiante {
     
     pu f: mostrarInformacion()->Void {
         tprint('--- Información del Estudiante ---');
-        tprint('Nombre: &th.nombre');
-        tprint('Edad: &th.edad años');
-        tprint('Promedio: &th.promedio');
+        tprint("Nombre: &th.nombre");
+        tprint("Edad: &th.edad años");
+        tprint("Promedio: &th.promedio");
         
         i: (th.aprobado) {
             tprint('Estado: APROBADO');
@@ -85,7 +85,7 @@ cs: Curso {
         i: (th.totalEstudiantes < MAX_ESTUDIANTES) {
             th.estudiantes = th.estudiantes + {estudiante};
             th.totalEstudiantes = th.totalEstudiantes + 1;
-            tprint('&estudiante.nombre inscrito en &th.nombre');
+            tprint("&estudiante.nombre inscrito en &th.nombre");
             r: (true);
         } e: {
             tprint('Error: Curso lleno');
@@ -94,9 +94,9 @@ cs: Curso {
     }
     
     pu f: mostrarEstadisticas()->Void {
-        tprint('=== Estadísticas del Curso: &th.nombre ===');
-        tprint('Código: &th.codigo');
-        tprint('Total de estudiantes: &th.totalEstudiantes');
+        tprint("=== Estadísticas del Curso: &th.nombre ===");
+        tprint("Código: &th.codigo");
+        tprint("Total de estudiantes: &th.totalEstudiantes");
         
         v: aprobados = 0;
         v: reprobados = 0;
@@ -111,15 +111,15 @@ cs: Curso {
             i = i + 1;
         }
         
-        tprint('Aprobados: &aprobados');
-        tprint('Reprobados: &reprobados');
+        tprint("Aprobados: &aprobados");
+        tprint("Reprobados: &reprobados");
     }
 }
 
 f: generarReporte(curso->Curso)->Void {
     tprint('===== REPORTE ACADÉMICO FINAL =====');
-    tprint('Curso: &curso.nombre (&curso.codigo)');
-    tprint('Estudiantes registrados: &curso.totalEstudiantes');
+    tprint("Curso: &curso.nombre (&curso.codigo)");
+    tprint("Estudiantes registrados: &curso.totalEstudiantes");
 }
 
 f: calcularPromedioGeneral(curso->Curso)->Flo {
@@ -183,7 +183,7 @@ est3.mostrarInformacion();
 curso.mostrarEstadisticas();
 
 c: promedioGeneral = calcularPromedioGeneral(curso);
-tprint('Promedio general del curso: &promedioGeneral');
+tprint("Promedio general del curso: &promedioGeneral");
 
 generarReporte(curso);
 
@@ -191,7 +191,7 @@ tprint('=== Validaciones del Sistema ===');
 
 i: (curso.totalEstudiantes < MAX_ESTUDIANTES) {
     c: disponibles = MAX_ESTUDIANTES - curso.totalEstudiantes;
-    tprint('Cupos disponibles: &disponibles');
+    tprint("Cupos disponibles: &disponibles");
 } e: {
     tprint('Curso completo');
 }

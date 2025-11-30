@@ -6,7 +6,7 @@ use umbral_lexer::Token as LexToken;
 pub fn parsear_declaracion_enum(p: &mut Parser, exportado: bool) -> Result<Sentencia, ParseError> {
     let nombre = p.parsear_identificador_consumir()?;
     if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
-        return Err(ParseError::nuevo("Se esperaba '{' en enum", p.posicion));
+        return Err(p.crear_error("Se esperaba '{' en enum"));
     }
     let mut variantes = Vec::new();
     loop {
@@ -18,8 +18,8 @@ pub fn parsear_declaracion_enum(p: &mut Parser, exportado: bool) -> Result<Sente
                 }
             }
             Some(LexToken::LlaveDer) => break,
-            Some(_) => return Err(ParseError::nuevo("Entrada no valida en enum", p.posicion)),
-            None => return Err(ParseError::nuevo("Fin inesperado en enum", p.posicion)),
+            Some(_) => return Err(p.crear_error("Entrada no valida en enum")),
+            None => return Err(p.crear_error("Fin inesperado en enum")),
         }
     }
     p.coincidir(|t| matches!(t, LexToken::PuntoYComa));

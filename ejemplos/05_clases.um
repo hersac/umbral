@@ -8,7 +8,7 @@ cs: Persona {
     }
     
     pu f: presentarse()->Void {
-        tprint('Hola, soy &th.nombre y tengo &th.edad años');
+        tprint("Hola, soy &th.nombre y tengo &th.edad años");
     }
     
     pu f: esMayorDeEdad()->Bool {
@@ -21,7 +21,7 @@ c: persona1 = n: Persona('Juan', 25);
 persona1.presentarse();
 
 c: esMayor = persona1.esMayorDeEdad();
-tprint('¿Es mayor de edad?: &esMayor');
+tprint("¿Es mayor de edad?: &esMayor");
 
 cs: Empleado {
     pr: nombre->Str;
@@ -37,15 +37,15 @@ cs: Empleado {
     }
     
     pu f: mostrarInfo()->Void {
-        tprint('Empleado: &th.nombre');
-        tprint('Puesto: &th.puesto');
-        tprint('Salario: &th.salario');
+        tprint("Empleado: &th.nombre");
+        tprint("Puesto: &th.puesto");
+        tprint("Salario: &th.salario");
     }
     
     pu f: darAumento(porcentaje->Flo)->Void {
         c: aumento = th.salario * (porcentaje / 100);
         th.salario = th.salario + aumento;
-        tprint('Nuevo salario: &th.salario');
+        tprint("Nuevo salario: &th.salario");
     }
 }
 
@@ -78,8 +78,8 @@ c: rect = n: Rectangulo(5.0, 3.0);
 c: area = rect.calcularArea();
 c: perimetro = rect.calcularPerimetro();
 
-tprint('Área: &area');
-tprint('Perímetro: &perimetro');
+tprint("Área: &area");
+tprint("Perímetro: &perimetro");
 
 f: crearPersona(nombre->Str, edad->Int)->Persona {
     r: (n: Persona(nombre, edad));

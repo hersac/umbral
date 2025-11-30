@@ -124,7 +124,6 @@ fn parsear_postfija(parser: &mut Parser) -> Result<Expresion, ParseError> {
     let mut expr = parsear_primaria(parser)?;
 
     loop {
-        // Verificar si es una llamada a función (identificador seguido de paréntesis)
         if matches!(expr, Expresion::Identificador(_)) 
             && parser.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) 
         {
@@ -143,7 +142,7 @@ fn parsear_postfija(parser: &mut Parser) -> Result<Expresion, ParseError> {
                     if parser.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
                         break;
                     }
-                    return Err(ParseError::nuevo("Se esperaba ',' o ')'", parser.posicion));
+                    return Err(parser.crear_error("Se esperaba ',' o ')'"));
                 }
             }
             expr = Expresion::LlamadoFuncion {
@@ -156,7 +155,6 @@ fn parsear_postfija(parser: &mut Parser) -> Result<Expresion, ParseError> {
         if parser.coincidir(|t| matches!(t, LexToken::Punto)) {
             let propiedad = parser.parsear_identificador_consumir()?;
 
-            // Verificar si es una llamada a método (tiene paréntesis)
             if parser.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
                 let mut argumentos = Vec::new();
                 if !parser.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
@@ -168,7 +166,7 @@ fn parsear_postfija(parser: &mut Parser) -> Result<Expresion, ParseError> {
                         if parser.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
                             break;
                         }
-                        return Err(ParseError::nuevo("Se esperaba ',' o ')'", parser.posicion));
+                        return Err(parser.crear_error("Se esperaba ',' o ')'"));
                     }
                 }
                 expr = Expresion::LlamadoMetodo {
@@ -187,7 +185,7 @@ fn parsear_postfija(parser: &mut Parser) -> Result<Expresion, ParseError> {
         if parser.coincidir(|t| matches!(t, LexToken::CorcheteIzq)) {
             let indice = parsear_expresion_principal(parser)?;
             if !parser.coincidir(|t| matches!(t, LexToken::CorcheteDer)) {
-                return Err(ParseError::nuevo("Se esperaba ']'", parser.posicion));
+                return Err(parser.crear_error("Se esperaba ']'"));
             }
             expr = Expresion::AccesoIndice {
                 objeto: Box::new(expr),
@@ -255,10 +253,7 @@ fn parsear_primaria(parser: &mut Parser) -> Result<Expresion, ParseError> {
             parser.avanzar();
             let tipo = parser.parsear_identificador_consumir()?;
             if !parser.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
-                return Err(ParseError::nuevo(
-                    "Se esperaba '(' después del tipo",
-                    parser.posicion,
-                ));
+                return Err(parser.crear_error("Se esperaba '(' después del tipo"));
             }
             let mut argumentos = Vec::new();
             while !parser.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
@@ -273,13 +268,13 @@ fn parsear_primaria(parser: &mut Parser) -> Result<Expresion, ParseError> {
                 parser.avanzar();
                 return Ok(Expresion::Identificador(nombre));
             }
-            Err(ParseError::nuevo("Expresion no valida", parser.posicion))
+            Err(parser.crear_error("Expresion no valida"))
         }
         Some(LexToken::ParentesisIzq) => {
             parser.avanzar();
             let expr = parsear_expresion_principal(parser)?;
             if !parser.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
-                return Err(ParseError::nuevo("Se esperaba ')'", parser.posicion));
+                return Err(parser.crear_error("Se esperaba ')'"));
             }
             Ok(Expresion::Agrupada(Box::new(expr)))
         }
@@ -291,7 +286,7 @@ fn parsear_primaria(parser: &mut Parser) -> Result<Expresion, ParseError> {
             parser.avanzar();
             parsear_array_principal(parser)
         }
-        _ => Err(ParseError::nuevo("Expresion no valida", parser.posicion)),
+        _ => Err(parser.crear_error("Expresion no valida")),
     }
 }
 
@@ -318,10 +313,7 @@ fn parsear_array_principal(parser: &mut Parser) -> Result<Expresion, ParseError>
             break;
         }
 
-        return Err(ParseError::nuevo(
-            "Se esperaba ',' o '}' despues de un elemento de la lista",
-            parser.posicion,
-        ));
+        return Err(parser.crear_error("Se esperaba ',' o '}' despues de un elemento de la lista"));
     }
 
     Ok(Expresion::Array(elementos))

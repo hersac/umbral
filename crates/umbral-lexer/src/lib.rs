@@ -2,6 +2,12 @@ use std::iter::Peekable;
 use std::str::Chars;
 
 #[derive(Debug, Clone)]
+pub struct TokenConPosicion {
+    pub token: Token,
+    pub posicion: usize,
+}
+
+#[derive(Debug, Clone)]
 pub enum Token {
     DeclararVariable,
     DeclararConstante,
@@ -286,7 +292,6 @@ pub fn analizar(texto: &str) -> Vec<Token> {
                         continue;
                     }
                     _ => {
-                        // Si no coincide con ninguna palabra clave, retroceder y tratar como identificador
                         lista.push(Token::Identificador(palabra.clone()));
                         lista.push(Token::DosPuntos);
                         continue;
@@ -524,4 +529,99 @@ pub fn analizar(texto: &str) -> Vec<Token> {
     }
 
     lista
+}
+
+pub fn analizar_con_posiciones(texto: &str) -> Vec<TokenConPosicion> {
+    let tokens = analizar(texto);
+    let mut resultado = Vec::new();
+    
+    let chars: Vec<char> = texto.chars().collect();
+    let mut idx_char = 0;
+    
+    for token in tokens {
+        while idx_char < chars.len() {
+            if chars[idx_char].is_whitespace() {
+                idx_char += 1;
+                continue;
+            }
+            
+            if idx_char + 1 < chars.len() && chars[idx_char] == '!' && chars[idx_char + 1] == '!' {
+                while idx_char < chars.len() && chars[idx_char] != '\n' {
+                    idx_char += 1;
+                }
+                continue;
+            }
+            
+            break;
+        }
+        
+        resultado.push(TokenConPosicion {
+            token: token.clone(),
+            posicion: idx_char,
+        });
+        
+        if idx_char < chars.len() {
+            idx_char += estimar_longitud_token_directo(&token, &chars[idx_char..]);
+        }
+    }
+    
+    resultado
+}
+
+fn estimar_longitud_token_directo(token: &Token, _resto: &[char]) -> usize {
+    use Token::*;
+    match token {
+        Numero(s) | Identificador(s) | Tipo(s) => s.len(),
+        Cadena(s) => s.len() + 2, // "texto"
+        CadenaLiteral(s) => s.len() + 2, // 'texto'
+        CadenaMultilinea(s) => s.len() + 6, // '''texto'''
+        DeclararVariable | DeclararConstante | DeclararFuncion => 2, // v: c: f:
+        Instanciar => 2, // n:
+        DeclararClase => 3, // cs:
+        DeclararInterfaz => 3, // in:
+        DeclararEnum => 3, // em:
+        PropPrivada => 3, // pr:
+        PropPublica => 3, // pu:
+        Equip => 5, // equip
+        Origin => 6, // origin
+        As => 2, // as
+        Out => 3, // out
+        Implementacion => 4, // imp:
+        Extension => 4, // ext:
+        If => 2, // i:
+        ElseIf => 3, // ie:
+        Else => 2, // e:
+        Switch => 3, // sw:
+        Case => 3, // ca:
+        Default => 4, // def:
+        For => 3, // fo:
+        ForEach => 3, // fe:
+        While => 3, // wh:
+        DoWhile => 3, // dw:
+        Return => 2, // r:
+        This => 2, // th
+        TPrint => 6, // tprint
+        FlechaDoble => 2, // =>
+        Asignacion => 1, // =
+        IgualIgual => 2, // ==
+        Diferente => 2, // !=
+        MenorIgual => 2, // <=
+        MayorIgual => 2, // >=
+        And => 2, // &&
+        Or => 2, // ||
+        Incremento => 2, // ++
+        Decremento => 2, // --
+        OperadorTipo => 2, // ->
+        Rango => 2, // ..
+        RangoIncluyente => 3, // ..=
+        Spread => 1, // &
+        Verdadero => 4, // true
+        Falso => 5, // false
+        Nulo => 4, // null
+        ParentesisIzq | ParentesisDer | LlaveIzq | LlaveDer | CorcheteIzq | CorcheteDer |
+        PuntoYComa | Coma | DosPuntos | Punto | Flecha | Suma | Resta | Multiplicacion |
+        Division | Modulo | Menor | Mayor | Not | Asterisco => 1,
+        Interpolacion => 2, // ${
+        Desconocido(_) => 1,
+    }
 }

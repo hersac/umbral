@@ -1242,7 +1242,13 @@ impl Interpretador {
             return self.resolver_acceso_encadenado(&expr);
         }
 
-        self.entorno_actual.obtener(&expr).unwrap_or(Valor::Nulo)
+        let nombre_variable = if expr == "th" {
+            "__this__"
+        } else {
+            &expr
+        };
+        
+        self.entorno_actual.obtener(nombre_variable).unwrap_or(Valor::Nulo)
     }
 
     fn es_literal_numerico(&self, expr: &str) -> bool {
@@ -1256,7 +1262,13 @@ impl Interpretador {
     fn resolver_llamada_metodo_interpolacion(&mut self, expr: &str) -> Valor {
         let partes: Vec<&str> = expr.split('.').collect();
         
-        let Some(mut valor_actual) = self.entorno_actual.obtener(partes[0]) else {
+        let primer_elemento = if partes[0] == "th" {
+            "__this__"
+        } else {
+            partes[0]
+        };
+        
+        let Some(mut valor_actual) = self.entorno_actual.obtener(primer_elemento) else {
             return Valor::Nulo;
         };
 
@@ -1312,8 +1324,61 @@ impl Interpretador {
                     _ => Valor::Nulo
                 }
             }
+            Valor::Objeto(instancia) => {
+                let argumentos = if args_str.is_empty() {
+                    vec![]
+                } else {
+                    args_str.split(',')
+                        .map(|s| self.parsear_argumento_simple(s.trim()))
+                        .collect()
+                };
+                
+                self.ejecutar_metodo_objeto(&instancia, metodo, argumentos)
+            }
             _ => Valor::Nulo
         }
+    }
+    
+    fn ejecutar_metodo_objeto(&mut self, instancia: &crate::runtime::valores::Instancia, metodo: &str, args: Vec<Valor>) -> Valor {
+        let clase = match self.gestor_clases.obtener_clase(&instancia.clase) {
+            Some(c) => c,
+            None => return Valor::Nulo,
+        };
+
+        let metodo_def = match clase.obtener_metodo(metodo) {
+            Some(m) => m.clone(),
+            None => return Valor::Nulo,
+        };
+
+        let anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(None));
+        self.entorno_actual = Entorno::nuevo(Some(anterior));
+
+        self.entorno_actual
+            .definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
+
+        for (i, param) in metodo_def.parametros.iter().enumerate() {
+            if let Some(valor) = args.get(i) {
+                self.entorno_actual
+                    .definir_variable(param.nombre.clone(), valor.clone());
+            }
+        }
+
+        self.valor_retorno = None;
+        for sentencia in metodo_def.cuerpo {
+            if let Some(valor) = self.ejecutar_sentencia(sentencia) {
+                if let Some(parent) = self.entorno_actual.parent.take() {
+                    self.entorno_actual = *parent;
+                }
+                self.valor_retorno = None;
+                return valor;
+            }
+        }
+
+        if let Some(parent) = self.entorno_actual.parent.take() {
+            self.entorno_actual = *parent;
+        }
+        self.valor_retorno = None;
+        Valor::Nulo
     }
 
     fn parsear_argumento_simple(&self, arg: &str) -> Valor {
@@ -1344,7 +1409,14 @@ impl Interpretador {
 
     fn resolver_acceso_encadenado(&mut self, expr: &str) -> Valor {
         let partes: Vec<&str> = expr.split('.').collect();
-        let Some(mut valor_actual) = self.entorno_actual.obtener(partes[0]) else {
+        
+        let primer_elemento = if partes[0] == "th" {
+            "__this__"
+        } else {
+            partes[0]
+        };
+        
+        let Some(mut valor_actual) = self.entorno_actual.obtener(primer_elemento) else {
             return Valor::Nulo;
         };
 

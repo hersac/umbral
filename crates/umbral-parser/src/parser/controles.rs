@@ -5,29 +5,29 @@ use umbral_lexer::Token as LexToken;
 
 pub fn parsear_if(p: &mut Parser) -> Result<Sentencia, ParseError> {
     if !p.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
-        return Err(ParseError::nuevo("Se esperaba '(' después de if", p.posicion));
+        return Err(p.crear_error("Se esperaba '(' después de if"));
     }
     let condicion = crate::parser::expresiones::parsear_expresion_principal(p)?;
     if !p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
-        return Err(ParseError::nuevo("Se esperaba ')'", p.posicion));
+        return Err(p.crear_error("Se esperaba ')'"));
     }
 
     if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
-        return Err(ParseError::nuevo("Se esperaba '{'", p.posicion));
+        return Err(p.crear_error("Se esperaba '{'"));
     }
     let bloque_entonces = parsear_bloque(p)?;
 
     let mut else_ifs = Vec::new();
     while p.coincidir(|t| matches!(t, LexToken::ElseIf)) {
         if !p.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
-            return Err(ParseError::nuevo("Se esperaba '(' después de else if", p.posicion));
+            return Err(p.crear_error("Se esperaba '(' después de else if"));
         }
         let cond = crate::parser::expresiones::parsear_expresion_principal(p)?;
         if !p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
-            return Err(ParseError::nuevo("Se esperaba ')'", p.posicion));
+            return Err(p.crear_error("Se esperaba ')'"));
         }
         if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
-            return Err(ParseError::nuevo("Se esperaba '{'", p.posicion));
+            return Err(p.crear_error("Se esperaba '{'"));
         }
         let bloque = parsear_bloque(p)?;
         else_ifs.push(ElseIf { condicion: cond, bloque });
@@ -35,7 +35,7 @@ pub fn parsear_if(p: &mut Parser) -> Result<Sentencia, ParseError> {
 
     let bloque_else = if p.coincidir(|t| matches!(t, LexToken::Else)) {
         if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
-            return Err(ParseError::nuevo("Se esperaba '{'", p.posicion));
+            return Err(p.crear_error("Se esperaba '{'"));
         }
         Some(parsear_bloque(p)?)
     } else {
@@ -52,14 +52,14 @@ pub fn parsear_if(p: &mut Parser) -> Result<Sentencia, ParseError> {
 
 pub fn parsear_switch(p: &mut Parser) -> Result<Sentencia, ParseError> {
     if !p.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
-        return Err(ParseError::nuevo("Se esperaba '(' después de switch", p.posicion));
+        return Err(p.crear_error("Se esperaba '(' después de switch"));
     }
     let expresion = crate::parser::expresiones::parsear_expresion_principal(p)?;
     if !p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
-        return Err(ParseError::nuevo("Se esperaba ')'", p.posicion));
+        return Err(p.crear_error("Se esperaba ')'"));
     }
     if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
-        return Err(ParseError::nuevo("Se esperaba '{'", p.posicion));
+        return Err(p.crear_error("Se esperaba '{'"));
     }
 
     let mut casos = Vec::new();
@@ -69,20 +69,20 @@ pub fn parsear_switch(p: &mut Parser) -> Result<Sentencia, ParseError> {
         if p.coincidir(|t| matches!(t, LexToken::Case)) {
             let valor = crate::parser::expresiones::parsear_expresion_principal(p)?;
             if !p.coincidir(|t| matches!(t, LexToken::FlechaDoble)) {
-                return Err(ParseError::nuevo("Se esperaba '=>'", p.posicion));
+                return Err(p.crear_error("Se esperaba '=>'"));
             }
             let mut bloque = Vec::new();
             bloque.push(p.parsear_sentencia()?);
             casos.push(Case { valor, bloque });
         } else if p.coincidir(|t| matches!(t, LexToken::Default)) {
             if !p.coincidir(|t| matches!(t, LexToken::FlechaDoble)) {
-                return Err(ParseError::nuevo("Se esperaba '=>'", p.posicion));
+                return Err(p.crear_error("Se esperaba '=>'"));
             }
             let mut bloque = Vec::new();
             bloque.push(p.parsear_sentencia()?);
             default = Some(bloque);
         } else {
-            return Err(ParseError::nuevo("Se esperaba 'case' o 'default'", p.posicion));
+            return Err(p.crear_error("Se esperaba 'case' o 'default'"));
         }
     }
 
@@ -95,23 +95,23 @@ pub fn parsear_switch(p: &mut Parser) -> Result<Sentencia, ParseError> {
 
 pub fn parsear_for(p: &mut Parser) -> Result<Sentencia, ParseError> {
     if !p.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
-        return Err(ParseError::nuevo("Se esperaba '(' después de for", p.posicion));
+        return Err(p.crear_error("Se esperaba '(' después de for"));
     }
 
     let inicializacion = Box::new(p.parsear_sentencia()?);
     
     let condicion = crate::parser::expresiones::parsear_expresion_principal(p)?;
     if !p.coincidir(|t| matches!(t, LexToken::PuntoYComa)) {
-        return Err(ParseError::nuevo("Se esperaba ';'", p.posicion));
+        return Err(p.crear_error("Se esperaba ';'"));
     }
 
     let incremento = crate::parser::expresiones::parsear_expresion_principal(p)?;
     if !p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
-        return Err(ParseError::nuevo("Se esperaba ')'", p.posicion));
+        return Err(p.crear_error("Se esperaba ')'"));
     }
 
     if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
-        return Err(ParseError::nuevo("Se esperaba '{'", p.posicion));
+        return Err(p.crear_error("Se esperaba '{'"));
     }
     let bloque = parsear_bloque(p)?;
 
@@ -125,7 +125,7 @@ pub fn parsear_for(p: &mut Parser) -> Result<Sentencia, ParseError> {
 
 pub fn parsear_foreach(p: &mut Parser) -> Result<Sentencia, ParseError> {
     if !p.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
-        return Err(ParseError::nuevo("Se esperaba '(' después de foreach", p.posicion));
+        return Err(p.crear_error("Se esperaba '(' después de foreach"));
     }
 
     p.coincidir(|t| matches!(t, LexToken::DeclararVariable));
@@ -139,16 +139,16 @@ pub fn parsear_foreach(p: &mut Parser) -> Result<Sentencia, ParseError> {
     };
 
     if !p.coincidir(|t| matches!(t, LexToken::MenorIgual)) {
-        return Err(ParseError::nuevo("Se esperaba '<=' en foreach", p.posicion));
+        return Err(p.crear_error("Se esperaba '<=' en foreach"));
     }
 
     let iterable = crate::parser::expresiones::parsear_expresion_principal(p)?;
     if !p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
-        return Err(ParseError::nuevo("Se esperaba ')'", p.posicion));
+        return Err(p.crear_error("Se esperaba ')'"));
     }
 
     if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
-        return Err(ParseError::nuevo("Se esperaba '{'", p.posicion));
+        return Err(p.crear_error("Se esperaba '{'"));
     }
     let bloque = parsear_bloque(p)?;
 
@@ -162,15 +162,15 @@ pub fn parsear_foreach(p: &mut Parser) -> Result<Sentencia, ParseError> {
 
 pub fn parsear_while(p: &mut Parser) -> Result<Sentencia, ParseError> {
     if !p.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
-        return Err(ParseError::nuevo("Se esperaba '(' después de while", p.posicion));
+        return Err(p.crear_error("Se esperaba '(' después de while"));
     }
     let condicion = crate::parser::expresiones::parsear_expresion_principal(p)?;
     if !p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
-        return Err(ParseError::nuevo("Se esperaba ')'", p.posicion));
+        return Err(p.crear_error("Se esperaba ')'"));
     }
 
     if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
-        return Err(ParseError::nuevo("Se esperaba '{'", p.posicion));
+        return Err(p.crear_error("Se esperaba '{'"));
     }
     let bloque = parsear_bloque(p)?;
 
@@ -179,16 +179,16 @@ pub fn parsear_while(p: &mut Parser) -> Result<Sentencia, ParseError> {
 
 pub fn parsear_dowhile(p: &mut Parser) -> Result<Sentencia, ParseError> {
     if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
-        return Err(ParseError::nuevo("Se esperaba '{'", p.posicion));
+        return Err(p.crear_error("Se esperaba '{'"));
     }
     let bloque = parsear_bloque(p)?;
 
     if !p.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
-        return Err(ParseError::nuevo("Se esperaba '(' después del bloque", p.posicion));
+        return Err(p.crear_error("Se esperaba '(' después del bloque"));
     }
     let condicion = crate::parser::expresiones::parsear_expresion_principal(p)?;
     if !p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
-        return Err(ParseError::nuevo("Se esperaba ')'", p.posicion));
+        return Err(p.crear_error("Se esperaba ')'"));
     }
 
     Ok(Sentencia::DoWhile(DoWhile { bloque, condicion }))

@@ -308,6 +308,73 @@ cs: Persona {
 !! Instanciación
 c: persona1 = n: Persona("Juan", 25);
 persona1.presentarse();
+
+!! Interfaces (in:)
+!! Define contratos que las clases deben cumplir
+in: Dibujable {
+    f: dibujar()->Void;
+    f: obtenerColor()->Str;
+}
+
+!! Implementar una interfaz (imp:)
+cs: Circulo imp: Dibujable {
+    pr: radio->Flo;
+    pr: color->Str;
+    
+    pu f: Circulo(radio->Flo, color->Str) {
+        th.radio = radio;
+        th.color = color;
+    }
+    
+    !! Implementación de métodos de la interfaz
+    pu f: dibujar()->Void {
+        tprint("Dibujando círculo de radio &th.radio");
+    }
+    
+    pu f: obtenerColor()->Str {
+        r: (th.color);
+    }
+}
+
+!! Herencia (ext:)
+!! Una clase puede extender de otra clase base
+cs: Empleado ext: Persona {
+    pr: salario->Flo;
+    pr: puesto->Str;
+    
+    pu f: Empleado(nombre->Str, edad->Int, puesto->Str, salario->Flo) {
+        !! Llamar al constructor de la clase base
+        th.nombre = nombre;
+        th.edad = edad;
+        th.puesto = puesto;
+        th.salario = salario;
+    }
+    
+    !! Sobrescribir método heredado
+    pu f: presentarse()->Void {
+        tprint("Hola, soy &th.nombre, &th.puesto de la empresa");
+    }
+    
+    !! Nuevo método específico
+    pu f: obtenerSalario()->Flo {
+        r: (th.salario);
+    }
+}
+
+!! Uso de herencia
+c: empleado1 = n: Empleado("Ana", 28, "Desarrolladora", 50000.0);
+empleado1.presentarse();                    !! "Hola, soy Ana, Desarrolladora de la empresa"
+tprint(empleado1.obtenerSalario());         !! 50000.0
+tprint(empleado1.esMayorDeEdad());          !! true (heredado de Persona)
+
+!! Combinación: Herencia + Interfaz
+cs: Rectangulo ext: Forma imp: Dibujable {
+    pr: ancho->Flo;
+    pr: alto->Flo;
+    
+    !! Implementa métodos de la clase base Forma
+    !! Implementa métodos de la interfaz Dibujable
+}
 ```
 
 ### Importaciones y Exportaciones

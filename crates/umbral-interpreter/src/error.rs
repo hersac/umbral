@@ -12,7 +12,7 @@ impl fmt::Display for InterpreterError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             InterpreterError::LexerError(msg) => write!(f, "Error de Lexer: {}", msg),
-            InterpreterError::ParserError(msg) => write!(f, "Error de Parser: {}", msg),
+            InterpreterError::ParserError(msg) => write!(f, "{}", msg),
             InterpreterError::RuntimeError(msg) => write!(f, "Error de Runtime: {}", msg),
             InterpreterError::IoError(msg) => write!(f, "Error de I/O: {}", msg),
         }

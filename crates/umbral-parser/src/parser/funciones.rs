@@ -30,10 +30,7 @@ pub fn parsear_parametros(p: &mut Parser) -> Result<Vec<Parametro>, ParseError> 
 
 fn parsear_lista_parametros(p: &mut Parser) -> Result<Vec<Parametro>, ParseError> {
     if !p.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
-        return Err(ParseError::nuevo(
-            "Se esperaba '(' en definición de función",
-            p.posicion,
-        ));
+        return Err(p.crear_error("Se esperaba '(' en definición de función"));
     }
     let mut lista = Vec::new();
     if p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
@@ -47,10 +44,7 @@ fn parsear_lista_parametros(p: &mut Parser) -> Result<Vec<Parametro>, ParseError
         if p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
             break;
         }
-        return Err(ParseError::nuevo(
-            "Se esperaba ',' o ')' en lista de parámetros",
-            p.posicion,
-        ));
+        return Err(p.crear_error("Se esperaba ',' o ')' en lista de parámetros"));
     }
     Ok(lista)
 }
@@ -97,10 +91,7 @@ pub fn parsear_funcion_interna(p: &mut Parser, es_publico: bool) -> Result<Metod
 impl Parser {
     pub fn parsear_bloque(&mut self) -> Result<Vec<Sentencia>, ParseError> {
         if !self.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
-            return Err(ParseError::nuevo(
-                "Se esperaba '{' para bloque",
-                self.posicion,
-            ));
+            return Err(self.crear_error("Se esperaba '{' para bloque"));
         }
         let mut sentencias = Vec::new();
         while !self.esta_fin() {

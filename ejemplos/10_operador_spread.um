@@ -2,7 +2,7 @@
 !! Este ejemplo muestra el uso del operador spread para expandir arrays
 
 tprint('========================================');
-tprint('   OPERADOR SPREAD (&) EN ARRAYS');
+tprint("   OPERADOR SPREAD (&) EN ARRAYS");
 tprint('========================================');
 
 !! =====================================
@@ -57,7 +57,7 @@ c: arr2 = { 30, 40 };
 c: conSpread = { &arr1, &arr2 };
 c: conPlus = arr1 + arr2;
 
-tprint('Con spread { &arr1, &arr2 }:');
+tprint("Con spread { &arr1, &arr2 }:");
 tprint(conSpread);
 tprint('Con concatenación arr1 + arr2:');
 tprint(conPlus);
@@ -109,7 +109,7 @@ tprint('');
 tprint('=== 7. Spread Anidado ===');
 c: base = { 'x', 'y' };
 c: nivel2 = { &base, 'z' };
-c: nivel3 = { 'inicio', &nivel2, 'fin' };
+c: nivel3 = { 'inicio", &nivel2, "fin' };
 
 tprint('Spread anidado:');
 tprint(nivel3);
@@ -183,8 +183,8 @@ tprint('========================================');
 tprint('   RESUMEN DEL OPERADOR SPREAD');
 tprint('========================================');
 tprint('');
-tprint('El operador & expande arrays dentro de literales:');
-tprint('  - { &array1, &array2 } combina arrays');
+tprint("El operador & expande arrays dentro de literales:");
+tprint("  - { &array1, &array2 } combina arrays");
 tprint('  - Puede mezclarse con valores literales');
 tprint('  - Funciona con múltiples arrays');
 tprint('  - Arrays vacíos no afectan el resultado');

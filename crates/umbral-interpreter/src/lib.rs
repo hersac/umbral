@@ -1,4 +1,4 @@
-use umbral_lexer::analizar;
+use umbral_lexer::{analizar_con_posiciones, TokenConPosicion};
 use umbral_parser::Parser;
 use umbral_runtime::Runtime;
 use std::path::PathBuf;
@@ -23,7 +23,7 @@ impl Interpreter {
 
     pub fn ejecutar(&mut self, codigo: &str) -> InterpreterResult<()> {
         let tokens = self.tokenizar(codigo)?;
-        let ast = self.parsear(tokens)?;
+        let ast = self.parsear(tokens, codigo)?;
         self.evaluar(ast)?;
         Ok(())
     }
@@ -37,8 +37,8 @@ impl Interpreter {
         self.runtime = Runtime::nuevo();
     }
 
-    fn tokenizar(&self, codigo: &str) -> InterpreterResult<Vec<umbral_lexer::Token>> {
-        let tokens = analizar(codigo);
+    fn tokenizar(&self, codigo: &str) -> InterpreterResult<Vec<TokenConPosicion>> {
+        let tokens = analizar_con_posiciones(codigo);
         
         if tokens.is_empty() {
             return Err(InterpreterError::LexerError(
@@ -49,11 +49,11 @@ impl Interpreter {
         Ok(tokens)
     }
 
-    fn parsear(&self, tokens: Vec<umbral_lexer::Token>) -> InterpreterResult<umbral_parser::ast::Programa> {
-        let mut parser = Parser::nuevo(tokens);
+    fn parsear(&self, tokens: Vec<TokenConPosicion>, codigo: &str) -> InterpreterResult<umbral_parser::ast::Programa> {
+        let mut parser = Parser::nuevo_con_posiciones(tokens, codigo.to_string());
         
         parser.parsear_programa().map_err(|e| {
-            InterpreterError::ParserError(format!("{:?}", e))
+            InterpreterError::ParserError(e.formatear_error())
         })
     }
 

@@ -89,6 +89,6 @@ c: cat1 = clasificarEdad(10);
 c: cat2 = clasificarEdad(16);
 c: cat3 = clasificarEdad(30);
 
-tprint('Edad 10: &cat1');
-tprint('Edad 16: &cat2');
-tprint('Edad 30: &cat3');
+tprint("Edad 10: &cat1");
+tprint("Edad 16: &cat2");
+tprint("Edad 30: &cat3");

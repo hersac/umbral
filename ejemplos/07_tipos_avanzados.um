@@ -5,10 +5,10 @@ v: decimal->Flo = 3.14159;
 v: texto->Str = 'Hola Umbral';
 v: verdadero->Bool = true;
 
-tprint('Int: &entero');
-tprint('Flo: &decimal');
-tprint('Str: &texto');
-tprint('Bool: &verdadero');
+tprint("Int: &entero");
+tprint("Flo: &decimal");
+tprint("Str: &texto");
+tprint("Bool: &verdadero");
 
 f: sinRetorno()->Void {
     tprint('Esta función no retorna nada');
@@ -23,19 +23,19 @@ v: numerosFlo->[]Flo = {1.5, 2.5, 3.5};
 v: palabras->[]Str = {'Hola', 'Mundo', 'Umbral'};
 v: banderas->[]Bool = {true, false, true};
 
-tprint('Array Int: &numerosInt');
-tprint('Array Flo: &numerosFlo');
-tprint('Array Str: &palabras');
-tprint('Array Bool: &banderas');
+tprint("Array Int: &numerosInt");
+tprint("Array Flo: &numerosFlo");
+tprint("Array Str: &palabras");
+tprint("Array Bool: &banderas");
 
 tprint('=== Matrices ===');
 
 v: matrizInt->[][]Int = {{1, 2, 3}, {4, 5, 6}};
 v: matrizStr->[][]Str = {{'A', 'B'}, {'C', 'D'}};
 
-tprint('Matriz Int: &matrizInt');
-tprint('Elemento [0][0]: &matrizInt[0][0]');
-tprint('Elemento [1][2]: &matrizInt[1][2]');
+tprint("Matriz Int: &matrizInt");
+tprint("Elemento [0][0]: &matrizInt[0][0]");
+tprint("Elemento [1][2]: &matrizInt[1][2]");
 
 cs: Punto {
     pr: x->Int;
@@ -47,7 +47,7 @@ cs: Punto {
     }
     
     pu f: mostrar()->Void {
-        tprint('Punto(&th.x, &th.y)');
+        tprint("Punto(&th.x, &th.y)");
     }
 }
 
@@ -78,10 +78,10 @@ c: valorFlo = obtenerDecimal();
 c: valorStr = obtenerTexto();
 c: valorBool = obtenerBooleano();
 
-tprint('Retorno Int: &valorInt');
-tprint('Retorno Flo: &valorFlo');
-tprint('Retorno Str: &valorStr');
-tprint('Retorno Bool: &valorBool');
+tprint("Retorno Int: &valorInt");
+tprint("Retorno Flo: &valorFlo");
+tprint("Retorno Str: &valorStr");
+tprint("Retorno Bool: &valorBool");
 
 f: crearArrayInt()->[]Int {
     r: ({10, 20, 30});
@@ -95,8 +95,8 @@ tprint('=== Funciones que Retornan Arrays ===');
 c: arrInt = crearArrayInt();
 c: arrStr = crearArrayStr();
 
-tprint('Array Int: &arrInt');
-tprint('Array Str: &arrStr');
+tprint("Array Int: &arrInt");
+tprint("Array Str: &arrStr");
 
 f: crearMatrizInt()->[][]Int {
     r: ({{1, 2}, {3, 4}});
@@ -104,7 +104,7 @@ f: crearMatrizInt()->[][]Int {
 
 tprint('=== Funciones que Retornan Matrices ===');
 c: matInt = crearMatrizInt();
-tprint('Matriz Int: &matInt');
+tprint("Matriz Int: &matInt");
 
 f: crearPunto(x->Int, y->Int)->Punto {
     r: (n: Punto(x, y));
