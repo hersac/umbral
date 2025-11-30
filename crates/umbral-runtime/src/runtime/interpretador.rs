@@ -307,7 +307,6 @@ impl Interpretador {
             } => self.evaluar_unaria(&operador, *expresion),
             Expresion::Agrupada(expr) => self.evaluar_expresion(*expr),
             Expresion::This => {
-                // Buscar la instancia actual en el entorno
                 self.entorno_actual.obtener("__this__").unwrap_or_else(|| {
                     eprintln!("'th' solo puede usarse dentro de métodos o constructores de clase");
                     Valor::Nulo
@@ -821,7 +820,6 @@ impl Interpretador {
         let anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(None));
         self.entorno_actual = Entorno::nuevo(Some(anterior));
 
-        // Vincular 'th' (__this__) con la instancia actual
         self.entorno_actual
             .definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
 
@@ -861,7 +859,6 @@ impl Interpretador {
             self.ejecutar_sentencia(sentencia);
         }
 
-        // Actualizar la instancia con los cambios realizados en el constructor
         if let Some(Valor::Objeto(inst_actualizada)) = self.entorno_actual.obtener("__this__") {
             *instancia = inst_actualizada;
         }
@@ -956,7 +953,6 @@ impl Interpretador {
     ) -> Valor {
         let obj_valor = self.evaluar_expresion(objeto);
 
-        // Métodos para arreglos (Listas)
         if let Valor::Lista(ref items) = obj_valor {
             match metodo {
                 "push" => {
@@ -1053,7 +1049,6 @@ impl Interpretador {
         let anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(None));
         self.entorno_actual = Entorno::nuevo(Some(anterior));
 
-        // Vincular 'th' (__this__) con la instancia actual
         self.entorno_actual
             .definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
 
@@ -1080,149 +1075,6 @@ impl Interpretador {
         }
         self.valor_retorno = None;
         Valor::Nulo
-    }
-
-    fn interpolar_cadena(&mut self, s: &str) -> Valor {
-        let mut resultado = String::new();
-        let chars: Vec<char> = s.chars().collect();
-        let mut i = 0;
-
-        while i < chars.len() {
-            let c = chars[i];
-            if c == '&' {
-                let (var_name, nuevo_i) = self.leer_nombre_variable(&chars, i + 1);
-                if !var_name.is_empty() {
-                    let valor_interpolado = self.resolver_variable_interpolada(&var_name);
-                    resultado.push_str(&format!("{}", valor_interpolado));
-                    i = nuevo_i;
-                    continue;
-                }
-            }
-            resultado.push(c);
-            i += 1;
-        }
-
-        Valor::Texto(resultado)
-    }
-
-    fn leer_nombre_variable(&self, chars: &[char], mut i: usize) -> (String, usize) {
-        let mut nombre = String::new();
-
-        // Leer primera parte
-        while i < chars.len() {
-            let ch = chars[i];
-            if ch.is_alphanumeric() || ch == '_' {
-                nombre.push(ch);
-                i += 1;
-            } else {
-                break;
-            }
-        }
-
-        if nombre.is_empty() {
-            return (nombre, i);
-        }
-
-        while i < chars.len() {
-            if chars[i] == '.' {
-                if i + 1 < chars.len() {
-                    let next = chars[i + 1];
-                    if next.is_alphanumeric() || next == '_' {
-                        nombre.push('.');
-                        nombre.push(next);
-                        i += 2;
-
-                        while i < chars.len() {
-                            let ch = chars[i];
-                            if ch.is_alphanumeric() || ch == '_' {
-                                nombre.push(ch);
-                                i += 1;
-                            } else {
-                                break;
-                            }
-                        }
-                        continue;
-                    }
-                }
-            }
-            break;
-        }
-
-        (nombre, i)
-    }
-
-    fn resolver_variable_interpolada(&mut self, nombre: &str) -> Valor {
-        if !nombre.contains('.') {
-            let nombre_real = if nombre == "th" { "__this__" } else { nombre };
-            return self
-                .entorno_actual
-                .obtener(nombre_real)
-                .unwrap_or(Valor::Nulo);
-        }
-
-        let partes: Vec<&str> = nombre.split('.').collect();
-        let primera_parte = if partes[0] == "th" {
-            "__this__"
-        } else {
-            partes[0]
-        };
-
-        let Some(mut valor_actual) = self.entorno_actual.obtener(primera_parte) else {
-            return Valor::Nulo;
-        };
-
-        for &parte in &partes[1..] {
-            valor_actual = self.acceder_propiedad_o_metodo(valor_actual, parte);
-            if matches!(valor_actual, Valor::Nulo) {
-                break;
-            }
-        }
-
-        valor_actual
-    }
-
-    fn acceder_propiedad_o_metodo(&mut self, valor: Valor, propiedad: &str) -> Valor {
-        match valor {
-            Valor::Objeto(ref inst) => self.acceder_objeto(inst, propiedad),
-            Valor::Diccionario(ref mapa) => mapa.get(propiedad).cloned().unwrap_or(Valor::Nulo),
-            _ => Valor::Nulo,
-        }
-    }
-
-    fn acceder_objeto(
-        &mut self,
-        instancia: &crate::runtime::valores::Instancia,
-        propiedad: &str,
-    ) -> Valor {
-        if let Some(prop_valor) = instancia.propiedades.get(propiedad) {
-            return prop_valor.clone();
-        }
-
-        self.ejecutar_metodo_objeto(instancia, propiedad)
-    }
-
-    fn ejecutar_metodo_objeto(
-        &mut self,
-        instancia: &crate::runtime::valores::Instancia,
-        nombre_metodo: &str,
-    ) -> Valor {
-        let Some(clase) = self.gestor_clases.obtener_clase(&instancia.clase) else {
-            return Valor::Nulo;
-        };
-
-        let Some(metodo) = clase.obtener_metodo(nombre_metodo) else {
-            return Valor::Nulo;
-        };
-
-        let parametros: Vec<String> = metodo.parametros.iter().map(|p| p.nombre.clone()).collect();
-
-        let funcion = Funcion::nueva(nombre_metodo.to_string(), parametros, metodo.cuerpo.clone());
-
-        self.valor_retorno = None;
-        let resultado = GestorFunciones::ejecutar_funcion(&funcion, vec![], self);
-        self.valor_retorno = None;
-
-        resultado
     }
 
     fn tprint(&mut self, valor: Valor) {
@@ -1337,20 +1189,16 @@ impl Interpretador {
         let mut nivel_parentesis = 0;
         
         while let Some(&ch) = chars.peek() {
-            // Si encontramos un paréntesis de apertura, incrementamos el nivel
             if ch == '(' {
                 nivel_parentesis += 1;
                 expr.push(chars.next().unwrap());
                 continue;
             }
             
-            // Si encontramos un paréntesis de cierre, decrementamos el nivel
             if ch == ')' {
                 nivel_parentesis -= 1;
                 expr.push(chars.next().unwrap());
-                // Si llegamos a nivel 0, continuamos para permitir encadenamiento
                 if nivel_parentesis == 0 {
-                    // Verificar si hay más encadenamiento (.método)
                     if chars.peek() == Some(&'.') {
                         continue;
                     }
@@ -1358,13 +1206,11 @@ impl Interpretador {
                 continue;
             }
             
-            // Dentro de paréntesis, permitir espacios y números
             if nivel_parentesis > 0 {
                 expr.push(chars.next().unwrap());
                 continue;
             }
             
-            // Fuera de paréntesis, usar la lógica estándar
             if !self.es_caracter_expresion_basico(ch) {
                 break;
             }
@@ -1388,7 +1234,6 @@ impl Interpretador {
             return self.parsear_entero(&expr);
         }
 
-        // Si contiene paréntesis, es una llamada a método
         if expr.contains('(') {
             return self.resolver_llamada_metodo_interpolacion(&expr);
         }
@@ -1409,22 +1254,17 @@ impl Interpretador {
     }
 
     fn resolver_llamada_metodo_interpolacion(&mut self, expr: &str) -> Valor {
-        // Parsear expresión como: lista.push(6) o lista.len() o lista.push(6).len()
         let partes: Vec<&str> = expr.split('.').collect();
         
-        // Obtener el valor base (variable inicial)
         let Some(mut valor_actual) = self.entorno_actual.obtener(partes[0]) else {
             return Valor::Nulo;
         };
 
-        // Procesar cada parte del encadenamiento
         for &parte in &partes[1..] {
             if parte.contains('(') {
-                // Es una llamada a método
                 let metodo_fin = parte.find('(').unwrap_or(parte.len());
                 let metodo = &parte[..metodo_fin];
                 
-                // Extraer argumentos entre paréntesis
                 let args_str = if parte.contains('(') && parte.contains(')') {
                     let inicio = parte.find('(').unwrap() + 1;
                     let fin = parte.rfind(')').unwrap();
@@ -1433,10 +1273,8 @@ impl Interpretador {
                     ""
                 };
 
-                // Ejecutar método según el tipo de valor
                 valor_actual = self.ejecutar_metodo_interpolacion(valor_actual, metodo, args_str);
             } else {
-                // Es una propiedad simple
                 valor_actual = self.navegar_propiedad(valor_actual, parte);
             }
             
@@ -1458,7 +1296,6 @@ impl Interpretador {
                             return valor;
                         }
                         let mut nueva_lista = items.clone();
-                        // Parsear el argumento (puede ser número, string, etc)
                         let arg_valor = self.parsear_argumento_simple(args_str);
                         nueva_lista.push(arg_valor);
                         Valor::Lista(nueva_lista)
@@ -1482,7 +1319,6 @@ impl Interpretador {
     fn parsear_argumento_simple(&self, arg: &str) -> Valor {
         let arg_limpio = arg.trim();
         
-        // Intentar parsear como número
         if let Ok(n) = arg_limpio.parse::<i64>() {
             return Valor::Entero(n);
         }
@@ -1491,13 +1327,11 @@ impl Interpretador {
             return Valor::Flotante(f);
         }
         
-        // Si está entre comillas, es un string
         if (arg_limpio.starts_with('"') && arg_limpio.ends_with('"')) ||
            (arg_limpio.starts_with('\'') && arg_limpio.ends_with('\'')) {
             return Valor::Texto(arg_limpio[1..arg_limpio.len()-1].to_string());
         }
         
-        // Booleanos
         if arg_limpio == "true" {
             return Valor::Booleano(true);
         }
@@ -1505,7 +1339,6 @@ impl Interpretador {
             return Valor::Booleano(false);
         }
         
-        // Por defecto, intentar obtener variable
         self.entorno_actual.obtener(arg_limpio).unwrap_or(Valor::Nulo)
     }
 
