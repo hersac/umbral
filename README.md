@@ -61,6 +61,9 @@ PowerShell -ExecutionPolicy Bypass -File install.ps1
 
 **Importante**: Cierra y vuelve a abrir tu terminal después de instalar.
 
+> [!WARNING]
+> **Conflicto de versiones**: Si previamente instalaste Umbral manualmente con `cargo install`, es posible que esa versión tenga prioridad. Ejecuta `cargo uninstall umbral` antes de usar el instalador para evitar conflictos.
+
 ### Verificar instalación
 
 ```bash
