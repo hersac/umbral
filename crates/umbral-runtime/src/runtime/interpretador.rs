@@ -180,16 +180,57 @@ impl Interpretador {
     fn ejecutar_importacion(&mut self, imp: umbral_parser::ast::Importacion) -> Option<Valor> {
         use std::fs;
 
-        let ruta_relativa = PathBuf::from(&imp.ruta);
-        let ruta_archivo = self.directorio_base.join(&ruta_relativa);
+        let ruta_original = PathBuf::from(&imp.ruta);
 
-        let contenido = match fs::read_to_string(&ruta_archivo) {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!("Error al leer archivo '{}': {}", ruta_archivo.display(), e);
-                return None;
+        // Estrategia de búsqueda de módulos:
+        // 1. Ruta relativa directa (comportamiento actual)
+        // 2. Módulo UMP: modules_ump/<ruta>
+        // 3. Módulo UMP (main): modules_ump/<ruta>/main.um
+        // 4. Módulo UMP (index): modules_ump/<ruta>/index.um
+
+        let rutas_posibles = vec![
+            self.directorio_base.join(&ruta_original),
+            self.directorio_base
+                .join("modules_ump")
+                .join(&ruta_original),
+            self.directorio_base
+                .join("modules_ump")
+                .join(&ruta_original)
+                .join("main.um"),
+            self.directorio_base
+                .join("modules_ump")
+                .join(&ruta_original)
+                .join("index.um"),
+        ];
+
+        let mut contenido = String::new();
+        let mut ruta_encontrada = PathBuf::new();
+        let mut encontrado = false;
+
+        for ruta in rutas_posibles {
+            if let Ok(c) = fs::read_to_string(&ruta) {
+                contenido = c;
+                ruta_encontrada = ruta;
+                encontrado = true;
+                break;
             }
-        };
+        }
+
+        if !encontrado {
+            eprintln!(
+                "Error: No se pudo encontrar el módulo '{}'. Se buscaron las siguientes rutas:",
+                imp.ruta
+            );
+            eprintln!(" - {}", self.directorio_base.join(&ruta_original).display());
+            eprintln!(
+                " - {}",
+                self.directorio_base
+                    .join("modules_ump")
+                    .join(&ruta_original)
+                    .display()
+            );
+            return None;
+        }
 
         let tokens = umbral_lexer::analizar(&contenido);
         let programa = match umbral_parser::parsear_programa(tokens) {
@@ -197,7 +238,7 @@ impl Interpretador {
             Err(e) => {
                 eprintln!(
                     "Error al parsear archivo '{}': {:?}",
-                    ruta_archivo.display(),
+                    ruta_encontrada.display(),
                     e
                 );
                 return None;
@@ -205,7 +246,7 @@ impl Interpretador {
         };
 
         let mut interprete_modulo = Interpretador::nuevo();
-        if let Some(parent) = ruta_archivo.parent() {
+        if let Some(parent) = ruta_encontrada.parent() {
             interprete_modulo.establecer_directorio_base(parent.to_path_buf());
         }
 
@@ -287,7 +328,7 @@ impl Interpretador {
                 let contenido = s.trim_matches('"').to_string();
                 let interpolado = self.procesar_interpolaciones(contenido);
                 Valor::Texto(interpolado)
-            },
+            }
             Expresion::LiteralCadenaLiteral(s) => Valor::Texto(s),
             Expresion::LiteralNulo => Valor::Nulo,
             Expresion::Identificador(nombre) => {
@@ -306,12 +347,10 @@ impl Interpretador {
                 expresion,
             } => self.evaluar_unaria(&operador, *expresion),
             Expresion::Agrupada(expr) => self.evaluar_expresion(*expr),
-            Expresion::This => {
-                self.entorno_actual.obtener("__this__").unwrap_or_else(|| {
-                    eprintln!("'th' solo puede usarse dentro de métodos o constructores de clase");
-                    Valor::Nulo
-                })
-            }
+            Expresion::This => self.entorno_actual.obtener("__this__").unwrap_or_else(|| {
+                eprintln!("'th' solo puede usarse dentro de métodos o constructores de clase");
+                Valor::Nulo
+            }),
             Expresion::Spread(expr) => self.evaluar_expresion(*expr),
             Expresion::Array(items) => {
                 let mut valores: Vec<Valor> = Vec::new();
@@ -1187,14 +1226,14 @@ impl Interpretador {
     ) -> String {
         let mut expr = String::new();
         let mut nivel_parentesis = 0;
-        
+
         while let Some(&ch) = chars.peek() {
             if ch == '(' {
                 nivel_parentesis += 1;
                 expr.push(chars.next().unwrap());
                 continue;
             }
-            
+
             if ch == ')' {
                 nivel_parentesis -= 1;
                 expr.push(chars.next().unwrap());
@@ -1205,16 +1244,16 @@ impl Interpretador {
                 }
                 continue;
             }
-            
+
             if nivel_parentesis > 0 {
                 expr.push(chars.next().unwrap());
                 continue;
             }
-            
+
             if !self.es_caracter_expresion_basico(ch) {
                 break;
             }
-            
+
             expr.push(chars.next().unwrap());
         }
         expr
@@ -1242,13 +1281,11 @@ impl Interpretador {
             return self.resolver_acceso_encadenado(&expr);
         }
 
-        let nombre_variable = if expr == "th" {
-            "__this__"
-        } else {
-            &expr
-        };
-        
-        self.entorno_actual.obtener(nombre_variable).unwrap_or(Valor::Nulo)
+        let nombre_variable = if expr == "th" { "__this__" } else { &expr };
+
+        self.entorno_actual
+            .obtener(nombre_variable)
+            .unwrap_or(Valor::Nulo)
     }
 
     fn es_literal_numerico(&self, expr: &str) -> bool {
@@ -1261,13 +1298,13 @@ impl Interpretador {
 
     fn resolver_llamada_metodo_interpolacion(&mut self, expr: &str) -> Valor {
         let partes: Vec<&str> = expr.split('.').collect();
-        
+
         let primer_elemento = if partes[0] == "th" {
             "__this__"
         } else {
             partes[0]
         };
-        
+
         let Some(mut valor_actual) = self.entorno_actual.obtener(primer_elemento) else {
             return Valor::Nulo;
         };
@@ -1276,7 +1313,7 @@ impl Interpretador {
             if parte.contains('(') {
                 let metodo_fin = parte.find('(').unwrap_or(parte.len());
                 let metodo = &parte[..metodo_fin];
-                
+
                 let args_str = if parte.contains('(') && parte.contains(')') {
                     let inicio = parte.find('(').unwrap() + 1;
                     let fin = parte.rfind(')').unwrap();
@@ -1289,7 +1326,7 @@ impl Interpretador {
             } else {
                 valor_actual = self.navegar_propiedad(valor_actual, parte);
             }
-            
+
             if matches!(valor_actual, Valor::Nulo) {
                 break;
             }
@@ -1298,48 +1335,57 @@ impl Interpretador {
         valor_actual
     }
 
-    fn ejecutar_metodo_interpolacion(&mut self, valor: Valor, metodo: &str, args_str: &str) -> Valor {
+    fn ejecutar_metodo_interpolacion(
+        &mut self,
+        valor: Valor,
+        metodo: &str,
+        args_str: &str,
+    ) -> Valor {
         match valor {
-            Valor::Lista(ref items) => {
-                match metodo {
-                    "len" => Valor::Entero(items.len() as i64),
-                    "push" => {
-                        if args_str.is_empty() {
-                            return valor;
-                        }
-                        let mut nueva_lista = items.clone();
-                        let arg_valor = self.parsear_argumento_simple(args_str);
-                        nueva_lista.push(arg_valor);
-                        Valor::Lista(nueva_lista)
+            Valor::Lista(ref items) => match metodo {
+                "len" => Valor::Entero(items.len() as i64),
+                "push" => {
+                    if args_str.is_empty() {
+                        return valor;
                     }
-                    "pop" => {
-                        if !items.is_empty() {
-                            let mut nueva_lista = items.clone();
-                            nueva_lista.pop();
-                            Valor::Lista(nueva_lista)
-                        } else {
-                            Valor::Lista(vec![])
-                        }
-                    }
-                    _ => Valor::Nulo
+                    let mut nueva_lista = items.clone();
+                    let arg_valor = self.parsear_argumento_simple(args_str);
+                    nueva_lista.push(arg_valor);
+                    Valor::Lista(nueva_lista)
                 }
-            }
+                "pop" => {
+                    if !items.is_empty() {
+                        let mut nueva_lista = items.clone();
+                        nueva_lista.pop();
+                        Valor::Lista(nueva_lista)
+                    } else {
+                        Valor::Lista(vec![])
+                    }
+                }
+                _ => Valor::Nulo,
+            },
             Valor::Objeto(instancia) => {
                 let argumentos = if args_str.is_empty() {
                     vec![]
                 } else {
-                    args_str.split(',')
+                    args_str
+                        .split(',')
                         .map(|s| self.parsear_argumento_simple(s.trim()))
                         .collect()
                 };
-                
+
                 self.ejecutar_metodo_objeto(&instancia, metodo, argumentos)
             }
-            _ => Valor::Nulo
+            _ => Valor::Nulo,
         }
     }
-    
-    fn ejecutar_metodo_objeto(&mut self, instancia: &crate::runtime::valores::Instancia, metodo: &str, args: Vec<Valor>) -> Valor {
+
+    fn ejecutar_metodo_objeto(
+        &mut self,
+        instancia: &crate::runtime::valores::Instancia,
+        metodo: &str,
+        args: Vec<Valor>,
+    ) -> Valor {
         let clase = match self.gestor_clases.obtener_clase(&instancia.clase) {
             Some(c) => c,
             None => return Valor::Nulo,
@@ -1383,39 +1429,42 @@ impl Interpretador {
 
     fn parsear_argumento_simple(&self, arg: &str) -> Valor {
         let arg_limpio = arg.trim();
-        
+
         if let Ok(n) = arg_limpio.parse::<i64>() {
             return Valor::Entero(n);
         }
-        
+
         if let Ok(f) = arg_limpio.parse::<f64>() {
             return Valor::Flotante(f);
         }
-        
-        if (arg_limpio.starts_with('"') && arg_limpio.ends_with('"')) ||
-           (arg_limpio.starts_with('\'') && arg_limpio.ends_with('\'')) {
-            return Valor::Texto(arg_limpio[1..arg_limpio.len()-1].to_string());
+
+        if (arg_limpio.starts_with('"') && arg_limpio.ends_with('"'))
+            || (arg_limpio.starts_with('\'') && arg_limpio.ends_with('\''))
+        {
+            return Valor::Texto(arg_limpio[1..arg_limpio.len() - 1].to_string());
         }
-        
+
         if arg_limpio == "true" {
             return Valor::Booleano(true);
         }
         if arg_limpio == "false" {
             return Valor::Booleano(false);
         }
-        
-        self.entorno_actual.obtener(arg_limpio).unwrap_or(Valor::Nulo)
+
+        self.entorno_actual
+            .obtener(arg_limpio)
+            .unwrap_or(Valor::Nulo)
     }
 
     fn resolver_acceso_encadenado(&mut self, expr: &str) -> Valor {
         let partes: Vec<&str> = expr.split('.').collect();
-        
+
         let primer_elemento = if partes[0] == "th" {
             "__this__"
         } else {
             partes[0]
         };
-        
+
         let Some(mut valor_actual) = self.entorno_actual.obtener(primer_elemento) else {
             return Valor::Nulo;
         };
