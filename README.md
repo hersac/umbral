@@ -417,6 +417,42 @@ c: resultado = mat_sumar(10, 5);
 origin 'modulos/matematicas.um' equip sumar;
 ```
 
+### Gestor de Paquetes UMP
+
+Umbral tiene soporte integrado para el gestor de paquetes **UMP** (Umbral Package Manager), que permite instalar y gestionar librerías de forma sencilla.
+
+#### Instalación de librerías
+
+```bash
+# Instalar una librería desde el registry
+ump add http
+
+# La librería se descarga en modules_ump/
+```
+
+#### Importación simplificada
+
+Una vez instalada una librería con UMP, puedes importarla usando solo su nombre:
+
+```umbral
+!! Importación simplificada de módulo UMP
+equip { fetch } origin 'http';
+
+!! Uso de la librería
+c: url = "https://api.ejemplo.com/datos";
+c: respuesta = fetch(url);
+tprint("Respuesta: &respuesta");
+```
+
+**Ventajas:**
+- ✅ No necesitas conocer la estructura interna de `modules_ump`
+- ✅ Sintaxis consistente con `ump add <nombre>`
+- ✅ Búsqueda automática en la jerarquía de directorios
+- ✅ Compatible con rutas relativas tradicionales
+
+**Más información:** [UMP Package Manager](https://github.com/hersac/ump)
+
+
 ### Strings e interpolación
 
 ```umbral
@@ -608,7 +644,9 @@ Los siguientes valores se evalúan como `false`: `false`, `null`, `0`, `0.0`, `"
 ### Sistema de Módulos
 *   **Importación**: `equip [item] origin 'ruta';`
 *   **Exportación**: `out` prefijo en declaraciones.
-*   **Rutas**: Relativas al archivo actual.
+*   **Rutas**: Relativas al archivo actual o nombre de módulo UMP.
+*   **Módulos UMP**: Si el origen no contiene `/`, `./` o `../`, se busca automáticamente en `modules_ump/`.
+*   **Búsqueda**: El intérprete busca `modules_ump` subiendo en la jerarquía de directorios hasta encontrarlo.
 
 ---
 

@@ -180,56 +180,104 @@ impl Interpretador {
     fn ejecutar_importacion(&mut self, imp: umbral_parser::ast::Importacion) -> Option<Valor> {
         use std::fs;
 
-        let ruta_original = PathBuf::from(&imp.ruta);
+        let ruta_str = &imp.ruta;
 
-        // Estrategia de búsqueda de módulos:
-        // 1. Ruta relativa directa (comportamiento actual)
-        // 2. Módulo UMP: modules_ump/<ruta>
-        // 3. Módulo UMP (main): modules_ump/<ruta>/main.um
-        // 4. Módulo UMP (index): modules_ump/<ruta>/index.um
-
-        let rutas_posibles = vec![
-            self.directorio_base.join(&ruta_original),
-            self.directorio_base
-                .join("modules_ump")
-                .join(&ruta_original),
-            self.directorio_base
-                .join("modules_ump")
-                .join(&ruta_original)
-                .join("main.um"),
-            self.directorio_base
-                .join("modules_ump")
-                .join(&ruta_original)
-                .join("index.um"),
-        ];
+        // Detectar si es ruta relativa o nombre de módulo UMP
+        let es_ruta_relativa =
+            ruta_str.contains('/') || ruta_str.starts_with("./") || ruta_str.starts_with("../");
 
         let mut contenido = String::new();
         let mut ruta_encontrada = PathBuf::new();
         let mut encontrado = false;
 
-        for ruta in rutas_posibles {
-            if let Ok(c) = fs::read_to_string(&ruta) {
-                contenido = c;
-                ruta_encontrada = ruta;
-                encontrado = true;
-                break;
-            }
-        }
+        if es_ruta_relativa {
+            // Comportamiento para rutas relativas (mantiene compatibilidad)
+            let ruta_original = PathBuf::from(ruta_str);
 
-        if !encontrado {
-            eprintln!(
-                "Error: No se pudo encontrar el módulo '{}'. Se buscaron las siguientes rutas:",
-                imp.ruta
-            );
-            eprintln!(" - {}", self.directorio_base.join(&ruta_original).display());
-            eprintln!(
-                " - {}",
+            let rutas_posibles = vec![
+                self.directorio_base.join(&ruta_original),
+                self.directorio_base
+                    .join("modules_ump")
+                    .join(&ruta_original),
                 self.directorio_base
                     .join("modules_ump")
                     .join(&ruta_original)
-                    .display()
-            );
-            return None;
+                    .join("main.um"),
+                self.directorio_base
+                    .join("modules_ump")
+                    .join(&ruta_original)
+                    .join("index.um"),
+            ];
+
+            for ruta in rutas_posibles {
+                if let Ok(c) = fs::read_to_string(&ruta) {
+                    contenido = c;
+                    ruta_encontrada = ruta;
+                    encontrado = true;
+                    break;
+                }
+            }
+
+            if !encontrado {
+                eprintln!(
+                    "Error: No se pudo encontrar el módulo '{}'. Se buscaron las siguientes rutas:",
+                    imp.ruta
+                );
+                eprintln!(" - {}", self.directorio_base.join(&ruta_original).display());
+                eprintln!(
+                    " - {}",
+                    self.directorio_base
+                        .join("modules_ump")
+                        .join(&ruta_original)
+                        .display()
+                );
+                return None;
+            }
+        } else {
+            let nombre_modulo = ruta_str;
+            let mut dir_actual = self.directorio_base.clone();
+
+            loop {
+                let modules_ump = dir_actual.join("modules_ump");
+
+                if modules_ump.exists() && modules_ump.is_dir() {
+                    let rutas_posibles = vec![
+                        modules_ump.join(nombre_modulo).join("src").join("main.um"),
+                        modules_ump.join(nombre_modulo).join("main.um"),
+                        modules_ump.join(nombre_modulo).join("index.um"),
+                    ];
+
+                    for ruta in rutas_posibles {
+                        if let Ok(c) = fs::read_to_string(&ruta) {
+                            contenido = c;
+                            ruta_encontrada = ruta;
+                            encontrado = true;
+                            break;
+                        }
+                    }
+
+                    if encontrado {
+                        break;
+                    }
+                }
+
+                // Subir un nivel en la jerarquía
+                if !dir_actual.pop() {
+                    break;
+                }
+            }
+
+            if !encontrado {
+                eprintln!(
+                    "Error: No se pudo encontrar el módulo UMP '{}' en modules_ump.",
+                    nombre_modulo
+                );
+                eprintln!(
+                    "Asegúrate de que el módulo esté instalado con 'ump add {}'.",
+                    nombre_modulo
+                );
+                return None;
+            }
         }
 
         let tokens = umbral_lexer::analizar(&contenido);
