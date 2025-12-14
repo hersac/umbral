@@ -1,6 +1,6 @@
 # Umbral
 
-**Versión 1.1.5**
+**Versión 1.2.5**
 
 Lenguaje de programación de propósito general con sintaxis expresiva y moderna. Diseñado para ser fácil de aprender y productivo de usar.
 
@@ -25,25 +25,59 @@ Lenguaje de programación de propósito general con sintaxis expresiva y moderna
 
 ## ✨ Características
 
+### ✅ Implementado
+
 - 🎯 **Sintaxis clara y concisa** - Fácil de leer y escribir
 - 🔄 **Tipado dinámico con anotaciones opcionales** - Flexibilidad sin sacrificar claridad
-- 🏗️ **Programación orientada a objetos** - Clases, herencia e interfaces
-- 🔧 **Funciones de primera clase** - Funciones como valores, closures
+- 🏗️ **Programación orientada a objetos** - Clases con herencia (`ext:`)
+- 🔧 **Funciones de primera clase** - Funciones como valores y recursividad
 - 🎨 **Interpolación de strings** - Sintaxis natural con `&variable`
-- 🔄 **Control de flujo completo** - if/else, switch, for, foreach, while, do-while
-- 🚀 **REPL interactivo** - Experimenta en tiempo real
+- 🔄 **Control de flujo completo** - if/else, switch/case, for, foreach, while, do-while
+- 🚀 **REPL interactivo** - Experimenta en tiempo real con `umbral-repl`
 - 📦 **CLI potente** - Ejecuta archivos con `umbral archivo.um`
+- 📚 **Sistema de módulos** - Importaciones/exportaciones con `equip`/`origin`
+- 🔧 **Gestor de paquetes UMP** - Instalación automática de librerías
+- 📖 **Biblioteca estándar** - Funciones esenciales para strings, números, archivos y colecciones
+- 🎨 **Arrays y diccionarios** - Estructuras de datos con métodos integrados
+- ⚡ **Operadores completos** - Aritméticos, lógicos, comparación, incremento/decremento y spread
+
+### 🚧 En desarrollo
+
+- ⚠️ **Interfaces** - Definición con `in:` e implementación con `imp:` (sintaxis definida, validación pendiente)
+- 🔒 **Manejo de errores** - Sistema try/catch
+- 🐛 **Debugger integrado** - Herramientas de depuración
+- 📊 **Language Server Protocol (LSP)** - Soporte para editores
 
 ---
 
 ## 🚀 Instalación rápida
 
-### Requisitos
+### Opción 1: Descargar binarios precompilados
+
+Descarga la última versión desde [Releases](https://github.com/hersac/umbral/releases):
+
+- **Linux**: `umbral_1.2.5_amd64.deb`
+- **Windows**: `umbral_1.2.5_x64.exe`
+- **Código fuente**: `umbral-1.2.5.tar.gz` o `umbral-1.2.5.zip`
+
+#### Instalación en Linux (Debian/Ubuntu)
+
+```bash
+sudo dpkg -i umbral_1.2.5_amd64.deb
+```
+
+#### Instalación en Windows
+
+Ejecuta el instalador `umbral_1.2.5_x64.exe` y sigue las instrucciones.
+
+### Opción 2: Compilar desde código fuente
+
+#### Requisitos
 
 - [Rust](https://rustup.rs/) 1.70 o superior
 - Git
 
-### Linux / macOS
+#### Linux / macOS
 
 ```bash
 git clone https://github.com/hersac/umbral.git
@@ -51,7 +85,7 @@ cd umbral
 ./install.sh
 ```
 
-### Windows (PowerShell como Administrador)
+#### Windows (PowerShell como Administrador)
 
 ```powershell
 git clone https://github.com/hersac/umbral.git
@@ -575,7 +609,7 @@ v: claves = Std.keys(dict);                !! ["a", "b"]
 
 ---
 
-## 📜 Especificación Formal (v1.1.5)
+## 📜 Especificación Formal (v1.2.5)
 
 ### Sistema de Tipos
 
@@ -785,18 +819,6 @@ umbral/
 ├── test_repl.sh            # Tests del REPL
 ├── INSTALL.md              # Guía de instalación
 ├── LICENSE                 # Licencia del proyecto
-├── ejemplos/               # Ejemplos de código organizados
-│   ├── 01_variables_y_constantes.um
-│   ├── 02_funciones.um
-│   ├── 03_condicionales.um
-│   ├── 04_bucles.um
-│   ├── 05_clases.um
-│   ├── 06_importaciones_exportaciones.um
-│   ├── 07_tipos_avanzados.um
-│   ├── 08_ejemplo_completo.um
-│   ├── 09_uso_importaciones.um
-│   └── modulos/
-│       └── matematicas.um
 └── crates/
     ├── umbral-lexer/       # Tokenizador
     │   ├── Cargo.toml
@@ -864,83 +886,47 @@ cargo test -p umbral-interpreter
 
 ### Ejemplos de código
 
-Explora los ejemplos organizados por tema:
-
-```bash
-# Variables y constantes
-umbral ejemplos/01_variables_y_constantes.um
-
-# Funciones
-umbral ejemplos/02_funciones.um
-
-# Condicionales
-umbral ejemplos/03_condicionales.um
-
-# Bucles
-umbral ejemplos/04_bucles.um
-
-# Clases (POO)
-umbral ejemplos/05_clases.um
-
-# Importaciones y exportaciones
-umbral ejemplos/06_importaciones_exportaciones.um
-
-# Tipos avanzados
-umbral ejemplos/07_tipos_avanzados.um
-
-# Ejemplo completo (Sistema de gestión)
-umbral ejemplos/08_ejemplo_completo.um
-
-# Uso de importaciones
-umbral ejemplos/09_uso_importaciones.um
-```
+El proyecto incluye una carpeta `ejemplos/` con código de demostración de todas las funcionalidades de Umbral, organizados por tema (variables, funciones, clases, bucles, importaciones, etc.).
 
 ---
 
 ## 🗺️ Roadmap
 
-### ✅ Versión 1.1.5 (Actual)
+### ✅ Versión 1.2.5 (Actual)
 
-- ✅ Lexer completo
-- ✅ Parser con AST
-- ✅ Runtime funcional
+- ✅ Lexer completo con soporte para todos los tokens
+- ✅ Parser con AST robusto
+- ✅ Runtime funcional con gestión de memoria
 - ✅ Variables y constantes con tipado (Int, Flo, Str, Bool, Void)
-- ✅ Funciones con retorno de tipos avanzados
-- ✅ Clases y POO básico
-- ✅ Condicionales (si/sino)
-- ✅ Bucles (mientras)
-- ✅ Operadores aritméticos, lógicos y de comparación
-- ✅ Arrays y matrices ([]Tipo, [][]Tipo)
-- ✅ Arrays/matrices de clases ([]Clase, [][]Clase)
-- ✅ Interpolación de strings
+- ✅ Funciones con retorno de tipos avanzados y recursividad
+- ✅ Clases con herencia (`ext:`)
+- ✅ Sintaxis de interfaces (`in:` e `imp:`)
+- ✅ Control de flujo completo (if/else, switch/case, for, foreach, while, do-while)
+- ✅ Operadores completos (aritméticos, lógicos, comparación, incremento/decremento, spread)
+- ✅ Arrays y diccionarios con métodos integrados
+- ✅ Interpolación de strings con `&variable`
 - ✅ Sistema de módulos con importaciones/exportaciones
-- ✅ Control de acceso público/privado con `out`
-- ✅ 7 sintaxis de importación (equip/origin)
-- ✅ CLI (`umbral`)
+- ✅ Control de acceso con `out` para exportaciones
+- ✅ Múltiples sintaxis de importación (equip/origin)
+- ✅ Integración con gestor de paquetes UMP
+- ✅ Resolución automática de módulos en `modules_ump/`
+- ✅ Biblioteca estándar (Std) con funciones para strings, números, archivos y colecciones
+- ✅ CLI (`umbral`) con gestión de versiones centralizada
 - ✅ REPL interactivo (`umbral-repl`)
 - ✅ Instaladores para Linux/macOS/Windows
-- ✅ 9 ejemplos completos organizados por tema
+- ✅ Paquetes binarios (.deb, .exe)
 
-### 🔄 Versión 1.1.0 (Próxima)
+### 🔄 Próximas mejoras
 
-- [ ] Soporte completo para `th` (this) en constructores
-- [ ] Validación de interfaces
+- [ ] Validación completa de interfaces en runtime
 - [ ] Enums funcionales
 - [ ] Manejo de errores con try/catch
-- [ ] Bucles adicionales (for, foreach, do-while)
-- [ ] Switch/case
-- [ ] Librería estándar básica
-- [ ] Sistema de paquetes
-
-### 🚀 Versión 2.0.0 (Futuro)
-
-- [ ] Sistema de tipos estático opcional
-- [ ] Compilador a bytecode
-- [ ] Optimización de performance
+- [ ] Optimización de performance del intérprete
+- [ ] Expansión de la biblioteca estándar
 - [ ] Debugger integrado
 - [ ] Language Server Protocol (LSP)
-- [ ] Gestión de paquetes
-- [ ] Documentación generada automáticamente
+- [ ] Sistema de tipos estático opcional
+- [ ] Compilador a bytecode
 
 ---
 
