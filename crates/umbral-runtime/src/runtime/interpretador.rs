@@ -1354,12 +1354,28 @@ impl Interpretador {
         let mut chars = texto.chars().peekable();
 
         while let Some(c) = chars.next() {
+            if c == '\\' {
+                if chars.peek() == Some(&'&') {
+                    chars.next();
+                    salida.push('&');
+                    continue;
+                }
+                salida.push(c);
+                continue;
+            }
+            
             if c != '&' {
                 salida.push(c);
                 continue;
             }
 
             let expr = self.leer_expresion_interpolacion(&mut chars);
+            
+            if expr.is_empty() {
+                salida.push('&');
+                continue;
+            }
+            
             let valor = self.evaluar_interpolacion(expr);
             salida.push_str(&valor);
         }

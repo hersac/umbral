@@ -184,7 +184,7 @@ tprint('   RESUMEN DEL OPERADOR SPREAD');
 tprint('========================================');
 tprint('');
 tprint("El operador & expande arrays dentro de literales:");
-tprint("  - { &array1, &array2 } combina arrays");
+tprint("  - { \&array1, \&array2 } combina arrays");
 tprint('  - Puede mezclarse con valores literales');
 tprint('  - Funciona con múltiples arrays');
 tprint('  - Arrays vacíos no afectan el resultado');
