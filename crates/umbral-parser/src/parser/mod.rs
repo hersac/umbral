@@ -138,72 +138,114 @@ impl Parser {
     fn parsear_sentencia(&mut self) -> Result<Sentencia, ParseError> {
         let exportado = self.coincidir(|t| matches!(t, LexToken::Out));
         
+        let resultado = self.intentar_parsear_declaraciones(exportado)
+            .or_else(|| self.intentar_parsear_controles())
+            .or_else(|| self.intentar_parsear_comandos());
+        
+        if let Some(sentencia) = resultado {
+            return sentencia;
+        }
+        
+        self.parsear_expresion_o_asignacion()
+    }
+    
+    fn intentar_parsear_declaraciones(&mut self, exportado: bool) -> Option<Result<Sentencia, ParseError>> {
         if self.coincidir(|t| matches!(t, LexToken::Equip)) || self.coincidir(|t| matches!(t, LexToken::Origin)) {
             self.posicion -= 1;
-            return importaciones::parsear_importacion(self);
+            return Some(importaciones::parsear_importacion(self));
         }
+        
         if self.coincidir(|t| matches!(t, LexToken::DeclararVariable)) {
-            return variables::parsear_declaracion_variable(self, exportado);
+            return Some(variables::parsear_declaracion_variable(self, exportado));
         }
+        
         if self.coincidir(|t| matches!(t, LexToken::DeclararConstante)) {
-            return constantes::parsear_declaracion_constante(self, exportado);
+            return Some(constantes::parsear_declaracion_constante(self, exportado));
         }
+        
         if self.coincidir(|t| matches!(t, LexToken::DeclararFuncion)) {
-            return funciones::parsear_declaracion_funcion(self, exportado);
+            return Some(funciones::parsear_declaracion_funcion(self, exportado));
         }
+        
         if self.coincidir(|t| matches!(t, LexToken::DeclararClase)) {
-            return clases::parsear_declaracion_clase(self, exportado);
+            return Some(clases::parsear_declaracion_clase(self, exportado));
         }
+        
         if self.coincidir(|t| matches!(t, LexToken::DeclararInterfaz)) {
-            return interfaces::parsear_declaracion_interfaz(self, exportado);
+            return Some(interfaces::parsear_declaracion_interfaz(self, exportado));
         }
+        
         if self.coincidir(|t| matches!(t, LexToken::DeclararEnum)) {
-            return enums::parsear_declaracion_enum(self, exportado);
+            return Some(enums::parsear_declaracion_enum(self, exportado));
         }
-        if self.coincidir(|t| matches!(t, LexToken::TPrint)) {
-            return sentencias::parsear_tprint(self);
-        }
-        if self.coincidir(|t| matches!(t, LexToken::Return)) {
-            return sentencias::parsear_return(self);
-        }
+        
+        None
+    }
+    
+    fn intentar_parsear_controles(&mut self) -> Option<Result<Sentencia, ParseError>> {
         if self.coincidir(|t| matches!(t, LexToken::If)) {
-            return controles::parsear_if(self);
+            return Some(controles::parsear_if(self));
         }
+        
         if self.coincidir(|t| matches!(t, LexToken::Switch)) {
-            return controles::parsear_switch(self);
+            return Some(controles::parsear_switch(self));
         }
+        
         if self.coincidir(|t| matches!(t, LexToken::For)) {
-            return controles::parsear_for(self);
+            return Some(controles::parsear_for(self));
         }
+        
         if self.coincidir(|t| matches!(t, LexToken::ForEach)) {
-            return controles::parsear_foreach(self);
+            return Some(controles::parsear_foreach(self));
         }
+        
         if self.coincidir(|t| matches!(t, LexToken::While)) {
-            return controles::parsear_while(self);
+            return Some(controles::parsear_while(self));
         }
+        
         if self.coincidir(|t| matches!(t, LexToken::DoWhile)) {
-            return controles::parsear_dowhile(self);
+            return Some(controles::parsear_dowhile(self));
         }
-
-        let expr = parsear_expresion_principal(self)?;
         
-        if self.coincidir(|t| matches!(t, LexToken::Asignacion)) {
-            let valor = parsear_expresion_principal(self)?;
+        None
+    }
+    
+    fn intentar_parsear_comandos(&mut self) -> Option<Result<Sentencia, ParseError>> {
+        if self.coincidir(|t| matches!(t, LexToken::TPrint)) {
+            return Some(sentencias::parsear_tprint(self));
+        }
+        
+        if self.coincidir(|t| matches!(t, LexToken::Return)) {
+            return Some(sentencias::parsear_return(self));
+        }
+        
+        None
+    }
+    
+    fn parsear_expresion_o_asignacion(&mut self) -> Result<Sentencia, ParseError> {
+        let expresion = parsear_expresion_principal(self)?;
+        
+        if !self.coincidir(|t| matches!(t, LexToken::Asignacion)) {
             self.coincidir(|t| matches!(t, LexToken::PuntoYComa));
-            
-            let objetivo = match expr {
-                Expresion::Identificador(n) => ObjetivoAsignacion::Variable(n),
-                Expresion::AccesoPropiedad { objeto, propiedad } => {
-                    ObjetivoAsignacion::Propiedad { objeto, propiedad }
-                }
-                _ => return Err(self.crear_error("Objetivo de asignación inválido")),
-            };
-            
-            return Ok(Sentencia::Asignacion(Asignacion { objetivo, valor }));
+            return Ok(Sentencia::Expresion(expresion));
         }
         
+        self.parsear_asignacion_con_objetivo(expresion)
+    }
+    
+    fn parsear_asignacion_con_objetivo(&mut self, expresion: Expresion) -> Result<Sentencia, ParseError> {
+        let valor = parsear_expresion_principal(self)?;
         self.coincidir(|t| matches!(t, LexToken::PuntoYComa));
-        Ok(Sentencia::Expresion(expr))
+        
+        let objetivo = match expresion {
+            Expresion::Identificador(nombre) => ObjetivoAsignacion::Variable(nombre),
+            Expresion::AccesoPropiedad { objeto, propiedad } => {
+                ObjetivoAsignacion::Propiedad { objeto, propiedad }
+            }
+            _ => return Err(self.crear_error("Objetivo de asignación inválido")),
+        };
+        
+        Ok(Sentencia::Asignacion(Asignacion { objetivo, valor }))
     }
 
     fn parsear_identificador_consumir(&mut self) -> Result<String, ParseError> {

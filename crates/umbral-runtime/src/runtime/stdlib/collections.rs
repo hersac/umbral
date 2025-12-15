@@ -1,111 +1,128 @@
 use crate::runtime::valores::Valor;
 use std::collections::HashMap;
 
+fn registrar_funcion(mapa: &mut HashMap<String, Valor>, nombre: &str, funcion: fn(Vec<Valor>) -> Valor) {
+    mapa.insert(
+        nombre.to_string(),
+        Valor::FuncionNativa(nombre.to_string(), funcion),
+    );
+}
+
 pub fn crear_modulo() -> Valor {
     let mut mapa = HashMap::new();
 
-    mapa.insert(
-        "len".to_string(),
-        Valor::FuncionNativa("len".to_string(), len),
-    );
-    mapa.insert(
-        "push".to_string(),
-        Valor::FuncionNativa("push".to_string(), push),
-    );
-    mapa.insert(
-        "pop".to_string(),
-        Valor::FuncionNativa("pop".to_string(), pop),
-    );
-    mapa.insert(
-        "keys".to_string(),
-        Valor::FuncionNativa("keys".to_string(), keys),
-    );
-    mapa.insert(
-        "values".to_string(),
-        Valor::FuncionNativa("values".to_string(), values),
-    );
-    mapa.insert(
-        "sort".to_string(),
-        Valor::FuncionNativa("sort".to_string(), sort),
-    );
-    mapa.insert(
-        "reverse".to_string(),
-        Valor::FuncionNativa("reverse".to_string(), reverse),
-    );
+    registrar_funcion(&mut mapa, "len", len);
+    registrar_funcion(&mut mapa, "push", push);
+    registrar_funcion(&mut mapa, "pop", pop);
+    registrar_funcion(&mut mapa, "keys", keys);
+    registrar_funcion(&mut mapa, "values", values);
+    registrar_funcion(&mut mapa, "sort", sort);
+    registrar_funcion(&mut mapa, "reverse", reverse);
 
     Valor::Diccionario(mapa)
 }
 
-fn len(args: Vec<Valor>) -> Valor {
-    match args.get(0) {
-        Some(Valor::Lista(l)) => Valor::Entero(l.len() as i64),
-        Some(Valor::Texto(s)) => Valor::Entero(s.len() as i64),
-        Some(Valor::Diccionario(d)) => Valor::Entero(d.len() as i64),
+fn obtener_longitud_lista(lista: &[Valor]) -> Valor {
+    Valor::Entero(lista.len() as i64)
+}
+
+fn obtener_longitud_texto(texto: &str) -> Valor {
+    Valor::Entero(texto.len() as i64)
+}
+
+fn obtener_longitud_diccionario(diccionario: &HashMap<String, Valor>) -> Valor {
+    Valor::Entero(diccionario.len() as i64)
+}
+
+fn len(argumentos: Vec<Valor>) -> Valor {
+    match argumentos.get(0) {
+        Some(Valor::Lista(lista)) => obtener_longitud_lista(lista),
+        Some(Valor::Texto(texto)) => obtener_longitud_texto(texto),
+        Some(Valor::Diccionario(diccionario)) => obtener_longitud_diccionario(diccionario),
         _ => Valor::Entero(0),
     }
 }
 
-fn push(args: Vec<Valor>) -> Valor {
-    if let Some(Valor::Lista(mut l)) = args.get(0).cloned() {
-        if let Some(val) = args.get(1) {
-            l.push(val.clone());
-            Valor::Lista(l)
-        } else {
-            Valor::Lista(l)
+fn agregar_elemento_lista(mut lista: Vec<Valor>, elemento: Valor) -> Valor {
+    lista.push(elemento);
+    Valor::Lista(lista)
+}
+
+fn push(argumentos: Vec<Valor>) -> Valor {
+    let lista = match argumentos.get(0).cloned() {
+        Some(Valor::Lista(l)) => l,
+        _ => return Valor::Nulo,
+    };
+
+    let elemento = match argumentos.get(1) {
+        Some(valor) => valor.clone(),
+        None => return Valor::Lista(lista),
+    };
+
+    agregar_elemento_lista(lista, elemento)
+}
+
+fn pop(argumentos: Vec<Valor>) -> Valor {
+    let mut lista = match argumentos.get(0).cloned() {
+        Some(Valor::Lista(l)) => l,
+        _ => return Valor::Nulo,
+    };
+
+    lista.pop();
+    Valor::Lista(lista)
+}
+
+fn extraer_claves(diccionario: &HashMap<String, Valor>) -> Valor {
+    let claves: Vec<Valor> = diccionario.keys().map(|c| Valor::Texto(c.clone())).collect();
+    Valor::Lista(claves)
+}
+
+fn keys(argumentos: Vec<Valor>) -> Valor {
+    match argumentos.get(0) {
+        Some(Valor::Diccionario(diccionario)) => extraer_claves(diccionario),
+        _ => Valor::Lista(vec![]),
+    }
+}
+
+fn extraer_valores(diccionario: &HashMap<String, Valor>) -> Valor {
+    let valores: Vec<Valor> = diccionario.values().cloned().collect();
+    Valor::Lista(valores)
+}
+
+fn values(argumentos: Vec<Valor>) -> Valor {
+    match argumentos.get(0) {
+        Some(Valor::Diccionario(diccionario)) => extraer_valores(diccionario),
+        _ => Valor::Lista(vec![]),
+    }
+}
+
+fn comparar_valores(a: &Valor, b: &Valor) -> std::cmp::Ordering {
+    match (a, b) {
+        (Valor::Entero(x), Valor::Entero(y)) => x.cmp(y),
+        (Valor::Flotante(x), Valor::Flotante(y)) => {
+            x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal)
         }
-    } else {
-        Valor::Nulo
+        (Valor::Texto(x), Valor::Texto(y)) => x.cmp(y),
+        _ => std::cmp::Ordering::Equal,
     }
 }
 
-fn pop(args: Vec<Valor>) -> Valor {
-    if let Some(Valor::Lista(mut l)) = args.get(0).cloned() {
-        l.pop();
-        Valor::Lista(l)
-    } else {
-        Valor::Nulo
-    }
+fn sort(argumentos: Vec<Valor>) -> Valor {
+    let mut lista = match argumentos.get(0).cloned() {
+        Some(Valor::Lista(l)) => l,
+        _ => return Valor::Nulo,
+    };
+
+    lista.sort_by(comparar_valores);
+    Valor::Lista(lista)
 }
 
-fn keys(args: Vec<Valor>) -> Valor {
-    if let Some(Valor::Diccionario(d)) = args.get(0) {
-        let keys_list: Vec<Valor> = d.keys().map(|k| Valor::Texto(k.clone())).collect();
-        Valor::Lista(keys_list)
-    } else {
-        Valor::Lista(vec![])
-    }
-}
+fn reverse(argumentos: Vec<Valor>) -> Valor {
+    let mut lista = match argumentos.get(0).cloned() {
+        Some(Valor::Lista(l)) => l,
+        _ => return Valor::Nulo,
+    };
 
-fn values(args: Vec<Valor>) -> Valor {
-    if let Some(Valor::Diccionario(d)) = args.get(0) {
-        let values_list: Vec<Valor> = d.values().cloned().collect();
-        Valor::Lista(values_list)
-    } else {
-        Valor::Lista(vec![])
-    }
-}
-
-fn sort(args: Vec<Valor>) -> Valor {
-    if let Some(Valor::Lista(mut l)) = args.get(0).cloned() {
-        l.sort_by(|a, b| match (a, b) {
-            (Valor::Entero(x), Valor::Entero(y)) => x.cmp(y),
-            (Valor::Flotante(x), Valor::Flotante(y)) => {
-                x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal)
-            }
-            (Valor::Texto(x), Valor::Texto(y)) => x.cmp(y),
-            _ => std::cmp::Ordering::Equal,
-        });
-        Valor::Lista(l)
-    } else {
-        Valor::Nulo
-    }
-}
-
-fn reverse(args: Vec<Valor>) -> Valor {
-    if let Some(Valor::Lista(mut l)) = args.get(0).cloned() {
-        l.reverse();
-        Valor::Lista(l)
-    } else {
-        Valor::Nulo
-    }
+    lista.reverse();
+    Valor::Lista(lista)
 }

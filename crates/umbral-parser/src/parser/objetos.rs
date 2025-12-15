@@ -3,34 +3,56 @@ use crate::error::ParseError;
 use crate::parser::Parser;
 use umbral_lexer::Token as LexToken;
 
-pub fn parsear_objeto_principal(parser: &mut Parser) -> Result<Expresion, ParseError> {
+fn obtener_clave_objeto(parseador: &Parser) -> Option<String> {
+    match parseador.peekear() {
+        Some(LexToken::Identificador(nombre)) => Some(nombre.clone()),
+        Some(LexToken::Cadena(texto) | LexToken::CadenaLiteral(texto)) => Some(texto.clone()),
+        _ => None,
+    }
+}
+
+fn parsear_par_clave_valor(parseador: &mut Parser) -> Result<(String, Expresion), ParseError> {
+    let clave = match obtener_clave_objeto(parseador) {
+        Some(c) => c,
+        None => return Err(parseador.crear_error("Clave de objeto esperada")),
+    };
+
+    parseador.avanzar();
+
+    if !parseador.coincidir(|t| matches!(t, LexToken::FlechaDoble)) {
+        return Err(parseador.crear_error("Se esperaba '=>' en objeto"));
+    }
+
+    let valor = crate::parser::expresiones::parsear_expresion_principal(parseador)?;
+    Ok((clave, valor))
+}
+
+fn parsear_pares_objeto(parseador: &mut Parser) -> Result<Vec<(String, Expresion)>, ParseError> {
     let mut pares = Vec::new();
-    if parser.coincidir(|t| matches!(t, LexToken::CorcheteDer)) {
-        return Ok(Expresion::Objeto(pares));
-    }
+
     loop {
-        let clave = match parser.peekear() {
-            Some(LexToken::Identificador(n)) => Some(n.clone()),
-            Some(LexToken::Cadena(s) | LexToken::CadenaLiteral(s)) => Some(s.clone()),
-            _ => None,
-        };
-        if let Some(k) = clave {
-            parser.avanzar();
-            if !parser.coincidir(|t| matches!(t, LexToken::FlechaDoble)) {
-                return Err(parser.crear_error("Se esperaba '=>' en objeto"));
-            }
-            let valor = crate::parser::expresiones::parsear_expresion_principal(parser)?;
-            pares.push((k, valor));
-            if parser.coincidir(|t| matches!(t, LexToken::Coma)) {
-                continue;
-            }
-            if parser.coincidir(|t| matches!(t, LexToken::CorcheteDer)) {
-                break;
-            }
-            return Err(parser.crear_error("Se esperaba ',' o ']' en objeto"));
-        } else {
-            return Err(parser.crear_error("Clave de objeto esperada"));
+        let par = parsear_par_clave_valor(parseador)?;
+        pares.push(par);
+
+        if parseador.coincidir(|t| matches!(t, LexToken::Coma)) {
+            continue;
         }
+
+        if parseador.coincidir(|t| matches!(t, LexToken::CorcheteDer)) {
+            break;
+        }
+
+        return Err(parseador.crear_error("Se esperaba ',' o ']' en objeto"));
     }
+
+    Ok(pares)
+}
+
+pub fn parsear_objeto_principal(parseador: &mut Parser) -> Result<Expresion, ParseError> {
+    if parseador.coincidir(|t| matches!(t, LexToken::CorcheteDer)) {
+        return Ok(Expresion::Objeto(Vec::new()));
+    }
+
+    let pares = parsear_pares_objeto(parseador)?;
     Ok(Expresion::Objeto(pares))
 }

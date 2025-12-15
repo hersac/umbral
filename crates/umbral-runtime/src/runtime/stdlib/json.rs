@@ -1,92 +1,117 @@
 use crate::runtime::valores::Valor;
 use std::collections::HashMap;
 
+fn registrar_funcion(mapa: &mut HashMap<String, Valor>, nombre: &str, funcion: fn(Vec<Valor>) -> Valor) {
+    mapa.insert(
+        nombre.to_string(),
+        Valor::FuncionNativa(nombre.to_string(), funcion),
+    );
+}
+
 pub fn crear_modulo() -> Valor {
     let mut mapa = HashMap::new();
 
-    mapa.insert(
-        "parse".to_string(),
-        Valor::FuncionNativa("parse".to_string(), parse),
-    );
-    mapa.insert(
-        "stringify".to_string(),
-        Valor::FuncionNativa("stringify".to_string(), stringify),
-    );
+    registrar_funcion(&mut mapa, "parse", parsear);
+    registrar_funcion(&mut mapa, "stringify", convertir_texto);
 
     Valor::Diccionario(mapa)
 }
 
-fn parse(args: Vec<Valor>) -> Valor {
-    if let Some(Valor::Texto(json_str)) = args.get(0) {
-        match serde_json::from_str::<serde_json::Value>(json_str) {
-            Ok(json_val) => json_to_valor(&json_val),
-            Err(_) => Valor::Nulo,
-        }
-    } else {
-        Valor::Nulo
+fn parsear_texto_json(texto: &str) -> Valor {
+    match serde_json::from_str::<serde_json::Value>(texto) {
+        Ok(valor_json) => json_a_valor(&valor_json),
+        Err(_) => Valor::Nulo,
     }
 }
 
-fn stringify(args: Vec<Valor>) -> Valor {
-    if let Some(val) = args.get(0) {
-        let json_val = valor_to_json(val);
-        match serde_json::to_string(&json_val) {
-            Ok(s) => Valor::Texto(s),
-            Err(_) => Valor::Nulo,
-        }
-    } else {
-        Valor::Nulo
+fn parsear(argumentos: Vec<Valor>) -> Valor {
+    match argumentos.get(0) {
+        Some(Valor::Texto(texto)) => parsear_texto_json(texto),
+        _ => Valor::Nulo,
     }
 }
 
-fn json_to_valor(json: &serde_json::Value) -> Valor {
+fn serializar_a_texto(valor_json: &serde_json::Value) -> Valor {
+    match serde_json::to_string(valor_json) {
+        Ok(texto) => Valor::Texto(texto),
+        Err(_) => Valor::Nulo,
+    }
+}
+
+fn convertir_texto(argumentos: Vec<Valor>) -> Valor {
+    match argumentos.get(0) {
+        Some(valor) => {
+            let valor_json = valor_a_json(valor);
+            serializar_a_texto(&valor_json)
+        }
+        None => Valor::Nulo,
+    }
+}
+
+fn convertir_numero_json(numero: &serde_json::Number) -> Valor {
+    if let Some(entero) = numero.as_i64() {
+        return Valor::Entero(entero);
+    }
+    
+    if let Some(flotante) = numero.as_f64() {
+        return Valor::Flotante(flotante);
+    }
+    
+    Valor::Nulo
+}
+
+fn convertir_array_json(array: &[serde_json::Value]) -> Valor {
+    let lista: Vec<Valor> = array.iter().map(json_a_valor).collect();
+    Valor::Lista(lista)
+}
+
+fn convertir_objeto_json(objeto: &serde_json::Map<String, serde_json::Value>) -> Valor {
+    let mut mapa = HashMap::new();
+    for (clave, valor) in objeto {
+        mapa.insert(clave.clone(), json_a_valor(valor));
+    }
+    Valor::Diccionario(mapa)
+}
+
+fn json_a_valor(json: &serde_json::Value) -> Valor {
     match json {
         serde_json::Value::Null => Valor::Nulo,
-        serde_json::Value::Bool(b) => Valor::Booleano(*b),
-        serde_json::Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                Valor::Entero(i)
-            } else if let Some(f) = n.as_f64() {
-                Valor::Flotante(f)
-            } else {
-                Valor::Nulo
-            }
-        }
-        serde_json::Value::String(s) => Valor::Texto(s.clone()),
-        serde_json::Value::Array(arr) => {
-            let lista: Vec<Valor> = arr.iter().map(json_to_valor).collect();
-            Valor::Lista(lista)
-        }
-        serde_json::Value::Object(obj) => {
-            let mut mapa = HashMap::new();
-            for (k, v) in obj {
-                mapa.insert(k.clone(), json_to_valor(v));
-            }
-            Valor::Diccionario(mapa)
-        }
+        serde_json::Value::Bool(booleano) => Valor::Booleano(*booleano),
+        serde_json::Value::Number(numero) => convertir_numero_json(numero),
+        serde_json::Value::String(texto) => Valor::Texto(texto.clone()),
+        serde_json::Value::Array(array) => convertir_array_json(array),
+        serde_json::Value::Object(objeto) => convertir_objeto_json(objeto),
     }
 }
 
-fn valor_to_json(val: &Valor) -> serde_json::Value {
-    match val {
+fn convertir_flotante_json(flotante: f64) -> serde_json::Value {
+    serde_json::Number::from_f64(flotante)
+        .map(serde_json::Value::Number)
+        .unwrap_or(serde_json::Value::Null)
+}
+
+fn convertir_lista_json(lista: &[Valor]) -> serde_json::Value {
+    let array: Vec<serde_json::Value> = lista.iter().map(valor_a_json).collect();
+    serde_json::Value::Array(array)
+}
+
+fn convertir_diccionario_json(diccionario: &HashMap<String, Valor>) -> serde_json::Value {
+    let mut objeto = serde_json::Map::new();
+    for (clave, valor) in diccionario {
+        objeto.insert(clave.clone(), valor_a_json(valor));
+    }
+    serde_json::Value::Object(objeto)
+}
+
+fn valor_a_json(valor: &Valor) -> serde_json::Value {
+    match valor {
         Valor::Nulo => serde_json::Value::Null,
-        Valor::Booleano(b) => serde_json::Value::Bool(*b),
-        Valor::Entero(i) => serde_json::Value::Number((*i).into()),
-        Valor::Flotante(f) => serde_json::Number::from_f64(*f)
-            .map(serde_json::Value::Number)
-            .unwrap_or(serde_json::Value::Null),
-        Valor::Texto(s) => serde_json::Value::String(s.clone()),
-        Valor::Lista(l) => {
-            let arr: Vec<serde_json::Value> = l.iter().map(valor_to_json).collect();
-            serde_json::Value::Array(arr)
-        }
-        Valor::Diccionario(d) => {
-            let mut obj = serde_json::Map::new();
-            for (k, v) in d {
-                obj.insert(k.clone(), valor_to_json(v));
-            }
-            serde_json::Value::Object(obj)
-        }
+        Valor::Booleano(booleano) => serde_json::Value::Bool(*booleano),
+        Valor::Entero(entero) => serde_json::Value::Number((*entero).into()),
+        Valor::Flotante(flotante) => convertir_flotante_json(*flotante),
+        Valor::Texto(texto) => serde_json::Value::String(texto.clone()),
+        Valor::Lista(lista) => convertir_lista_json(lista),
+        Valor::Diccionario(diccionario) => convertir_diccionario_json(diccionario),
         _ => serde_json::Value::Null,
     }
 }

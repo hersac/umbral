@@ -69,6 +69,26 @@ fn calcular_linea_columna(codigo: &str, posicion: usize) -> (usize, usize) {
     (linea, columna)
 }
 
+fn validar_linea(linea: usize, total_lineas: usize) -> bool {
+    linea > 0 && linea <= total_lineas
+}
+
+fn agregar_encabezado_error(resultado: &mut String, mensaje: &str, linea: usize, columna: usize) {
+    resultado.push_str(&format!("Error: {}\n", mensaje));
+    resultado.push_str(&format!("  --> línea {}, columna {}\n", linea, columna));
+    resultado.push_str(&format!("   |\n"));
+}
+
+fn agregar_linea_contexto(resultado: &mut String, numero: usize, contenido: &str) {
+    resultado.push_str(&format!("{:3} | {}\n", numero, contenido));
+}
+
+fn agregar_linea_con_indicador(resultado: &mut String, numero: usize, contenido: &str, columna: usize) {
+    let espacios = " ".repeat(columna.saturating_sub(1));
+    resultado.push_str(&format!("{:3} | {}\n", numero, contenido));
+    resultado.push_str(&format!("   | {}^\n", espacios));
+}
+
 fn formatear_error_con_indicador(
     mensaje: &str,
     codigo: &str,
@@ -77,34 +97,25 @@ fn formatear_error_con_indicador(
 ) -> String {
     let lineas: Vec<&str> = codigo.lines().collect();
     
-    if linea == 0 || linea > lineas.len() {
+    if !validar_linea(linea, lineas.len()) {
         return format!("{} en línea {}, columna {}", mensaje, linea, columna);
     }
     
-    let linea_idx = linea - 1;
-    let linea_codigo = lineas[linea_idx];
-    
-    let espacios = " ".repeat(columna.saturating_sub(1));
-    
-    let indicador = "^";
-    
+    let indice_linea = linea - 1;
     let mut resultado = String::new();
-    resultado.push_str(&format!("Error: {}\n", mensaje));
-    resultado.push_str(&format!("  --> línea {}, columna {}\n", linea, columna));
-    resultado.push_str(&format!("   |\n"));
     
-    if linea_idx > 0 {
-        resultado.push_str(&format!("{:3} | {}\n", linea_idx, lineas[linea_idx - 1]));
+    agregar_encabezado_error(&mut resultado, mensaje, linea, columna);
+    
+    if indice_linea > 0 {
+        agregar_linea_contexto(&mut resultado, linea - 1, lineas[indice_linea - 1]);
     }
     
-    resultado.push_str(&format!("{:3} | {}\n", linea, linea_codigo));
-    resultado.push_str(&format!("   | {}{}\n", espacios, indicador));
+    agregar_linea_con_indicador(&mut resultado, linea, lineas[indice_linea], columna);
     
-    if linea_idx + 1 < lineas.len() {
-        resultado.push_str(&format!("{:3} | {}\n", linea + 1, lineas[linea_idx + 1]));
+    if indice_linea + 1 < lineas.len() {
+        agregar_linea_contexto(&mut resultado, linea + 1, lineas[indice_linea + 1]);
     }
     
     resultado.push_str(&format!("   |\n"));
-    
     resultado
 }

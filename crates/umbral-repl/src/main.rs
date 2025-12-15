@@ -14,30 +14,11 @@ fn main() {
     let mut buffer_multilinea = String::new();
     
     loop {
-        let prompt = if buffer_multilinea.is_empty() {
-            PROMPT
-        } else {
-            PROMPT_MULTILINE
-        };
+        let prompt = obtener_prompt(&buffer_multilinea);
         
         match leer_linea(&mut editor, prompt) {
-            Ok(linea) => {
-                if manejar_comando_especial(&linea, &mut interprete, &mut buffer_multilinea) {
-                    continue;
-                }
-                
-                buffer_multilinea.push_str(&linea);
-                buffer_multilinea.push('\n');
-                
-                if expresion_completa(&buffer_multilinea) {
-                    ejecutar_codigo(&mut interprete, &buffer_multilinea);
-                    buffer_multilinea.clear();
-                }
-            }
-            Err(ReadlineError::Interrupted) => {
-                println!("^C");
-                buffer_multilinea.clear();
-            }
+            Ok(linea) => procesar_entrada(&mut interprete, &mut buffer_multilinea, linea),
+            Err(ReadlineError::Interrupted) => manejar_interrupcion(&mut buffer_multilinea),
             Err(ReadlineError::Eof) => {
                 println!("Adiós!");
                 break;
@@ -48,6 +29,33 @@ fn main() {
             }
         }
     }
+}
+
+fn obtener_prompt(buffer: &str) -> &'static str {
+    if buffer.is_empty() {
+        PROMPT
+    } else {
+        PROMPT_MULTILINE
+    }
+}
+
+fn procesar_entrada(interprete: &mut Interpreter, buffer: &mut String, linea: String) {
+    if manejar_comando_especial(&linea, interprete, buffer) {
+        return;
+    }
+    
+    buffer.push_str(&linea);
+    buffer.push('\n');
+    
+    if expresion_completa(buffer) {
+        ejecutar_codigo(interprete, buffer);
+        buffer.clear();
+    }
+}
+
+fn manejar_interrupcion(buffer: &mut String) {
+    println!("^C");
+    buffer.clear();
 }
 
 fn mostrar_banner() {
@@ -80,30 +88,39 @@ fn manejar_comando_especial(
     interprete: &mut Interpreter,
     buffer: &mut String,
 ) -> bool {
-    let linea_trimmed = linea.trim();
+    let linea_limpia = linea.trim();
     
-    match linea_trimmed {
-        ":help" => {
-            mostrar_ayuda();
-            true
-        }
-        ":clear" => {
-            interprete.reiniciar();
-            buffer.clear();
-            println!("✓ Estado del intérprete reiniciado");
-            true
-        }
-        ":exit" | ":quit" => {
-            println!("Adiós!");
-            std::process::exit(0);
-        }
-        _ if linea_trimmed.starts_with(':') => {
-            println!("Comando desconocido: {}", linea_trimmed);
-            println!("Usa :help para ver comandos disponibles");
-            true
-        }
-        _ => false,
+    if !linea_limpia.starts_with(':') {
+        return false;
     }
+    
+    ejecutar_comando(linea_limpia, interprete, buffer);
+    true
+}
+
+fn ejecutar_comando(comando: &str, interprete: &mut Interpreter, buffer: &mut String) {
+    match comando {
+        ":help" => mostrar_ayuda(),
+        ":clear" => reiniciar_interprete(interprete, buffer),
+        ":exit" | ":quit" => salir_repl(),
+        _ => mostrar_comando_desconocido(comando),
+    }
+}
+
+fn reiniciar_interprete(interprete: &mut Interpreter, buffer: &mut String) {
+    interprete.reiniciar();
+    buffer.clear();
+    println!("✓ Estado del intérprete reiniciado");
+}
+
+fn salir_repl() -> ! {
+    println!("Adiós!");
+    std::process::exit(0);
+}
+
+fn mostrar_comando_desconocido(comando: &str) {
+    println!("Comando desconocido: {}", comando);
+    println!("Usa :help para ver comandos disponibles");
 }
 
 fn mostrar_ayuda() {
@@ -138,21 +155,45 @@ fn mostrar_ayuda() {
 }
 
 fn expresion_completa(codigo: &str) -> bool {
-    let codigo_trimmed = codigo.trim();
+    let codigo_limpio = codigo.trim();
     
-    if codigo_trimmed.is_empty() {
+    if codigo_limpio.is_empty() {
         return false;
     }
     
-    if codigo_trimmed.ends_with(';') {
-        return cuenta_balanceada(codigo_trimmed);
+    if !termina_correctamente(codigo_limpio) {
+        return false;
     }
     
-    if codigo_trimmed.ends_with('}') {
-        return cuenta_balanceada(codigo_trimmed);
+    cuenta_balanceada(codigo_limpio)
+}
+
+fn termina_correctamente(codigo: &str) -> bool {
+    codigo.ends_with(';') || codigo.ends_with('}')
+}
+
+fn procesar_string_triple(chars: &mut std::iter::Peekable<std::str::Chars>, en_triple: &mut bool) -> bool {
+    if chars.peek() == Some(&'\'') {
+        chars.next();
+        if chars.peek() == Some(&'\'') {
+            chars.next();
+            *en_triple = !*en_triple;
+            return true;
+        }
     }
-    
     false
+}
+
+fn actualizar_balances(caracter: char, llaves: &mut i32, parentesis: &mut i32, corchetes: &mut i32) {
+    match caracter {
+        '{' => *llaves += 1,
+        '}' => *llaves -= 1,
+        '(' => *parentesis += 1,
+        ')' => *parentesis -= 1,
+        '[' => *corchetes += 1,
+        ']' => *corchetes -= 1,
+        _ => {}
+    }
 }
 
 fn cuenta_balanceada(codigo: &str) -> bool {
@@ -163,13 +204,8 @@ fn cuenta_balanceada(codigo: &str) -> bool {
     let mut en_string_triple = false;
     let mut chars = codigo.chars().peekable();
     
-    while let Some(c) = chars.next() {
-        if c == '\'' && chars.peek() == Some(&'\'') {
-            chars.next();
-            if chars.peek() == Some(&'\'') {
-                chars.next();
-                en_string_triple = !en_string_triple;
-            }
+    while let Some(caracter) = chars.next() {
+        if caracter == '\'' && procesar_string_triple(&mut chars, &mut en_string_triple) {
             continue;
         }
         
@@ -177,7 +213,7 @@ fn cuenta_balanceada(codigo: &str) -> bool {
             continue;
         }
         
-        if c == '"' || c == '\'' {
+        if caracter == '"' || caracter == '\'' {
             en_string = !en_string;
             continue;
         }
@@ -185,15 +221,8 @@ fn cuenta_balanceada(codigo: &str) -> bool {
         if en_string {
             continue;
         }
-        match c {
-            '{' => llaves += 1,
-            '}' => llaves -= 1,
-            '(' => parentesis += 1,
-            ')' => parentesis -= 1,
-            '[' => corchetes += 1,
-            ']' => corchetes -= 1,
-            _ => {}
-        }
+        
+        actualizar_balances(caracter, &mut llaves, &mut parentesis, &mut corchetes);
     }
     
     llaves == 0 && parentesis == 0 && corchetes == 0

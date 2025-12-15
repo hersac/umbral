@@ -4,23 +4,17 @@ use crate::parser::Parser;
 use crate::parser::expresiones;
 use umbral_lexer::Token as LexToken;
 
-pub fn parsear_declaracion_constante(p: &mut Parser, exportado: bool) -> Result<Sentencia, ParseError> {
-    let nombre = p.parsear_identificador_consumir()?;
+pub fn parsear_declaracion_constante(parseador: &mut Parser, exportado: bool) -> Result<Sentencia, ParseError> {
+    let nombre = parseador.parsear_identificador_consumir()?;
 
-    let tipo = if p.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
-        Some(p.parsear_tipo()?.ok_or_else(|| {
-            p.crear_error("Tipo esperado despues de '->' en constante")
-        })?)
-    } else {
-        None
-    };
+    let tipo = obtener_tipo_explicito(parseador)?;
 
-    if !p.coincidir(|t| matches!(t, LexToken::Asignacion)) {
-        return Err(p.crear_error("Se esperaba '=' en declaracion constante"));
+    if !parseador.coincidir(|t| matches!(t, LexToken::Asignacion)) {
+        return Err(parseador.crear_error("Se esperaba '=' en declaracion constante"));
     }
 
-    let valor = expresiones::parsear_expresion_principal(p)?;
-    p.coincidir(|t| matches!(t, LexToken::PuntoYComa));
+    let valor = expresiones::parsear_expresion_principal(parseador)?;
+    parseador.coincidir(|t| matches!(t, LexToken::PuntoYComa));
 
     let tipo = tipo.or_else(|| Some(inferir_tipo(&valor)));
 
@@ -32,68 +26,73 @@ pub fn parsear_declaracion_constante(p: &mut Parser, exportado: bool) -> Result<
     }))
 }
 
-fn inferir_tipo(valor: &Expresion) -> Tipo {
-    match valor {
-        Expresion::LiteralEntero(_) => Tipo {
-            nombre: "Int".to_string(),
-        },
-        Expresion::LiteralFloat(_) => Tipo {
-            nombre: "Flo".to_string(),
-        },
-        Expresion::LiteralCadena(_) | Expresion::LiteralCadenaLiteral(_) => Tipo {
-            nombre: "Str".to_string(),
-        },
-        Expresion::LiteralBool(_) => Tipo {
-            nombre: "Bool".to_string(),
-        },
-        Expresion::Objeto(_) => Tipo {
-            nombre: "Obj".to_string(),
-        },
-        Expresion::Array(_) => Tipo {
-            nombre: "Array".to_string(),
-        },
-        Expresion::Binaria {
-            izquierda,
-            derecha,
-            operador,
-        } => {
-            let t_izq = inferir_tipo(izquierda);
-            let t_der = inferir_tipo(derecha);
-            match operador.as_str() {
-                "+" | "-" | "*" | "/" | "%" => {
-                    if t_izq.nombre == "Flo" || t_der.nombre == "Flo" {
-                        Tipo {
-                            nombre: "Flo".to_string(),
-                        }
-                    } else {
-                        Tipo {
-                            nombre: "Int".to_string(),
-                        }
-                    }
-                }
-                "==" | "!=" | "<" | ">" | "<=" | ">=" | "&&" | "||" => Tipo {
-                    nombre: "Bool".to_string(),
-                },
-                _ => Tipo {
-                    nombre: "Any".to_string(),
-                },
-            }
+fn obtener_tipo_explicito(parseador: &mut Parser) -> Result<Option<Tipo>, ParseError> {
+    if !parseador.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
+        return Ok(None);
+    }
+    
+    let tipo = parseador.parsear_tipo()?.ok_or_else(|| {
+        parseador.crear_error("Tipo esperado despues de '->' en constante")
+    })?;
+    
+    Ok(Some(tipo))
+}
+
+fn crear_tipo(nombre: &str) -> Tipo {
+    Tipo {
+        nombre: nombre.to_string(),
+    }
+}
+
+fn inferir_tipo(expresion: &Expresion) -> Tipo {
+    match expresion {
+        Expresion::LiteralEntero(_) => crear_tipo("Int"),
+        Expresion::LiteralFloat(_) => crear_tipo("Flo"),
+        Expresion::LiteralCadena(_) | Expresion::LiteralCadenaLiteral(_) => crear_tipo("Str"),
+        Expresion::LiteralBool(_) => crear_tipo("Bool"),
+        Expresion::Objeto(_) => crear_tipo("Obj"),
+        Expresion::Array(_) => crear_tipo("Array"),
+        Expresion::Binaria { izquierda, derecha, operador } => {
+            inferir_tipo_binario(izquierda, derecha, operador)
         }
-        Expresion::Unaria {
-            operador,
-            expresion,
-        } => match operador.as_str() {
-            "-" => inferir_tipo(expresion),
-            "!" => Tipo {
-                nombre: "Bool".to_string(),
-            },
-            _ => Tipo {
-                nombre: "Any".to_string(),
-            },
-        },
-        Expresion::Agrupada(e) => inferir_tipo(e),
-        _ => Tipo {
-            nombre: "Any".to_string(),
-        },
+        Expresion::Unaria { operador, expresion } => inferir_tipo_unario(operador, expresion),
+        Expresion::Agrupada(expr) => inferir_tipo(expr),
+        _ => crear_tipo("Any"),
+    }
+}
+
+fn inferir_tipo_binario(izquierda: &Expresion, derecha: &Expresion, operador: &str) -> Tipo {
+    let es_aritmetico = matches!(operador, "+" | "-" | "*" | "/" | "%");
+    let es_comparacion = matches!(operador, "==" | "!=" | "<" | ">" | "<=" | ">=" | "&&" | "||");
+    
+    if es_comparacion {
+        return crear_tipo("Bool");
+    }
+    
+    if es_aritmetico {
+        return inferir_tipo_aritmetico(izquierda, derecha);
+    }
+    
+    crear_tipo("Any")
+}
+
+fn inferir_tipo_aritmetico(izquierda: &Expresion, derecha: &Expresion) -> Tipo {
+    let tipo_izq = inferir_tipo(izquierda);
+    let tipo_der = inferir_tipo(derecha);
+    
+    let es_flotante = tipo_izq.nombre == "Flo" || tipo_der.nombre == "Flo";
+    
+    if es_flotante {
+        return crear_tipo("Flo");
+    }
+    
+    crear_tipo("Int")
+}
+
+fn inferir_tipo_unario(operador: &str, expresion: &Expresion) -> Tipo {
+    match operador {
+        "-" => inferir_tipo(expresion),
+        "!" => crear_tipo("Bool"),
+        _ => crear_tipo("Any"),
     }
 }

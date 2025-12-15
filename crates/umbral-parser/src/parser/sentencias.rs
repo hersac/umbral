@@ -3,72 +3,89 @@ use crate::error::ParseError;
 use crate::parser::Parser;
 use umbral_lexer::Token as LexToken;
 
-pub fn parsear_tprint(p: &mut Parser) -> Result<Sentencia, ParseError> {
-    if !p.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
-        return Err(p.crear_error("Se esperaba '(' despues de tprint"));
+fn validar_parentesis_apertura(parseador: &mut Parser, contexto: &str) -> Result<(), ParseError> {
+    if !parseador.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
+        return Err(parseador.crear_error(&format!("Se esperaba '(' despues de {}", contexto)));
     }
-    let valor = crate::parser::expresiones::parsear_expresion_principal(p)?;
-    if !p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
-        return Err(p.crear_error("Se esperaba ')'"));
+    Ok(())
+}
+
+fn validar_parentesis_cierre(parseador: &mut Parser) -> Result<(), ParseError> {
+    if !parseador.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
+        return Err(parseador.crear_error("Se esperaba ')'"));
     }
-    p.coincidir(|t| matches!(t, LexToken::PuntoYComa));
+    Ok(())
+}
+
+pub fn parsear_tprint(parseador: &mut Parser) -> Result<Sentencia, ParseError> {
+    validar_parentesis_apertura(parseador, "tprint")?;
+    let valor = crate::parser::expresiones::parsear_expresion_principal(parseador)?;
+    validar_parentesis_cierre(parseador)?;
+    parseador.coincidir(|t| matches!(t, LexToken::PuntoYComa));
     Ok(Sentencia::LlamadoTPrint(LlamadoTPrint { valor }))
 }
 
-pub fn parsear_llamado_funcion(p: &mut Parser) -> Result<Sentencia, ParseError> {
-    let nombre = p.parsear_identificador_consumir()?;
-    if !p.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
-        return Err(p.crear_error("Se esperaba '(' en llamada"));
-    }
+fn parsear_lista_argumentos(parseador: &mut Parser) -> Result<Vec<Expresion>, ParseError> {
     let mut argumentos = Vec::new();
-    if !p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
-        loop {
-            argumentos.push(crate::parser::expresiones::parsear_expresion_principal(p)?);
-            if p.coincidir(|t| matches!(t, LexToken::Coma)) {
-                continue;
-            }
-            if p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
-                break;
-            }
-            return Err(p.crear_error("Se esperaba ',' o ')'"));
-        }
+    
+    if parseador.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
+        return Ok(argumentos);
     }
-    p.coincidir(|t| matches!(t, LexToken::PuntoYComa));
-    Ok(Sentencia::LlamadoFuncion(LlamadoFuncion {
-        nombre,
-        argumentos,
-    }))
+
+    loop {
+        argumentos.push(crate::parser::expresiones::parsear_expresion_principal(parseador)?);
+        
+        if parseador.coincidir(|t| matches!(t, LexToken::Coma)) {
+            continue;
+        }
+        
+        if parseador.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
+            break;
+        }
+        
+        return Err(parseador.crear_error("Se esperaba ',' o ')'"));
+    }
+
+    Ok(argumentos)
 }
 
-pub fn parsear_asignacion(p: &mut Parser) -> Result<Sentencia, ParseError> {
-    let nombre = p.parsear_identificador_consumir()?;
-    
-    let objetivo = if p.coincidir(|t| matches!(t, LexToken::Punto)) {
-        let propiedad = p.parsear_identificador_consumir()?;
-        ObjetivoAsignacion::Propiedad {
+pub fn parsear_llamado_funcion(parseador: &mut Parser) -> Result<Sentencia, ParseError> {
+    let nombre = parseador.parsear_identificador_consumir()?;
+    validar_parentesis_apertura(parseador, "llamada")?;
+    let argumentos = parsear_lista_argumentos(parseador)?;
+    parseador.coincidir(|t| matches!(t, LexToken::PuntoYComa));
+    Ok(Sentencia::LlamadoFuncion(LlamadoFuncion { nombre, argumentos }))
+}
+
+fn determinar_objetivo_asignacion(parseador: &mut Parser, nombre: String) -> ObjetivoAsignacion {
+    if parseador.coincidir(|t| matches!(t, LexToken::Punto)) {
+        let propiedad = parseador.parsear_identificador_consumir().unwrap();
+        return ObjetivoAsignacion::Propiedad {
             objeto: Box::new(Expresion::Identificador(nombre)),
             propiedad,
-        }
-    } else {
-        ObjetivoAsignacion::Variable(nombre)
-    };
-    
-    if !p.coincidir(|t| matches!(t, LexToken::Asignacion)) {
-        return Err(p.crear_error("Se esperaba '=' en asignacion"));
+        };
     }
-    let valor = crate::parser::expresiones::parsear_expresion_principal(p)?;
-    p.coincidir(|t| matches!(t, LexToken::PuntoYComa));
+    
+    ObjetivoAsignacion::Variable(nombre)
+}
+
+pub fn parsear_asignacion(parseador: &mut Parser) -> Result<Sentencia, ParseError> {
+    let nombre = parseador.parsear_identificador_consumir()?;
+    let objetivo = determinar_objetivo_asignacion(parseador, nombre);
+    
+    if !parseador.coincidir(|t| matches!(t, LexToken::Asignacion)) {
+        return Err(parseador.crear_error("Se esperaba '=' en asignacion"));
+    }
+    
+    let valor = crate::parser::expresiones::parsear_expresion_principal(parseador)?;
+    parseador.coincidir(|t| matches!(t, LexToken::PuntoYComa));
     Ok(Sentencia::Asignacion(Asignacion { objetivo, valor }))
 }
 
-pub fn parsear_return(p: &mut Parser) -> Result<Sentencia, ParseError> {
-    if !p.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
-        return Err(p.crear_error("Se esperaba '(' despues de return"));
-    }
-    let valor = crate::parser::expresiones::parsear_expresion_principal(p)?;
-    if !p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
-        return Err(p.crear_error("Se esperaba ')'"));
-    }
-    p.coincidir(|t| matches!(t, LexToken::PuntoYComa));
+pub fn parsear_return(parseador: &mut Parser) -> Result<Sentencia, ParseError> {
+    validar_parentesis_apertura(parseador, "return")?;
+    let valor = crate::parser::expresiones::parsear_expresion_principal(parseador)?;
+    validar_parentesis_cierre(parseador)?;
+    parseador.coincidir(|t| matches!(t, LexToken::PuntoYComa));
     Ok(Sentencia::Return(valor))
 }

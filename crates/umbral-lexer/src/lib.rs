@@ -84,39 +84,102 @@ pub enum Token {
     Desconocido(char),
 }
 
+fn procesar_escape(caracter: char) -> char {
+    match caracter {
+        'n' => '\n',
+        't' => '\t',
+        'r' => '\r',
+        '\\' => '\\',
+        '\'' => '\'',
+        '"' => '"',
+        _ => caracter,
+    }
+}
+
+fn agregar_caracter_escapado(texto: &mut String, iter: &mut Peekable<Chars>) {
+    let siguiente = iter.next();
+    
+    if siguiente.is_none() {
+        return;
+    }
+    
+    let caracter = siguiente.unwrap();
+    let es_escape_valido = matches!(caracter, 'n' | 't' | 'r' | '\\' | '\'' | '"');
+    
+    if es_escape_valido {
+        texto.push(procesar_escape(caracter));
+        return;
+    }
+    
+    texto.push('\\');
+    texto.push(caracter);
+}
+
 fn leer_cadena_simple(iter: &mut Peekable<Chars>) -> String {
-    let mut s = String::new();
-    while let Some(c) = iter.next() {
-        if c == '\'' {
+    let mut texto = String::new();
+    
+    while let Some(caracter) = iter.next() {
+        if caracter == '\'' {
             break;
         }
-        s.push(c);
+        
+        if caracter == '\\' {
+            agregar_caracter_escapado(&mut texto, iter);
+            continue;
+        }
+        
+        texto.push(caracter);
     }
-    s
+    
+    texto
 }
 
 fn leer_cadena_doble(iter: &mut Peekable<Chars>) -> String {
-    let mut s = String::new();
-    while let Some(c) = iter.next() {
-        if c == '"' {
+    let mut texto = String::new();
+    
+    while let Some(caracter) = iter.next() {
+        if caracter == '"' {
             break;
         }
-        s.push(c);
+        
+        if caracter == '\\' {
+            agregar_caracter_escapado(&mut texto, iter);
+            continue;
+        }
+        
+        texto.push(caracter);
     }
-    s
+    
+    texto
+}
+
+fn es_fin_triple_comilla(iter: &mut Peekable<Chars>) -> bool {
+    iter.peek().copied() == Some('\'') && iter.clone().nth(1) == Some('\'')
+}
+
+fn consumir_triple_comilla(iter: &mut Peekable<Chars>) {
+    iter.next();
+    iter.next();
 }
 
 fn leer_triple_comilla_simple(iter: &mut Peekable<Chars>) -> String {
-    let mut s = String::new();
-    while let Some(c) = iter.next() {
-        if c == '\'' && iter.peek().copied() == Some('\'') && iter.clone().nth(1) == Some('\'') {
-            iter.next();
-            iter.next();
+    let mut texto = String::new();
+    
+    while let Some(caracter) = iter.next() {
+        if caracter == '\'' && es_fin_triple_comilla(iter) {
+            consumir_triple_comilla(iter);
             break;
         }
-        s.push(c);
+        
+        if caracter == '\\' {
+            agregar_caracter_escapado(&mut texto, iter);
+            continue;
+        }
+        
+        texto.push(caracter);
     }
-    s
+    
+    texto
 }
 
 fn leer_numero(iter: &mut Peekable<Chars>, primero: char) -> String {

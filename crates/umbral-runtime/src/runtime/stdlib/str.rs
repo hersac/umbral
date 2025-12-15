@@ -1,132 +1,145 @@
 use crate::runtime::valores::Valor;
 use std::collections::HashMap;
 
+fn registrar_funcion(mapa: &mut HashMap<String, Valor>, nombre: &str, funcion: fn(Vec<Valor>) -> Valor) {
+    mapa.insert(
+        nombre.to_string(),
+        Valor::FuncionNativa(nombre.to_string(), funcion),
+    );
+}
+
 pub fn crear_modulo() -> Valor {
     let mut mapa = HashMap::new();
 
-    mapa.insert(
-        "trim".to_string(),
-        Valor::FuncionNativa("trim".to_string(), trim),
-    );
-    mapa.insert(
-        "split".to_string(),
-        Valor::FuncionNativa("split".to_string(), split),
-    );
-    mapa.insert(
-        "replace".to_string(),
-        Valor::FuncionNativa("replace".to_string(), replace),
-    );
-    mapa.insert(
-        "to_upper".to_string(),
-        Valor::FuncionNativa("to_upper".to_string(), to_upper),
-    );
-    mapa.insert(
-        "to_lower".to_string(),
-        Valor::FuncionNativa("to_lower".to_string(), to_lower),
-    );
-    mapa.insert(
-        "search".to_string(),
-        Valor::FuncionNativa("search".to_string(), search),
-    );
-    mapa.insert(
-        "contains".to_string(),
-        Valor::FuncionNativa("contains".to_string(), contains),
-    );
-    mapa.insert(
-        "starts_with".to_string(),
-        Valor::FuncionNativa("starts_with".to_string(), starts_with),
-    );
-    mapa.insert(
-        "ends_with".to_string(),
-        Valor::FuncionNativa("ends_with".to_string(), ends_with),
-    );
+    registrar_funcion(&mut mapa, "trim", recortar);
+    registrar_funcion(&mut mapa, "split", dividir);
+    registrar_funcion(&mut mapa, "replace", reemplazar);
+    registrar_funcion(&mut mapa, "to_upper", mayusculas);
+    registrar_funcion(&mut mapa, "to_lower", minusculas);
+    registrar_funcion(&mut mapa, "search", buscar);
+    registrar_funcion(&mut mapa, "contains", contiene);
+    registrar_funcion(&mut mapa, "starts_with", inicia_con);
+    registrar_funcion(&mut mapa, "ends_with", termina_con);
 
     Valor::Diccionario(mapa)
 }
 
-fn trim(args: Vec<Valor>) -> Valor {
-    if let Some(Valor::Texto(s)) = args.get(0) {
-        Valor::Texto(s.trim().to_string())
-    } else {
-        Valor::Nulo
+fn obtener_texto(argumentos: &[Valor]) -> Option<String> {
+    match argumentos.get(0) {
+        Some(Valor::Texto(texto)) => Some(texto.clone()),
+        _ => None,
     }
 }
 
-fn split(args: Vec<Valor>) -> Valor {
-    if let Some(Valor::Texto(s)) = args.get(0) {
-        let sep = if let Some(Valor::Texto(sep)) = args.get(1) {
-            sep.as_str()
-        } else {
-            " "
-        };
-
-        let partes: Vec<Valor> = s.split(sep).map(|p| Valor::Texto(p.to_string())).collect();
-
-        Valor::Lista(partes)
-    } else {
-        Valor::Nulo
+fn recortar(argumentos: Vec<Valor>) -> Valor {
+    match obtener_texto(&argumentos) {
+        Some(texto) => Valor::Texto(texto.trim().to_string()),
+        None => Valor::Nulo,
     }
 }
 
-fn replace(args: Vec<Valor>) -> Valor {
-    if let Some(Valor::Texto(s)) = args.get(0) {
-        if let (Some(Valor::Texto(old)), Some(Valor::Texto(new))) = (args.get(1), args.get(2)) {
-            Valor::Texto(s.replace(old, new))
-        } else {
-            Valor::Texto(s.clone())
+fn obtener_separador(argumentos: &[Valor]) -> &str {
+    match argumentos.get(1) {
+        Some(Valor::Texto(separador)) => separador.as_str(),
+        _ => " ",
+    }
+}
+
+fn dividir(argumentos: Vec<Valor>) -> Valor {
+    let texto = match obtener_texto(&argumentos) {
+        Some(t) => t,
+        None => return Valor::Nulo,
+    };
+
+    let separador = obtener_separador(&argumentos);
+    let partes: Vec<Valor> = texto.split(separador).map(|p| Valor::Texto(p.to_string())).collect();
+
+    Valor::Lista(partes)
+}
+
+fn obtener_patron_reemplazo(argumentos: &[Valor]) -> Option<(String, String)> {
+    let antiguo = match argumentos.get(1) {
+        Some(Valor::Texto(a)) => a.clone(),
+        _ => return None,
+    };
+
+    let nuevo = match argumentos.get(2) {
+        Some(Valor::Texto(n)) => n.clone(),
+        _ => return None,
+    };
+
+    Some((antiguo, nuevo))
+}
+
+fn reemplazar(argumentos: Vec<Valor>) -> Valor {
+    let texto = match obtener_texto(&argumentos) {
+        Some(t) => t,
+        None => return Valor::Nulo,
+    };
+
+    match obtener_patron_reemplazo(&argumentos) {
+        Some((antiguo, nuevo)) => Valor::Texto(texto.replace(&antiguo, &nuevo)),
+        None => Valor::Texto(texto),
+    }
+}
+
+fn mayusculas(argumentos: Vec<Valor>) -> Valor {
+    match obtener_texto(&argumentos) {
+        Some(texto) => Valor::Texto(texto.to_uppercase()),
+        None => Valor::Nulo,
+    }
+}
+
+fn minusculas(argumentos: Vec<Valor>) -> Valor {
+    match obtener_texto(&argumentos) {
+        Some(texto) => Valor::Texto(texto.to_lowercase()),
+        None => Valor::Nulo,
+    }
+}
+
+fn obtener_texto_y_patron(argumentos: &[Valor]) -> Option<(String, String)> {
+    let texto = match argumentos.get(0) {
+        Some(Valor::Texto(t)) => t.clone(),
+        _ => return None,
+    };
+
+    let patron = match argumentos.get(1) {
+        Some(Valor::Texto(p)) => p.clone(),
+        _ => return None,
+    };
+
+    Some((texto, patron))
+}
+
+fn buscar(argumentos: Vec<Valor>) -> Valor {
+    match obtener_texto_y_patron(&argumentos) {
+        Some((texto, patron)) => {
+            match texto.find(&patron) {
+                Some(indice) => Valor::Entero(indice as i64),
+                None => Valor::Entero(-1),
+            }
         }
-    } else {
-        Valor::Nulo
+        None => Valor::Entero(-1),
     }
 }
 
-fn to_upper(args: Vec<Valor>) -> Valor {
-    if let Some(Valor::Texto(s)) = args.get(0) {
-        Valor::Texto(s.to_uppercase())
-    } else {
-        Valor::Nulo
+fn contiene(argumentos: Vec<Valor>) -> Valor {
+    match obtener_texto_y_patron(&argumentos) {
+        Some((texto, patron)) => Valor::Booleano(texto.contains(&patron)),
+        None => Valor::Booleano(false),
     }
 }
 
-fn to_lower(args: Vec<Valor>) -> Valor {
-    if let Some(Valor::Texto(s)) = args.get(0) {
-        Valor::Texto(s.to_lowercase())
-    } else {
-        Valor::Nulo
+fn inicia_con(argumentos: Vec<Valor>) -> Valor {
+    match obtener_texto_y_patron(&argumentos) {
+        Some((texto, patron)) => Valor::Booleano(texto.starts_with(&patron)),
+        None => Valor::Booleano(false),
     }
 }
 
-fn search(args: Vec<Valor>) -> Valor {
-    if let (Some(Valor::Texto(s)), Some(Valor::Texto(pattern))) = (args.get(0), args.get(1)) {
-        match s.find(pattern) {
-            Some(idx) => Valor::Entero(idx as i64),
-            None => Valor::Entero(-1),
-        }
-    } else {
-        Valor::Entero(-1)
-    }
-}
-
-fn contains(args: Vec<Valor>) -> Valor {
-    if let (Some(Valor::Texto(s)), Some(Valor::Texto(pattern))) = (args.get(0), args.get(1)) {
-        Valor::Booleano(s.contains(pattern.as_str()))
-    } else {
-        Valor::Booleano(false)
-    }
-}
-
-fn starts_with(args: Vec<Valor>) -> Valor {
-    if let (Some(Valor::Texto(s)), Some(Valor::Texto(pattern))) = (args.get(0), args.get(1)) {
-        Valor::Booleano(s.starts_with(pattern.as_str()))
-    } else {
-        Valor::Booleano(false)
-    }
-}
-
-fn ends_with(args: Vec<Valor>) -> Valor {
-    if let (Some(Valor::Texto(s)), Some(Valor::Texto(pattern))) = (args.get(0), args.get(1)) {
-        Valor::Booleano(s.ends_with(pattern.as_str()))
-    } else {
-        Valor::Booleano(false)
+fn termina_con(argumentos: Vec<Valor>) -> Valor {
+    match obtener_texto_y_patron(&argumentos) {
+        Some((texto, patron)) => Valor::Booleano(texto.ends_with(&patron)),
+        None => Valor::Booleano(false),
     }
 }
