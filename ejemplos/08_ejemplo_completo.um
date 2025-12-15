@@ -2,6 +2,18 @@ c: VERSION = "1.1.5";
 c: MAX_ESTUDIANTES = 50;
 c: NOTA_APROBATORIA = 60;
 
+em: EstadoEstudiante {
+    Aprobado=1,
+    Reprobado=0,
+    Pendiente=2
+}
+
+em: NivelCurso {
+    Basico=1,
+    Intermedio=2,
+    Avanzado=3
+}
+
 tprint('=== Sistema de Gestión Académica ===');
 tprint("Versión: &VERSION");
 
@@ -10,14 +22,14 @@ cs: Estudiante {
     pr: edad->Int;
     pr: notas->[]Int;
     pr: promedio->Flo;
-    pr: aprobado->Bool;
+    pr: estado->Int;
     
     pu f: Estudiante(nombre->Str, edad->Int) {
         th.nombre = nombre;
         th.edad = edad;
         th.notas = {};
         th.promedio = 0.0;
-        th.aprobado = false;
+        th.estado = EstadoEstudiante.Pendiente;
     }
     
     pu f: agregarNota(nota->Int)->Void {
@@ -32,7 +44,7 @@ cs: Estudiante {
     pu f: calcularPromedio()->Flo {
         v: suma = 0;
         v: i = 0;
-        v: cantidad = 5;
+        v: cantidad = Std.len(th.notas);
         
         wh: (i < cantidad) {
             suma = suma + th.notas[i];
@@ -46,9 +58,9 @@ cs: Estudiante {
         }
         
         i: (th.promedio >= NOTA_APROBATORIA) {
-            th.aprobado = true;
+            th.estado = EstadoEstudiante.Aprobado;
         } e: {
-            th.aprobado = false;
+            th.estado = EstadoEstudiante.Reprobado;
         }
         
         r: (th.promedio);
@@ -60,10 +72,14 @@ cs: Estudiante {
         tprint("Edad: &th.edad años");
         tprint("Promedio: &th.promedio");
         
-        i: (th.aprobado) {
+        i: (th.estado == EstadoEstudiante.Aprobado) {
             tprint('Estado: APROBADO');
-        } e: {
+        }
+        i: (th.estado == EstadoEstudiante.Reprobado) {
             tprint('Estado: REPROBADO');
+        }
+        i: (th.estado == EstadoEstudiante.Pendiente) {
+            tprint('Estado: PENDIENTE');
         }
     }
 }
@@ -73,12 +89,14 @@ cs: Curso {
     pr: codigo->Str;
     pr: estudiantes->[]Estudiante;
     pr: totalEstudiantes->Int;
+    pr: nivel->Int;
     
-    pu f: Curso(nombre->Str, codigo->Str) {
+    pu f: Curso(nombre->Str, codigo->Str, nivel->Int) {
         th.nombre = nombre;
         th.codigo = codigo;
         th.estudiantes = {};
         th.totalEstudiantes = 0;
+        th.nivel = nivel;
     }
     
     pu f: inscribirEstudiante(estudiante->Estudiante)->Bool {
@@ -96,23 +114,40 @@ cs: Curso {
     pu f: mostrarEstadisticas()->Void {
         tprint("=== Estadísticas del Curso: &th.nombre ===");
         tprint("Código: &th.codigo");
+        
+        i: (th.nivel == NivelCurso.Basico) {
+            tprint('Nivel: BÁSICO');
+        }
+        i: (th.nivel == NivelCurso.Intermedio) {
+            tprint('Nivel: INTERMEDIO');
+        }
+        i: (th.nivel == NivelCurso.Avanzado) {
+            tprint('Nivel: AVANZADO');
+        }
+        
         tprint("Total de estudiantes: &th.totalEstudiantes");
         
         v: aprobados = 0;
         v: reprobados = 0;
+        v: pendientes = 0;
         v: i = 0;
         
         wh: (i < th.totalEstudiantes) {
-            i: (th.estudiantes[i].aprobado) {
+            i: (th.estudiantes[i].estado == EstadoEstudiante.Aprobado) {
                 aprobados = aprobados + 1;
-            } e: {
+            }
+            i: (th.estudiantes[i].estado == EstadoEstudiante.Reprobado) {
                 reprobados = reprobados + 1;
+            }
+            i: (th.estudiantes[i].estado == EstadoEstudiante.Pendiente) {
+                pendientes = pendientes + 1;
             }
             i = i + 1;
         }
         
         tprint("Aprobados: &aprobados");
         tprint("Reprobados: &reprobados");
+        tprint("Pendientes: &pendientes");
     }
 }
 
@@ -139,7 +174,7 @@ f: calcularPromedioGeneral(curso->Curso)->Flo {
 }
 
 tprint('=== Creando Curso ===');
-c: curso = n: Curso('Programación I', 'PROG-101');
+c: curso = n: Curso('Programación I', 'PROG-101', NivelCurso.Basico);
 
 tprint('=== Inscribiendo Estudiantes ===');
 c: est1 = n: Estudiante('Ana García', 20);
@@ -182,25 +217,4 @@ est3.mostrarInformacion();
 
 curso.mostrarEstadisticas();
 
-c: promedioGeneral = calcularPromedioGeneral(curso);
-tprint("Promedio general del curso: &promedioGeneral");
-
 generarReporte(curso);
-
-tprint('=== Validaciones del Sistema ===');
-
-i: (curso.totalEstudiantes < MAX_ESTUDIANTES) {
-    c: disponibles = MAX_ESTUDIANTES - curso.totalEstudiantes;
-    tprint("Cupos disponibles: &disponibles");
-} e: {
-    tprint('Curso completo');
-}
-
-i: (promedioGeneral >= NOTA_APROBATORIA) {
-    tprint('Rendimiento del curso: SATISFACTORIO');
-} e: {
-    tprint('Rendimiento del curso: NECESITA MEJORAS');
-}
-
-tprint('=== Sistema Finalizado ===');
-tprint('Gracias por usar el Sistema de Gestión');

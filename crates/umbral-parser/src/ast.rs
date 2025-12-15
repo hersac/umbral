@@ -125,9 +125,15 @@ pub struct DeclaracionInterfaz {
 }
 
 #[derive(Debug, Clone)]
+pub struct VarianteEnum {
+    pub nombre: String,
+    pub valor: Option<Expresion>,
+}
+
+#[derive(Debug, Clone)]
 pub struct DeclaracionEnum {
     pub nombre: String,
-    pub variantes: Vec<String>,
+    pub variantes: Vec<VarianteEnum>,
     pub exportado: bool,
 }
 

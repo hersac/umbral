@@ -1,0 +1,12 @@
+out em: Color {
+    Rojo,
+    Verde,
+    Azul,
+    Amarillo
+}
+
+out em: TipoUsuario {
+    Admin,
+    Editor,
+    Lector
+}

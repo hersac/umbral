@@ -48,6 +48,25 @@ Aprende sobre:
 - Condicional con alternativa (`si-sino`)
 - Condicionales anidados
 - Operadores de comparación (==, !=, <, >, <=, >=)
+
+---
+
+### 🆕 17️⃣ Sistema Completo con Enums
+**Archivo:** `17_enums_sistema_completo.um`
+
+Demostración completa de enumeraciones:
+- Enums con valores inferidos (0, 1, 2...)
+- Enums con valores explícitos numéricos
+- Enums con códigos HTTP
+- Comparaciones con enums
+- Operaciones aritméticas
+- Uso de enums en clases
+- Condicionales complejos con enums
+- Simulación de switch con enums
+
+```bash
+umbral 17_enums_sistema_completo.um
+```
 - Operadores lógicos (&&, ||, !)
 - Expresiones complejas
 - Condicionales en funciones

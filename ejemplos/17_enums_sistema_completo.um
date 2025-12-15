@@ -1,0 +1,144 @@
+
+em: EstadoPedido {
+    Pendiente,
+    Confirmado,
+    Enviado,
+    Entregado,
+    Cancelado
+}
+
+em: PrioridadTarea {
+    Baja=1,
+    Media=2,
+    Alta=3,
+    Critica=4
+}
+
+em: CodigoHTTP {
+    OK=200,
+    Creado=201,
+    NoAutorizado=401,
+    NoEncontrado=404,
+    ErrorServidor=500
+}
+
+cs: Respuesta {
+    pr: codigo->Int;
+    pr: mensaje->Str;
+    
+    pu f: Respuesta(codigo->Int, mensaje->Str) {
+        th.codigo = codigo;
+        th.mensaje = mensaje;
+    }
+    
+    pu f: esExitosa()->Bool {
+        r: (th.codigo == CodigoHTTP.OK || th.codigo == CodigoHTTP.Creado);
+    }
+    
+    pu f: mostrar()->Void {
+        tprint('--- Respuesta HTTP ---');
+        tprint("Codigo: &th.codigo");
+        tprint("Mensaje: &th.mensaje");
+        
+        i: (th.esExitosa()) {
+            tprint('Estado: EXITOSA');
+        } e: {
+            tprint('Estado: ERROR');
+        }
+    }
+}
+
+tprint('=== DEMO COMPLETA DE ENUMS ===');
+
+tprint('=== 1. Enums con valores inferidos ===');
+tprint("Pendiente: &EstadoPedido.Pendiente");
+tprint("Confirmado: &EstadoPedido.Confirmado");
+tprint("Enviado: &EstadoPedido.Enviado");
+tprint("Entregado: &EstadoPedido.Entregado");
+tprint("Cancelado: &EstadoPedido.Cancelado");
+
+tprint('=== 2. Enums con valores explícitos numéricos ===');
+tprint("Baja: &PrioridadTarea.Baja");
+tprint("Media: &PrioridadTarea.Media");
+tprint("Alta: &PrioridadTarea.Alta");
+tprint("Critica: &PrioridadTarea.Critica");
+
+tprint('=== 3. Enums con valores explícitos de códigos ===');
+tprint("OK: &CodigoHTTP.OK");
+tprint("Creado: &CodigoHTTP.Creado");
+tprint("NoAutorizado: &CodigoHTTP.NoAutorizado");
+tprint("NoEncontrado: &CodigoHTTP.NoEncontrado");
+tprint("ErrorServidor: &CodigoHTTP.ErrorServidor");
+
+tprint('=== 4. Comparaciones con enums ===');
+v: miPedido = EstadoPedido.Confirmado;
+tprint("Estado del pedido: &miPedido");
+
+i: (miPedido == EstadoPedido.Pendiente) {
+    tprint('El pedido esta pendiente');
+}
+i: (miPedido == EstadoPedido.Confirmado) {
+    tprint('El pedido fue confirmado');
+}
+i: (miPedido == EstadoPedido.Enviado) {
+    tprint('El pedido esta en camino');
+}
+
+tprint('=== 5. Operaciones aritméticas con enums numéricos ===');
+v: prioridad1 = PrioridadTarea.Media;
+v: prioridad2 = PrioridadTarea.Alta;
+
+tprint("Prioridad 1: &prioridad1");
+tprint("Prioridad 2: &prioridad2");
+
+i: (prioridad2 > prioridad1) {
+    tprint('La prioridad 2 es mayor');
+}
+
+v: sumaPrioridades = prioridad1 + prioridad2;
+tprint("Suma de prioridades: &sumaPrioridades");
+
+tprint('=== 6. Uso de enums en clases ===');
+c: respuestaOK = n: Respuesta(CodigoHTTP.OK, 'Operacion exitosa');
+respuestaOK.mostrar();
+
+c: respuestaError = n: Respuesta(CodigoHTTP.NoEncontrado, 'Recurso no existe');
+respuestaError.mostrar();
+
+c: respuestaCreado = n: Respuesta(CodigoHTTP.Creado, 'Usuario creado');
+respuestaCreado.mostrar();
+
+tprint('=== 7. Condicionales complejos con enums ===');
+v: estadoActual = EstadoPedido.Enviado;
+v: prioridadActual = PrioridadTarea.Critica;
+
+i: (estadoActual == EstadoPedido.Enviado && prioridadActual >= PrioridadTarea.Alta) {
+    tprint('Pedido URGENTE en camino - Seguimiento activo');
+}
+
+i: (estadoActual == EstadoPedido.Cancelado) {
+    tprint('Pedido cancelado - Reembolso pendiente');
+} e: {
+    tprint('Pedido activo - Procesando normalmente');
+}
+
+tprint('=== 8. Switch simulado con enums ===');
+v: codigoRespuesta = CodigoHTTP.NoAutorizado;
+
+i: (codigoRespuesta == CodigoHTTP.OK) {
+    tprint('200: Todo OK');
+}
+i: (codigoRespuesta == CodigoHTTP.Creado) {
+    tprint('201: Recurso creado');
+}
+i: (codigoRespuesta == CodigoHTTP.NoAutorizado) {
+    tprint('401: Credenciales invalidas');
+}
+i: (codigoRespuesta == CodigoHTTP.NoEncontrado) {
+    tprint('404: Recurso no existe');
+}
+i: (codigoRespuesta == CodigoHTTP.ErrorServidor) {
+    tprint('500: Error interno');
+}
+
+tprint('=== Demo completada ===');

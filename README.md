@@ -414,6 +414,85 @@ cs: Rectangulo ext: Forma imp: Dibujable {
 }
 ```
 
+### Enumeraciones (Enums)
+
+```umbral
+!! Definición de enum con valores inferidos (0, 1, 2...)
+em: Prioridad {
+    Baja,
+    Media,
+    Alta
+}
+
+!! Definición de enum con valores explícitos
+em: CodigoHTTP {
+    Ok=200,
+    Creado=201,
+    NoEncontrado=404,
+    ErrorServidor=500
+}
+
+em: Estado {
+    Activo='activo',
+    Inactivo='inactivo',
+    Pendiente='pendiente'
+}
+
+!! Enums mixtos (inferidos y explícitos)
+em: Mixto {
+    Primero,              !! valor = 0
+    Segundo='custom',     !! valor = 'custom'
+    Tercero,              !! valor = 2
+    Cuarto=100            !! valor = 100
+}
+
+!! Uso de enums - retornan directamente sus valores
+v: prioridad = Prioridad.Alta;      !! prioridad = 2
+v: codigo = CodigoHTTP.Ok;          !! codigo = 200
+v: estadoActual = Estado.Activo;    !! estadoActual = 'activo'
+
+!! Imprimir valores
+tprint(prioridad);        !! 2
+tprint(codigo);           !! 200
+tprint(estadoActual);     !! activo
+
+!! Comparación directa con valores
+i: (prioridad == 2) {
+    tprint('Prioridad es 2');
+}
+
+i: (codigo == 200) {
+    tprint('Código es 200');
+}
+
+i: (estadoActual == 'activo') {
+    tprint('Estado activo');
+}
+
+!! Operaciones aritméticas
+v: suma = Prioridad.Baja + Prioridad.Media + Prioridad.Alta;
+tprint(suma);  !! 3 (0 + 1 + 2)
+
+!! Enums en funciones
+f: procesarCodigo(codigo) {
+    i: (codigo == 200) {
+        tprint('Solicitud exitosa');
+    }
+    i: (codigo == 404) {
+        tprint('Recurso no encontrado');
+    }
+}
+
+procesarCodigo(CodigoHTTP.Ok);
+
+!! Enums exportables
+out em: TipoUsuario {
+    Admin,
+    Editor,
+    Lector
+}
+```
+
 ### Importaciones y Exportaciones
 
 ```umbral
@@ -919,7 +998,7 @@ El proyecto incluye una carpeta `ejemplos/` con código de demostración de toda
 ### 🔄 Próximas mejoras
 
 - [ ] Validación completa de interfaces en runtime
-- [ ] Enums funcionales
+- ✅ Enums funcionales
 - [ ] Manejo de errores con try/catch
 - [ ] Optimización de performance del intérprete
 - [ ] Expansión de la biblioteca estándar

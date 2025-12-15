@@ -1,5 +1,6 @@
 pub mod clases;
 pub mod entorno;
+pub mod enums;
 pub mod errores;
 pub mod funciones;
 pub mod interfaces;

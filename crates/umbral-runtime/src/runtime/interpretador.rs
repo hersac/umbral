@@ -1,5 +1,6 @@
 use crate::runtime::clases::{Clase, GestorClases};
 use crate::runtime::entorno::Entorno;
+use crate::runtime::enums::GestorEnums;
 use crate::runtime::funciones::GestorFunciones;
 use crate::runtime::interfaces::{GestorInterfaces, Interfaz};
 use crate::runtime::valores::{Funcion, Valor};
@@ -12,6 +13,7 @@ pub struct Interpretador {
     pub gestor_clases: GestorClases,
     pub gestor_funciones: GestorFunciones,
     pub gestor_interfaces: GestorInterfaces,
+    pub gestor_enums: GestorEnums,
     pub valor_retorno: Option<Valor>,
     pub exportaciones: HashMap<String, bool>,
     pub directorio_base: PathBuf,
@@ -24,6 +26,7 @@ impl Interpretador {
             gestor_clases: GestorClases::nuevo(),
             gestor_funciones: GestorFunciones::nuevo(),
             gestor_interfaces: GestorInterfaces::nuevo(),
+            gestor_enums: GestorEnums::nuevo(),
             valor_retorno: None,
             exportaciones: HashMap::new(),
             directorio_base: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
@@ -57,13 +60,13 @@ impl Interpretador {
             Sentencia::Funcion(func) => self.registrar_funcion(func),
             Sentencia::Clase(clase) => self.registrar_clase(clase),
             Sentencia::Interfaz(interfaz) => self.registrar_interfaz(interfaz),
+            Sentencia::Enum(decl_enum) => self.registrar_enum(decl_enum),
             Sentencia::LlamadoFuncion(llamado) => Some(self.evaluar_llamado_funcion(&llamado)),
             Sentencia::Importacion(imp) => self.ejecutar_importacion(imp),
             Sentencia::Expresion(expr) => {
                 self.evaluar_expresion(expr);
                 None
             }
-            _ => None,
         }
     }
 
@@ -172,6 +175,34 @@ impl Interpretador {
         self.gestor_interfaces.registrar(interfaz_obj);
         if interfaz.exportado {
             self.exportaciones.insert(nombre, true);
+        }
+        None
+    }
+
+    fn registrar_enum(&mut self, decl_enum: DeclaracionEnum) -> Option<Valor> {
+        let nombre_enum = decl_enum.nombre.clone();
+        let enum_obj = crate::runtime::enums::Enum::desde_declaracion(&decl_enum);
+        
+        self.gestor_enums.registrar(enum_obj);
+        
+        let mut dict_variantes = HashMap::new();
+        
+        for (indice, variante_enum) in decl_enum.variantes.iter().enumerate() {
+            let nombre_variante = variante_enum.nombre.clone();
+            
+            let valor_asociado = if let Some(ref expr_valor) = variante_enum.valor {
+                self.evaluar_expresion(expr_valor.clone())
+            } else {
+                Valor::Entero(indice as i64)
+            };
+            
+            dict_variantes.insert(nombre_variante, valor_asociado);
+        }
+        
+        self.entorno_actual.definir_variable(nombre_enum.clone(), Valor::Diccionario(dict_variantes));
+        
+        if decl_enum.exportado {
+            self.exportaciones.insert(nombre_enum, true);
         }
         None
     }

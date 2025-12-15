@@ -1,0 +1,11 @@
+out em: TipoMensaje {
+    Error,
+    Advertencia,
+    Info
+}
+
+out em: Nivel {
+    Alto,
+    Medio,
+    Bajo
+}
