@@ -2,6 +2,7 @@ pub mod clases;
 pub mod entorno;
 pub mod errores;
 pub mod funciones;
+pub mod interfaces;
 pub mod interpretador;
 pub mod stdlib;
 pub mod valores;

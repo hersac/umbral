@@ -3,7 +3,7 @@
 !! Este archivo muestra todas las características del lenguaje
 !! ============================================================
 
-equip { suma, multiplica } origin 'modulos/matematicas.um';
+equip { sumar, multiplicar } origin 'modulos/matematicas.um';
 
 !! ============================================================
 !! 1. VARIABLES Y CONSTANTES
@@ -270,8 +270,8 @@ miCuenta.mostrarInfo();
 
 tprint("\n=== Importación de Módulos ===");
 
-v: resultadoSuma = suma(15, 25);
-v: resultadoMultiplicacion = multiplica(7, 8);
+v: resultadoSuma = sumar(15, 25);
+v: resultadoMultiplicacion = multiplicar(7, 8);
 
 tprint("Suma importada (15 + 25): &resultadoSuma");
 tprint("Multiplicación importada (7 × 8): &resultadoMultiplicacion");

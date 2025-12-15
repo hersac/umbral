@@ -1,6 +1,7 @@
 use crate::runtime::clases::{Clase, GestorClases};
 use crate::runtime::entorno::Entorno;
 use crate::runtime::funciones::GestorFunciones;
+use crate::runtime::interfaces::{GestorInterfaces, Interfaz};
 use crate::runtime::valores::{Funcion, Valor};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -10,6 +11,7 @@ pub struct Interpretador {
     pub entorno_actual: Entorno,
     pub gestor_clases: GestorClases,
     pub gestor_funciones: GestorFunciones,
+    pub gestor_interfaces: GestorInterfaces,
     pub valor_retorno: Option<Valor>,
     pub exportaciones: HashMap<String, bool>,
     pub directorio_base: PathBuf,
@@ -21,6 +23,7 @@ impl Interpretador {
             entorno_actual: Entorno::nuevo(None),
             gestor_clases: GestorClases::nuevo(),
             gestor_funciones: GestorFunciones::nuevo(),
+            gestor_interfaces: GestorInterfaces::nuevo(),
             valor_retorno: None,
             exportaciones: HashMap::new(),
             directorio_base: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
@@ -53,6 +56,7 @@ impl Interpretador {
             Sentencia::DoWhile(do_while) => self.ejecutar_do_while(do_while),
             Sentencia::Funcion(func) => self.registrar_funcion(func),
             Sentencia::Clase(clase) => self.registrar_clase(clase),
+            Sentencia::Interfaz(interfaz) => self.registrar_interfaz(interfaz),
             Sentencia::LlamadoFuncion(llamado) => Some(self.evaluar_llamado_funcion(&llamado)),
             Sentencia::Importacion(imp) => self.ejecutar_importacion(imp),
             Sentencia::Expresion(expr) => {
@@ -167,7 +171,19 @@ impl Interpretador {
         None
     }
 
+    fn registrar_interfaz(&mut self, interfaz: DeclaracionInterfaz) -> Option<Valor> {
+        let interfaz_obj = Interfaz::desde_declaracion(&interfaz);
+        let nombre = interfaz_obj.nombre.clone();
+        self.gestor_interfaces.registrar(interfaz_obj);
+        if interfaz.exportado {
+            self.exportaciones.insert(nombre, true);
+        }
+        None
+    }
+
     fn registrar_clase(&mut self, clase: DeclaracionClase) -> Option<Valor> {
+        self.validar_implementaciones(&clase);
+
         let clase_obj = Clase::desde_declaracion(&clase);
         let nombre_clase = clase_obj.nombre.clone();
         self.gestor_clases.registrar_clase(clase_obj);
@@ -175,6 +191,52 @@ impl Interpretador {
             self.exportaciones.insert(nombre_clase, true);
         }
         None
+    }
+
+    fn validar_implementaciones(&self, clase: &DeclaracionClase) {
+        for nombre_interfaz in &clase.implementaciones {
+            self.validar_implementacion_interfaz(clase, nombre_interfaz);
+        }
+    }
+
+    fn validar_implementacion_interfaz(&self, clase: &DeclaracionClase, nombre_interfaz: &str) {
+        let interfaz_opt = self.gestor_interfaces.obtener(nombre_interfaz);
+
+        if interfaz_opt.is_none() {
+            eprintln!("Error: La interfaz '{}' no está definida.", nombre_interfaz);
+            return;
+        }
+
+        let interfaz = interfaz_opt.unwrap();
+        for (nombre_metodo, metodo_interfaz) in &interfaz.metodos {
+            self.validar_metodo_interfaz(clase, nombre_interfaz, nombre_metodo, metodo_interfaz);
+        }
+    }
+
+    fn validar_metodo_interfaz(
+        &self,
+        clase: &DeclaracionClase,
+        nombre_interfaz: &str,
+        nombre_metodo: &str,
+        metodo_interfaz: &Metodo,
+    ) {
+        let metodo_clase_opt = clase.metodos.iter().find(|m| m.nombre == *nombre_metodo);
+
+        if metodo_clase_opt.is_none() {
+            eprintln!(
+                "Error: La clase '{}' no implementa el método '{}' de la interfaz '{}'.",
+                clase.nombre, nombre_metodo, nombre_interfaz
+            );
+            return;
+        }
+
+        let metodo_clase = metodo_clase_opt.unwrap();
+        if metodo_clase.parametros.len() != metodo_interfaz.parametros.len() {
+            eprintln!(
+                "Error: La clase '{}' implementa incorrectamente el método '{}' de la interfaz '{}'. Diferente número de parámetros.",
+                clase.nombre, nombre_metodo, nombre_interfaz
+            );
+        }
     }
 
     fn ejecutar_importacion(&mut self, imp: umbral_parser::ast::Importacion) -> Option<Valor> {
