@@ -572,56 +572,56 @@ fn estimar_longitud_token_directo(token: &Token, _resto: &[char]) -> usize {
     use Token::*;
     match token {
         Numero(s) | Identificador(s) | Tipo(s) => s.len(),
-        Cadena(s) => s.len() + 2, // "texto"
-        CadenaLiteral(s) => s.len() + 2, // 'texto'
-        CadenaMultilinea(s) => s.len() + 6, // '''texto'''
-        DeclararVariable | DeclararConstante | DeclararFuncion => 2, // v: c: f:
-        Instanciar => 2, // n:
-        DeclararClase => 3, // cs:
-        DeclararInterfaz => 3, // in:
-        DeclararEnum => 3, // em:
-        PropPrivada => 3, // pr:
-        PropPublica => 3, // pu:
-        Equip => 5, // equip
-        Origin => 6, // origin
-        As => 2, // as
-        Out => 3, // out
-        Implementacion => 4, // imp:
-        Extension => 4, // ext:
-        If => 2, // i:
-        ElseIf => 3, // ie:
-        Else => 2, // e:
-        Switch => 3, // sw:
-        Case => 3, // ca:
-        Default => 4, // def:
-        For => 3, // fo:
-        ForEach => 3, // fe:
-        While => 3, // wh:
-        DoWhile => 3, // dw:
-        Return => 2, // r:
-        This => 2, // th
-        TPrint => 6, // tprint
-        FlechaDoble => 2, // =>
-        Asignacion => 1, // =
-        IgualIgual => 2, // ==
-        Diferente => 2, // !=
-        MenorIgual => 2, // <=
-        MayorIgual => 2, // >=
-        And => 2, // &&
-        Or => 2, // ||
-        Incremento => 2, // ++
-        Decremento => 2, // --
-        OperadorTipo => 2, // ->
-        Rango => 2, // ..
-        RangoIncluyente => 3, // ..=
-        Spread => 1, // &
-        Verdadero => 4, // true
-        Falso => 5, // false
-        Nulo => 4, // null
+        Cadena(s) => s.len() + 2,
+        CadenaLiteral(s) => s.len() + 2,
+        CadenaMultilinea(s) => s.len() + 6,
+        DeclararVariable | DeclararConstante | DeclararFuncion => 2,
+        Instanciar => 2,
+        DeclararClase => 3,
+        DeclararInterfaz => 3,
+        DeclararEnum => 3,
+        PropPrivada => 3,
+        PropPublica => 3,
+        Equip => 5,
+        Origin => 6,
+        As => 2,
+        Out => 3,
+        Implementacion => 4,
+        Extension => 4,
+        If => 2,
+        ElseIf => 3,
+        Else => 2,
+        Switch => 3,
+        Case => 3,
+        Default => 4,
+        For => 3,
+        ForEach => 3,
+        While => 3,
+        DoWhile => 3,
+        Return => 2,
+        This => 2,
+        TPrint => 6,
+        FlechaDoble => 2,
+        Asignacion => 1,
+        IgualIgual => 2,
+        Diferente => 2,
+        MenorIgual => 2,
+        MayorIgual => 2,
+        And => 2,
+        Or => 2,
+        Incremento => 2,
+        Decremento => 2,
+        OperadorTipo => 2,
+        Rango => 2,
+        RangoIncluyente => 3,
+        Spread => 1,
+        Verdadero => 4,
+        Falso => 5,
+        Nulo => 4,
         ParentesisIzq | ParentesisDer | LlaveIzq | LlaveDer | CorcheteIzq | CorcheteDer |
         PuntoYComa | Coma | DosPuntos | Punto | Flecha | Suma | Resta | Multiplicacion |
         Division | Modulo | Menor | Mayor | Not | Asterisco => 1,
-        Interpolacion => 2, // ${
+        Interpolacion => 2,
         Desconocido(_) => 1,
     }
 }

@@ -1003,15 +1003,29 @@ impl Interpretador {
             return;
         };
 
-        let anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(None));
-        self.entorno_actual = Entorno::nuevo(Some(anterior));
+        self.ejecutar_constructor(constructor, args, instancia);
+    }
 
-        self.entorno_actual
-            .definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
-
+    fn ejecutar_constructor(
+        &mut self,
+        constructor: umbral_parser::ast::Metodo,
+        args: &[Valor],
+        instancia: &mut crate::runtime::valores::Instancia,
+    ) {
+        self.crear_entorno_constructor(instancia);
         self.vincular_parametros_constructor(&constructor.parametros, args);
         self.ejecutar_cuerpo_constructor(constructor.cuerpo, instancia);
+        self.restaurar_entorno();
+    }
 
+    fn crear_entorno_constructor(&mut self, instancia: &crate::runtime::valores::Instancia) {
+        let anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(None));
+        self.entorno_actual = Entorno::nuevo(Some(anterior));
+        self.entorno_actual
+            .definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
+    }
+
+    fn restaurar_entorno(&mut self) {
         if let Some(parent) = self.entorno_actual.parent.take() {
             self.entorno_actual = *parent;
         }
@@ -1200,14 +1214,20 @@ impl Interpretador {
         let instancia = match obj_valor {
             Valor::Objeto(inst) => inst,
             _ => {
-                eprintln!(
-                    "No se puede llamar método '{}' en un valor que no es objeto",
-                    metodo
-                );
+                eprintln!("No se puede llamar método '{}' en un valor que no es objeto", metodo);
                 return Valor::Nulo;
             }
         };
 
+        self.ejecutar_metodo_instancia_impl(instancia, metodo, argumentos)
+    }
+
+    fn ejecutar_metodo_instancia_impl(
+        &mut self,
+        instancia: crate::runtime::valores::Instancia,
+        metodo: &str,
+        argumentos: Vec<Expresion>,
+    ) -> Valor {
         let clase = match self.gestor_clases.obtener_clase(&instancia.clase) {
             Some(c) => c,
             None => {
@@ -1219,47 +1239,54 @@ impl Interpretador {
         let metodo_def = match clase.obtener_metodo(metodo) {
             Some(m) => m.clone(),
             None => {
-                eprintln!(
-                    "Método '{}' no encontrado en clase '{}'",
-                    metodo, instancia.clase
-                );
+                eprintln!("Método '{}' no encontrado en clase '{}'", metodo, instancia.clase);
                 return Valor::Nulo;
             }
         };
 
-        let args: Vec<Valor> = argumentos
-            .into_iter()
-            .map(|arg| self.evaluar_expresion(arg))
-            .collect();
+        let args = self.evaluar_argumentos(argumentos);
+        self.ejecutar_metodo_clase(metodo_def, instancia, args)
+    }
 
+    fn ejecutar_metodo_clase(
+        &mut self,
+        metodo_def: umbral_parser::ast::Metodo,
+        instancia: crate::runtime::valores::Instancia,
+        args: Vec<Valor>,
+    ) -> Valor {
+        self.preparar_entorno_metodo(&instancia, &metodo_def.parametros, &args);
+        let resultado = self.ejecutar_cuerpo_metodo(metodo_def.cuerpo);
+        self.restaurar_entorno();
+        self.valor_retorno = None;
+        resultado
+    }
+
+    fn preparar_entorno_metodo(
+        &mut self,
+        instancia: &crate::runtime::valores::Instancia,
+        parametros: &[umbral_parser::ast::Parametro],
+        args: &[Valor],
+    ) {
         let anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(None));
         self.entorno_actual = Entorno::nuevo(Some(anterior));
-
         self.entorno_actual
             .definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
 
-        for (i, param) in metodo_def.parametros.iter().enumerate() {
+        for (i, param) in parametros.iter().enumerate() {
             if let Some(valor) = args.get(i) {
                 self.entorno_actual
                     .definir_variable(param.nombre.clone(), valor.clone());
             }
         }
-
         self.valor_retorno = None;
-        for sentencia in metodo_def.cuerpo {
+    }
+
+    fn ejecutar_cuerpo_metodo(&mut self, cuerpo: Vec<umbral_parser::ast::Sentencia>) -> Valor {
+        for sentencia in cuerpo {
             if let Some(valor) = self.ejecutar_sentencia(sentencia) {
-                if let Some(parent) = self.entorno_actual.parent.take() {
-                    self.entorno_actual = *parent;
-                }
-                self.valor_retorno = None;
                 return valor;
             }
         }
-
-        if let Some(parent) = self.entorno_actual.parent.take() {
-            self.entorno_actual = *parent;
-        }
-        self.valor_retorno = None;
         Valor::Nulo
     }
 
@@ -1354,33 +1381,62 @@ impl Interpretador {
         let mut chars = texto.chars().peekable();
 
         while let Some(c) = chars.next() {
-            if c == '\\' {
-                if chars.peek() == Some(&'&') {
-                    chars.next();
-                    salida.push('&');
-                    continue;
-                }
-                salida.push(c);
-                continue;
-            }
-            
-            if c != '&' {
-                salida.push(c);
-                continue;
-            }
-
-            let expr = self.leer_expresion_interpolacion(&mut chars);
-            
-            if expr.is_empty() {
-                salida.push('&');
-                continue;
-            }
-            
-            let valor = self.evaluar_interpolacion(expr);
-            salida.push_str(&valor);
+            self.procesar_caracter_interpolacion(c, &mut chars, &mut salida);
         }
 
         salida
+    }
+
+    fn procesar_caracter_interpolacion(
+        &mut self,
+        caracter: char,
+        chars: &mut std::iter::Peekable<std::str::Chars>,
+        salida: &mut String,
+    ) {
+        if self.es_escape_interpolacion(caracter, chars) {
+            self.agregar_escape_interpolacion(chars, salida);
+            return;
+        }
+
+        if caracter != '&' {
+            salida.push(caracter);
+            return;
+        }
+
+        self.evaluar_y_agregar_interpolacion(chars, salida);
+    }
+
+    fn es_escape_interpolacion(
+        &self,
+        caracter: char,
+        chars: &mut std::iter::Peekable<std::str::Chars>,
+    ) -> bool {
+        caracter == '\\' && chars.peek() == Some(&'&')
+    }
+
+    fn agregar_escape_interpolacion(
+        &self,
+        chars: &mut std::iter::Peekable<std::str::Chars>,
+        salida: &mut String,
+    ) {
+        chars.next();
+        salida.push('&');
+    }
+
+    fn evaluar_y_agregar_interpolacion(
+        &mut self,
+        chars: &mut std::iter::Peekable<std::str::Chars>,
+        salida: &mut String,
+    ) {
+        let expr = self.leer_expresion_interpolacion(chars);
+
+        if expr.is_empty() {
+            salida.push('&');
+            return;
+        }
+
+        let valor = self.evaluar_interpolacion(expr);
+        salida.push_str(&valor);
     }
 
     fn leer_expresion_interpolacion(
@@ -1391,25 +1447,12 @@ impl Interpretador {
         let mut nivel_parentesis = 0;
 
         while let Some(&ch) = chars.peek() {
-            if ch == '(' {
-                nivel_parentesis += 1;
-                expr.push(chars.next().unwrap());
+            if self.procesar_parentesis_apertura(ch, &mut nivel_parentesis, &mut expr, chars) {
                 continue;
             }
 
-            if ch == ')' {
-                if nivel_parentesis == 0 {
-                    break;
-                }
-                nivel_parentesis -= 1;
-                expr.push(chars.next().unwrap());
-                if nivel_parentesis == 0 {
-                    if chars.peek() == Some(&'.') {
-                        continue;
-                    }
-                    break;
-                }
-                continue;
+            if self.procesar_parentesis_cierre(ch, &mut nivel_parentesis, &mut expr, chars) {
+                break;
             }
 
             if nivel_parentesis > 0 {
@@ -1417,15 +1460,7 @@ impl Interpretador {
                 continue;
             }
 
-            if ch == '.' {
-                let mut temp_chars = chars.clone();
-                temp_chars.next();
-                if let Some(&next_ch) = temp_chars.peek() {
-                    if !next_ch.is_alphanumeric() && next_ch != '_' {
-                        break;
-                    }
-                }
-                expr.push(chars.next().unwrap());
+            if self.procesar_punto_acceso(ch, chars, &mut expr) {
                 continue;
             }
 
@@ -1436,6 +1471,73 @@ impl Interpretador {
             expr.push(chars.next().unwrap());
         }
         expr
+    }
+
+    fn procesar_parentesis_apertura(
+        &self,
+        caracter: char,
+        nivel: &mut i32,
+        expr: &mut String,
+        chars: &mut std::iter::Peekable<std::str::Chars>,
+    ) -> bool {
+        if caracter != '(' {
+            return false;
+        }
+
+        *nivel += 1;
+        expr.push(chars.next().unwrap());
+        true
+    }
+
+    fn procesar_parentesis_cierre(
+        &self,
+        caracter: char,
+        nivel: &mut i32,
+        expr: &mut String,
+        chars: &mut std::iter::Peekable<std::str::Chars>,
+    ) -> bool {
+        if caracter != ')' {
+            return false;
+        }
+
+        if *nivel == 0 {
+            return true;
+        }
+
+        *nivel -= 1;
+        expr.push(chars.next().unwrap());
+
+        if *nivel == 0 && chars.peek() != Some(&'.') {
+            return true;
+        }
+
+        false
+    }
+
+    fn procesar_punto_acceso(
+        &self,
+        caracter: char,
+        chars: &mut std::iter::Peekable<std::str::Chars>,
+        expr: &mut String,
+    ) -> bool {
+        if caracter != '.' {
+            return false;
+        }
+
+        let mut temp_chars = chars.clone();
+        temp_chars.next();
+
+        let es_acceso_valido = temp_chars
+            .peek()
+            .map(|&ch| ch.is_alphanumeric() || ch == '_')
+            .unwrap_or(false);
+
+        if !es_acceso_valido {
+            return false;
+        }
+
+        expr.push(chars.next().unwrap());
+        true
     }
 
     fn es_caracter_expresion_basico(&self, c: char) -> bool {
@@ -1477,34 +1579,14 @@ impl Interpretador {
 
     fn resolver_llamada_metodo_interpolacion(&mut self, expr: &str) -> Valor {
         let partes: Vec<&str> = expr.split('.').collect();
-
-        let primer_elemento = if partes[0] == "th" {
-            "__this__"
-        } else {
-            partes[0]
-        };
+        let primer_elemento = self.obtener_nombre_inicial(partes[0]);
 
         let Some(mut valor_actual) = self.entorno_actual.obtener(primer_elemento) else {
             return Valor::Nulo;
         };
 
         for &parte in &partes[1..] {
-            if parte.contains('(') {
-                let metodo_fin = parte.find('(').unwrap_or(parte.len());
-                let metodo = &parte[..metodo_fin];
-
-                let args_str = if parte.contains('(') && parte.contains(')') {
-                    let inicio = parte.find('(').unwrap() + 1;
-                    let fin = parte.rfind(')').unwrap();
-                    &parte[inicio..fin]
-                } else {
-                    ""
-                };
-
-                valor_actual = self.ejecutar_metodo_interpolacion(valor_actual, metodo, args_str);
-            } else {
-                valor_actual = self.navegar_propiedad(valor_actual, parte);
-            }
+            valor_actual = self.procesar_parte_cadena(valor_actual, parte);
 
             if matches!(valor_actual, Valor::Nulo) {
                 break;
@@ -1514,6 +1596,38 @@ impl Interpretador {
         valor_actual
     }
 
+    fn obtener_nombre_inicial<'a>(&self, parte: &'a str) -> &'a str {
+        if parte == "th" {
+            "__this__"
+        } else {
+            parte
+        }
+    }
+
+    fn procesar_parte_cadena(&mut self, valor: Valor, parte: &str) -> Valor {
+        if !parte.contains('(') {
+            return self.navegar_propiedad(valor, parte);
+        }
+
+        let (metodo, args_str) = self.extraer_metodo_argumentos(parte);
+        self.ejecutar_metodo_interpolacion(valor, metodo, args_str)
+    }
+
+    fn extraer_metodo_argumentos<'a>(&self, parte: &'a str) -> (&'a str, &'a str) {
+        let metodo_fin = parte.find('(').unwrap_or(parte.len());
+        let metodo = &parte[..metodo_fin];
+
+        let args_str = if parte.contains('(') && parte.contains(')') {
+            let inicio = parte.find('(').unwrap() + 1;
+            let fin = parte.rfind(')').unwrap();
+            &parte[inicio..fin]
+        } else {
+            ""
+        };
+
+        (metodo, args_str)
+    }
+
     fn ejecutar_metodo_interpolacion(
         &mut self,
         valor: Valor,
@@ -1521,42 +1635,59 @@ impl Interpretador {
         args_str: &str,
     ) -> Valor {
         match valor {
-            Valor::Lista(ref items) => match metodo {
-                "len" => Valor::Entero(items.len() as i64),
-                "push" => {
-                    if args_str.is_empty() {
-                        return valor;
-                    }
-                    let mut nueva_lista = items.clone();
-                    let arg_valor = self.parsear_argumento_simple(args_str);
-                    nueva_lista.push(arg_valor);
-                    Valor::Lista(nueva_lista)
-                }
-                "pop" => {
-                    if !items.is_empty() {
-                        let mut nueva_lista = items.clone();
-                        nueva_lista.pop();
-                        Valor::Lista(nueva_lista)
-                    } else {
-                        Valor::Lista(vec![])
-                    }
-                }
-                _ => Valor::Nulo,
-            },
-            Valor::Objeto(instancia) => {
-                let argumentos = if args_str.is_empty() {
-                    vec![]
-                } else {
-                    args_str
-                        .split(',')
-                        .map(|s| self.parsear_argumento_simple(s.trim()))
-                        .collect()
-                };
-
-                self.ejecutar_metodo_objeto(&instancia, metodo, argumentos)
+            Valor::Lista(ref items) => self.ejecutar_metodo_lista(items, metodo, args_str),
+            Valor::Objeto(ref instancia) => {
+                let argumentos = self.parsear_argumentos_interpolacion(args_str);
+                self.ejecutar_metodo_objeto(instancia, metodo, argumentos)
             }
             _ => Valor::Nulo,
         }
+    }
+
+    fn ejecutar_metodo_lista(
+        &mut self,
+        items: &[Valor],
+        metodo: &str,
+        args_str: &str,
+    ) -> Valor {
+        match metodo {
+            "len" => Valor::Entero(items.len() as i64),
+            "push" => self.ejecutar_push_lista(items, args_str),
+            "pop" => self.ejecutar_pop_lista(items),
+            _ => Valor::Nulo,
+        }
+    }
+
+    fn ejecutar_push_lista(&mut self, items: &[Valor], args_str: &str) -> Valor {
+        if args_str.is_empty() {
+            return Valor::Lista(items.to_vec());
+        }
+
+        let mut nueva_lista = items.to_vec();
+        let arg_valor = self.parsear_argumento_simple(args_str);
+        nueva_lista.push(arg_valor);
+        Valor::Lista(nueva_lista)
+    }
+
+    fn ejecutar_pop_lista(&self, items: &[Valor]) -> Valor {
+        if items.is_empty() {
+            return Valor::Lista(vec![]);
+        }
+
+        let mut nueva_lista = items.to_vec();
+        nueva_lista.pop();
+        Valor::Lista(nueva_lista)
+    }
+
+    fn parsear_argumentos_interpolacion(&mut self, args_str: &str) -> Vec<Valor> {
+        if args_str.is_empty() {
+            return vec![];
+        }
+
+        args_str
+            .split(',')
+            .map(|s| self.parsear_argumento_simple(s.trim()))
+            .collect()
     }
 
     fn ejecutar_metodo_objeto(

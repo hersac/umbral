@@ -118,7 +118,6 @@ mod tests {
         let mut interprete = Interpreter::nuevo();
         interprete.ejecutar("v: x = 10;").unwrap();
         interprete.reiniciar();
-        // Después de reiniciar, el estado debería estar limpio
         assert!(interprete.ejecutar("v: y = 20;").is_ok());
     }
 }

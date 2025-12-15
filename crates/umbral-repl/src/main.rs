@@ -144,12 +144,10 @@ fn expresion_completa(codigo: &str) -> bool {
         return false;
     }
     
-    // Verificar comandos simples que terminan con ;
     if codigo_trimmed.ends_with(';') {
         return cuenta_balanceada(codigo_trimmed);
     }
     
-    // Verificar bloques que terminan con }
     if codigo_trimmed.ends_with('}') {
         return cuenta_balanceada(codigo_trimmed);
     }
@@ -166,7 +164,6 @@ fn cuenta_balanceada(codigo: &str) -> bool {
     let mut chars = codigo.chars().peekable();
     
     while let Some(c) = chars.next() {
-        // Manejar strings triples
         if c == '\'' && chars.peek() == Some(&'\'') {
             chars.next();
             if chars.peek() == Some(&'\'') {
@@ -180,7 +177,6 @@ fn cuenta_balanceada(codigo: &str) -> bool {
             continue;
         }
         
-        // Manejar strings simples
         if c == '"' || c == '\'' {
             en_string = !en_string;
             continue;
@@ -189,8 +185,6 @@ fn cuenta_balanceada(codigo: &str) -> bool {
         if en_string {
             continue;
         }
-        
-        // Contar delimitadores
         match c {
             '{' => llaves += 1,
             '}' => llaves -= 1,

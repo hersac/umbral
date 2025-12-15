@@ -1,9 +1,7 @@
 use crate::runtime::entorno::Entorno;
 use crate::runtime::valores::{Funcion, Valor};
 
-pub struct GestorFunciones {
-    // Aquí se pueden almacenar funciones adicionales
-}
+pub struct GestorFunciones {}
 
 impl GestorFunciones {
     pub fn nuevo() -> Self {

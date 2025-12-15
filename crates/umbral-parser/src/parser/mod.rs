@@ -76,7 +76,7 @@ impl Parser {
         let mut pos = 0;
         for i in 0..self.posicion.min(self.tokens.len()) {
             pos += self.estimar_longitud_token(&self.tokens[i]);
-            pos += 1; // Espacio entre tokens
+            pos += 1;
         }
         pos.min(self.codigo_fuente.len().saturating_sub(1))
     }
@@ -85,13 +85,13 @@ impl Parser {
         use LexToken::*;
         match token {
             Numero(s) | Cadena(s) | CadenaLiteral(s) | CadenaMultilinea(s) | Identificador(s) | Tipo(s) => s.len(),
-            DeclararVariable => 2, // "v:"
-            DeclararConstante => 2, // "c:"
-            DeclararFuncion => 2, // "f:"
-            Instanciar => 2, // "n:"
-            DeclararClase => 3, // "cs:"
-            DeclararInterfaz => 3, // "in:"
-            DeclararEnum => 3, // "em:"
+            DeclararVariable => 2,
+            DeclararConstante => 2,
+            DeclararFuncion => 2,
+            Instanciar => 2,
+            DeclararClase => 3,
+            DeclararInterfaz => 3,
+            DeclararEnum => 3,
             _ => 2,
         }
     }
