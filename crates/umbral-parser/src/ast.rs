@@ -23,6 +23,8 @@ pub enum Sentencia {
     Enum(DeclaracionEnum),
     LlamadoFuncion(LlamadoFuncion),
     Importacion(Importacion),
+    TryCatch(TryCatch),
+    Throw(Throw),
 }
 
 #[derive(Debug, Clone)]
@@ -50,7 +52,10 @@ pub struct Asignacion {
 #[derive(Debug, Clone)]
 pub enum ObjetivoAsignacion {
     Variable(String),
-    Propiedad { objeto: Box<Expresion>, propiedad: String },
+    Propiedad {
+        objeto: Box<Expresion>,
+        propiedad: String,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -249,4 +254,23 @@ pub enum ItemImportacion {
     Todo(Option<String>),
     Nombre(String, Option<String>),
     ListaNombres(Vec<ItemImportacion>),
+}
+
+#[derive(Debug, Clone)]
+pub struct TryCatch {
+    pub bloque_try: Vec<Sentencia>,
+    pub bloque_catch: Option<Catch>,
+    pub bloque_finally: Option<Vec<Sentencia>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Catch {
+    pub variable: String,
+    pub tipo: Option<String>,
+    pub bloque: Vec<Sentencia>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Throw {
+    pub valor: Expresion,
 }

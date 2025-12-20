@@ -1,0 +1,23 @@
+!! 17_manejo_errores.um
+!! Este ejemplo demuestra el uso básico de bloques try-catch-finally
+
+tprint("--- Ejemplo Básico de Try-Catch ---");
+
+tr: {
+    tprint("Intentando ejecutar código...");
+    
+    !! Simulamos un error lanzando una excepción
+    v: condicion = true;
+    i: (condicion) {
+        tw: "Algo salió mal en el proceso";
+    }
+    
+    tprint("Esta línea no se ejecutará");
+} ct: (v: error) {
+    tprint("¡Error capturado!");
+    tprint("Mensaje: &error");
+} fy: {
+    tprint("Bloque finally: Se ejecuta siempre, haya error o no.");
+}
+
+tprint("Continúa la ejecución normal del programa.");

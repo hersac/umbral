@@ -15,6 +15,7 @@ pub struct Interpretador {
     pub gestor_interfaces: GestorInterfaces,
     pub gestor_enums: GestorEnums,
     pub valor_retorno: Option<Valor>,
+    pub estado_excepcion: Option<Valor>,
     pub exportaciones: HashMap<String, bool>,
     pub directorio_base: PathBuf,
 }
@@ -28,6 +29,7 @@ impl Interpretador {
             gestor_interfaces: GestorInterfaces::nuevo(),
             gestor_enums: GestorEnums::nuevo(),
             valor_retorno: None,
+            estado_excepcion: None,
             exportaciones: HashMap::new(),
             directorio_base: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
         };
@@ -63,6 +65,8 @@ impl Interpretador {
             Sentencia::Enum(decl_enum) => self.registrar_enum(decl_enum),
             Sentencia::LlamadoFuncion(llamado) => Some(self.evaluar_llamado_funcion(&llamado)),
             Sentencia::Importacion(imp) => self.ejecutar_importacion(imp),
+            Sentencia::TryCatch(stmt) => self.ejecutar_try_catch(stmt),
+            Sentencia::Throw(stmt) => self.ejecutar_throw(stmt),
             Sentencia::Expresion(expr) => {
                 self.evaluar_expresion(expr);
                 None
@@ -135,14 +139,20 @@ impl Interpretador {
             return;
         };
 
-        instancia.propiedades.insert(propiedad.clone(), valor.clone());
-        
+        instancia
+            .propiedades
+            .insert(propiedad.clone(), valor.clone());
+
         if !matches!(objeto_expr, Expresion::This) {
             return;
         }
 
-        if !self.entorno_actual.asignar("__this__", Valor::Objeto(instancia.clone())) {
-            self.entorno_actual.definir_variable("__this__".to_string(), Valor::Objeto(instancia));
+        if !self
+            .entorno_actual
+            .asignar("__this__", Valor::Objeto(instancia.clone()))
+        {
+            self.entorno_actual
+                .definir_variable("__this__".to_string(), Valor::Objeto(instancia));
         }
     }
 
@@ -182,25 +192,26 @@ impl Interpretador {
     fn registrar_enum(&mut self, decl_enum: DeclaracionEnum) -> Option<Valor> {
         let nombre_enum = decl_enum.nombre.clone();
         let enum_obj = crate::runtime::enums::Enum::desde_declaracion(&decl_enum);
-        
+
         self.gestor_enums.registrar(enum_obj);
-        
+
         let mut dict_variantes = HashMap::new();
-        
+
         for (indice, variante_enum) in decl_enum.variantes.iter().enumerate() {
             let nombre_variante = variante_enum.nombre.clone();
-            
+
             let valor_asociado = if let Some(ref expr_valor) = variante_enum.valor {
                 self.evaluar_expresion(expr_valor.clone())
             } else {
                 Valor::Entero(indice as i64)
             };
-            
+
             dict_variantes.insert(nombre_variante, valor_asociado);
         }
-        
-        self.entorno_actual.definir_variable(nombre_enum.clone(), Valor::Diccionario(dict_variantes));
-        
+
+        self.entorno_actual
+            .definir_variable(nombre_enum.clone(), Valor::Diccionario(dict_variantes));
+
         if decl_enum.exportado {
             self.exportaciones.insert(nombre_enum, true);
         }
@@ -275,11 +286,11 @@ impl Interpretador {
 
     fn buscar_modulo(&self, ruta: &str) -> Option<(String, PathBuf)> {
         let es_ruta_relativa = self.es_ruta_relativa(ruta);
-        
+
         if es_ruta_relativa {
             return self.buscar_ruta_relativa(ruta);
         }
-        
+
         self.buscar_modulo_ump(ruta)
     }
 
@@ -290,7 +301,7 @@ impl Interpretador {
     fn buscar_ruta_relativa(&self, ruta: &str) -> Option<(String, PathBuf)> {
         let ruta_original = PathBuf::from(ruta);
         let rutas_posibles = self.construir_rutas_relativas(&ruta_original);
-        
+
         self.intentar_leer_archivos(rutas_posibles, ruta)
     }
 
@@ -298,8 +309,14 @@ impl Interpretador {
         vec![
             self.directorio_base.join(ruta),
             self.directorio_base.join("modules_ump").join(ruta),
-            self.directorio_base.join("modules_ump").join(ruta).join("main.um"),
-            self.directorio_base.join("modules_ump").join(ruta).join("index.um"),
+            self.directorio_base
+                .join("modules_ump")
+                .join(ruta)
+                .join("main.um"),
+            self.directorio_base
+                .join("modules_ump")
+                .join(ruta)
+                .join("index.um"),
         ]
     }
 
@@ -321,7 +338,11 @@ impl Interpretador {
         None
     }
 
-    fn buscar_en_directorio(&self, dir: &PathBuf, nombre_modulo: &str) -> Option<(String, PathBuf)> {
+    fn buscar_en_directorio(
+        &self,
+        dir: &PathBuf,
+        nombre_modulo: &str,
+    ) -> Option<(String, PathBuf)> {
         use std::fs;
         let modules_ump = dir.join("modules_ump");
 
@@ -344,9 +365,13 @@ impl Interpretador {
         None
     }
 
-    fn intentar_leer_archivos(&self, rutas: Vec<PathBuf>, ruta_original: &str) -> Option<(String, PathBuf)> {
+    fn intentar_leer_archivos(
+        &self,
+        rutas: Vec<PathBuf>,
+        ruta_original: &str,
+    ) -> Option<(String, PathBuf)> {
         use std::fs;
-        
+
         for ruta in &rutas {
             if let Ok(contenido) = fs::read_to_string(ruta) {
                 return Some((contenido, ruta.clone()));
@@ -358,18 +383,31 @@ impl Interpretador {
     }
 
     fn reportar_ruta_no_encontrada(&self, ruta: &str, rutas_intentadas: &[PathBuf]) {
-        eprintln!("Error: No se pudo encontrar el módulo '{}'. Se buscaron las siguientes rutas:", ruta);
+        eprintln!(
+            "Error: No se pudo encontrar el módulo '{}'. Se buscaron las siguientes rutas:",
+            ruta
+        );
         for ruta_intentada in rutas_intentadas.iter().take(2) {
             eprintln!(" - {}", ruta_intentada.display());
         }
     }
 
     fn reportar_modulo_no_encontrado(&self, nombre: &str) {
-        eprintln!("Error: No se pudo encontrar el módulo UMP '{}' en modules_ump.", nombre);
-        eprintln!("Asegúrate de que el módulo esté instalado con 'ump add {}'.", nombre);
+        eprintln!(
+            "Error: No se pudo encontrar el módulo UMP '{}' en modules_ump.",
+            nombre
+        );
+        eprintln!(
+            "Asegúrate de que el módulo esté instalado con 'ump add {}'.",
+            nombre
+        );
     }
 
-    fn parsear_modulo(&self, contenido: &str, ruta: &PathBuf) -> Option<umbral_parser::ast::Programa> {
+    fn parsear_modulo(
+        &self,
+        contenido: &str,
+        ruta: &PathBuf,
+    ) -> Option<umbral_parser::ast::Programa> {
         let tokens = umbral_lexer::analizar(contenido);
         match umbral_parser::parsear_programa(tokens) {
             Ok(programa) => Some(programa),
@@ -380,9 +418,13 @@ impl Interpretador {
         }
     }
 
-    fn ejecutar_modulo(&self, programa: umbral_parser::ast::Programa, ruta: &PathBuf) -> Interpretador {
+    fn ejecutar_modulo(
+        &self,
+        programa: umbral_parser::ast::Programa,
+        ruta: &PathBuf,
+    ) -> Interpretador {
         let mut interprete = Interpretador::nuevo();
-        
+
         if let Some(parent) = ruta.parent() {
             interprete.establecer_directorio_base(parent.to_path_buf());
         }
@@ -394,7 +436,11 @@ impl Interpretador {
         interprete
     }
 
-    fn importar_items(&mut self, items: Vec<umbral_parser::ast::ItemImportacion>, modulo: &Interpretador) {
+    fn importar_items(
+        &mut self,
+        items: Vec<umbral_parser::ast::ItemImportacion>,
+        modulo: &Interpretador,
+    ) {
         for item in items {
             self.procesar_item_importacion(item, modulo);
         }
@@ -420,7 +466,7 @@ impl Interpretador {
 
     fn importar_todo(&mut self, alias: Option<String>, modulo: &Interpretador) {
         let alias_nombre = alias.unwrap_or_else(|| "mod".to_string());
-        
+
         self.importar_variables_exportadas(&alias_nombre, modulo);
         self.importar_clases_exportadas(&alias_nombre, modulo);
     }
@@ -430,9 +476,10 @@ impl Interpretador {
             if !modulo.exportaciones.get(nombre).copied().unwrap_or(false) {
                 continue;
             }
-            
+
             let nombre_final = format!("{}_{}", alias, nombre);
-            self.entorno_actual.definir_variable(nombre_final, valor.clone());
+            self.entorno_actual
+                .definir_variable(nombre_final, valor.clone());
         }
     }
 
@@ -441,9 +488,11 @@ impl Interpretador {
             if !modulo.exportaciones.get(nombre).copied().unwrap_or(false) {
                 continue;
             }
-            
+
             let nombre_final = format!("{}_{}", alias, nombre);
-            self.gestor_clases.clases.insert(nombre_final, clase.clone());
+            self.gestor_clases
+                .clases
+                .insert(nombre_final, clase.clone());
         }
     }
 
@@ -466,17 +515,30 @@ impl Interpretador {
         eprintln!("Advertencia: '{}' no encontrado en el módulo", nombre);
     }
 
-    fn intentar_importar_variable(&mut self, nombre: &str, nombre_final: &str, modulo: &Interpretador) -> bool {
+    fn intentar_importar_variable(
+        &mut self,
+        nombre: &str,
+        nombre_final: &str,
+        modulo: &Interpretador,
+    ) -> bool {
         if let Some(valor) = modulo.entorno_actual.obtener(nombre) {
-            self.entorno_actual.definir_variable(nombre_final.to_string(), valor);
+            self.entorno_actual
+                .definir_variable(nombre_final.to_string(), valor);
             return true;
         }
         false
     }
 
-    fn intentar_importar_clase(&mut self, nombre: &str, nombre_final: &str, modulo: &Interpretador) -> bool {
+    fn intentar_importar_clase(
+        &mut self,
+        nombre: &str,
+        nombre_final: &str,
+        modulo: &Interpretador,
+    ) -> bool {
         if let Some(clase) = modulo.gestor_clases.clases.get(nombre) {
-            self.gestor_clases.clases.insert(nombre_final.to_string(), clase.clone());
+            self.gestor_clases
+                .clases
+                .insert(nombre_final.to_string(), clase.clone());
             return true;
         }
         false
@@ -491,21 +553,29 @@ impl Interpretador {
             Expresion::LiteralCadenaLiteral(s) => Valor::Texto(s),
             Expresion::LiteralNulo => Valor::Nulo,
             Expresion::Identificador(nombre) => self.evaluar_identificador(&nombre),
-            Expresion::Binaria { izquierda, operador, derecha } => 
-                self.evaluar_binaria(*izquierda, &operador, *derecha),
-            Expresion::Unaria { operador, expresion } => 
-                self.evaluar_unaria(&operador, *expresion),
+            Expresion::Binaria {
+                izquierda,
+                operador,
+                derecha,
+            } => self.evaluar_binaria(*izquierda, &operador, *derecha),
+            Expresion::Unaria {
+                operador,
+                expresion,
+            } => self.evaluar_unaria(&operador, *expresion),
             Expresion::Agrupada(expr) => self.evaluar_expresion(*expr),
             Expresion::This => self.evaluar_this(),
             Expresion::Spread(expr) => self.evaluar_expresion(*expr),
             Expresion::Array(items) => self.evaluar_array(items),
             Expresion::Objeto(pares) => self.evaluar_objeto(pares),
-            Expresion::Instanciacion { tipo, argumentos } => 
-                self.evaluar_instanciacion(&tipo, argumentos),
-            Expresion::AccesoPropiedad { objeto, propiedad } => 
-                self.evaluar_acceso_propiedad(*objeto, &propiedad),
-            Expresion::AccesoIndice { objeto, indice } => 
-                self.evaluar_acceso_indice(*objeto, *indice),
+            Expresion::Instanciacion { tipo, argumentos } => {
+                self.evaluar_instanciacion(&tipo, argumentos)
+            }
+            Expresion::AccesoPropiedad { objeto, propiedad } => {
+                self.evaluar_acceso_propiedad(*objeto, &propiedad)
+            }
+            Expresion::AccesoIndice { objeto, indice } => {
+                self.evaluar_acceso_indice(*objeto, *indice)
+            }
             Expresion::LlamadoMetodo {
                 objeto,
                 metodo,
@@ -520,7 +590,7 @@ impl Interpretador {
                 if self.es_funcion_builtin(&nombre) {
                     return self.ejecutar_funcion_builtin(&nombre, args);
                 }
-                
+
                 self.ejecutar_funcion_usuario(&nombre, args)
             }
         }
@@ -547,7 +617,8 @@ impl Interpretador {
     }
 
     fn evaluar_array(&mut self, items: Vec<Expresion>) -> Valor {
-        let valores = items.into_iter()
+        let valores = items
+            .into_iter()
             .flat_map(|item| self.expandir_item_array(item))
             .collect();
         Valor::Lista(valores)
@@ -567,7 +638,8 @@ impl Interpretador {
     }
 
     fn evaluar_objeto(&mut self, pares: Vec<(String, Expresion)>) -> Valor {
-        let mapa = pares.into_iter()
+        let mapa = pares
+            .into_iter()
             .map(|(clave, valor_expr)| {
                 let valor = self.evaluar_expresion(valor_expr);
                 (clave, valor)
@@ -780,7 +852,9 @@ impl Interpretador {
             return resultado_elseif;
         }
 
-        if_stmt.bloque_else.and_then(|bloque| self.ejecutar_bloque(bloque))
+        if_stmt
+            .bloque_else
+            .and_then(|bloque| self.ejecutar_bloque(bloque))
     }
 
     fn ejecutar_elseifs(&mut self, else_ifs: Vec<ElseIf>) -> Option<Valor> {
@@ -799,8 +873,16 @@ impl Interpretador {
 
         let mut resultado = None;
         for sentencia in bloque {
+            if self.estado_excepcion.is_some() {
+                break;
+            }
+
             if let Some(valor) = self.ejecutar_sentencia(sentencia) {
                 resultado = Some(valor);
+                break;
+            }
+
+            if self.estado_excepcion.is_some() {
                 break;
             }
         }
@@ -820,7 +902,9 @@ impl Interpretador {
             return resultado_caso;
         }
 
-        switch.default.and_then(|bloque| self.ejecutar_bloque(bloque))
+        switch
+            .default
+            .and_then(|bloque| self.ejecutar_bloque(bloque))
     }
 
     fn ejecutar_casos(&mut self, valor_switch: &Valor, casos: Vec<Case>) -> Option<Valor> {
@@ -1245,7 +1329,10 @@ impl Interpretador {
         let instancia = match obj_valor {
             Valor::Objeto(inst) => inst,
             _ => {
-                eprintln!("No se puede llamar método '{}' en un valor que no es objeto", metodo);
+                eprintln!(
+                    "No se puede llamar método '{}' en un valor que no es objeto",
+                    metodo
+                );
                 return Valor::Nulo;
             }
         };
@@ -1270,7 +1357,10 @@ impl Interpretador {
         let metodo_def = match clase.obtener_metodo(metodo) {
             Some(m) => m.clone(),
             None => {
-                eprintln!("Método '{}' no encontrado en clase '{}'", metodo, instancia.clase);
+                eprintln!(
+                    "Método '{}' no encontrado en clase '{}'",
+                    metodo, instancia.clase
+                );
                 return Valor::Nulo;
             }
         };
@@ -1482,8 +1572,11 @@ impl Interpretador {
                 continue;
             }
 
-            if self.procesar_parentesis_cierre(ch, &mut nivel_parentesis, &mut expr, chars) {
-                break;
+            if ch == ')' {
+                if self.procesar_parentesis_cierre(ch, &mut nivel_parentesis, &mut expr, chars) {
+                    break;
+                }
+                continue;
             }
 
             if nivel_parentesis > 0 {
@@ -1600,6 +1693,79 @@ impl Interpretador {
             .unwrap_or(Valor::Nulo)
     }
 
+    fn ejecutar_try_catch(&mut self, stmt: TryCatch) -> Option<Valor> {
+        self.ejecutar_bloque(stmt.bloque_try);
+
+        if let Some(error) = self.estado_excepcion.take() {
+            if let Some(catch) = stmt.bloque_catch {
+                let coincide = if let Some(ref tipo_error) = catch.tipo {
+                    match &error {
+                        Valor::Objeto(inst) => inst.clase == *tipo_error,
+                        _ => false,
+                    }
+                } else {
+                    true
+                };
+
+                if coincide {
+                    let anterior =
+                        std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(None));
+                    self.entorno_actual = Entorno::nuevo(Some(anterior));
+
+                    self.entorno_actual.definir_variable(catch.variable, error);
+
+                    let mut resultado = None;
+                    for sentencia in catch.bloque {
+                        if self.estado_excepcion.is_some() {
+                            break;
+                        }
+                        if let Some(valor) = self.ejecutar_sentencia(sentencia) {
+                            resultado = Some(valor);
+                            break;
+                        }
+                        if self.estado_excepcion.is_some() {
+                            break;
+                        }
+                    }
+
+                    if let Some(parent) = self.entorno_actual.parent.take() {
+                        self.entorno_actual = *parent;
+                    }
+
+                    if resultado.is_some() {
+                        self.valor_retorno = resultado.clone();
+                    }
+                } else {
+                    self.estado_excepcion = Some(error);
+                }
+            } else {
+                self.estado_excepcion = Some(error);
+            }
+        }
+
+        if let Some(finally_block) = stmt.bloque_finally {
+            let excepcion_pendiente = self.estado_excepcion.take();
+            let retorno_pendiente = self.valor_retorno.take();
+
+            self.ejecutar_bloque(finally_block);
+
+            if self.estado_excepcion.is_none() {
+                self.estado_excepcion = excepcion_pendiente;
+            }
+            if self.valor_retorno.is_none() {
+                self.valor_retorno = retorno_pendiente;
+            }
+        }
+
+        None
+    }
+
+    fn ejecutar_throw(&mut self, stmt: Throw) -> Option<Valor> {
+        let valor = self.evaluar_expresion(stmt.valor);
+        self.estado_excepcion = Some(valor);
+        None
+    }
+
     fn es_literal_numerico(&self, expr: &str) -> bool {
         expr.chars().all(|c| c.is_digit(10))
     }
@@ -1675,12 +1841,7 @@ impl Interpretador {
         }
     }
 
-    fn ejecutar_metodo_lista(
-        &mut self,
-        items: &[Valor],
-        metodo: &str,
-        args_str: &str,
-    ) -> Valor {
+    fn ejecutar_metodo_lista(&mut self, items: &[Valor], metodo: &str, args_str: &str) -> Valor {
         match metodo {
             "len" => Valor::Entero(items.len() as i64),
             "push" => self.ejecutar_push_lista(items, args_str),

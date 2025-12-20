@@ -38,6 +38,10 @@ pub enum Token {
     Return,
     This,
     TPrint,
+    Try,
+    Catch,
+    Finally,
+    Throw,
     OperadorTipo,
     FlechaDoble,
     Asignacion,
@@ -98,58 +102,58 @@ fn procesar_escape(caracter: char) -> char {
 
 fn agregar_caracter_escapado(texto: &mut String, iter: &mut Peekable<Chars>) {
     let siguiente = iter.next();
-    
+
     if siguiente.is_none() {
         return;
     }
-    
+
     let caracter = siguiente.unwrap();
     let es_escape_valido = matches!(caracter, 'n' | 't' | 'r' | '\\' | '\'' | '"');
-    
+
     if es_escape_valido {
         texto.push(procesar_escape(caracter));
         return;
     }
-    
+
     texto.push('\\');
     texto.push(caracter);
 }
 
 fn leer_cadena_simple(iter: &mut Peekable<Chars>) -> String {
     let mut texto = String::new();
-    
+
     while let Some(caracter) = iter.next() {
         if caracter == '\'' {
             break;
         }
-        
+
         if caracter == '\\' {
             agregar_caracter_escapado(&mut texto, iter);
             continue;
         }
-        
+
         texto.push(caracter);
     }
-    
+
     texto
 }
 
 fn leer_cadena_doble(iter: &mut Peekable<Chars>) -> String {
     let mut texto = String::new();
-    
+
     while let Some(caracter) = iter.next() {
         if caracter == '"' {
             break;
         }
-        
+
         if caracter == '\\' {
             agregar_caracter_escapado(&mut texto, iter);
             continue;
         }
-        
+
         texto.push(caracter);
     }
-    
+
     texto
 }
 
@@ -164,21 +168,21 @@ fn consumir_triple_comilla(iter: &mut Peekable<Chars>) {
 
 fn leer_triple_comilla_simple(iter: &mut Peekable<Chars>) -> String {
     let mut texto = String::new();
-    
+
     while let Some(caracter) = iter.next() {
         if caracter == '\'' && es_fin_triple_comilla(iter) {
             consumir_triple_comilla(iter);
             break;
         }
-        
+
         if caracter == '\\' {
             agregar_caracter_escapado(&mut texto, iter);
             continue;
         }
-        
+
         texto.push(caracter);
     }
-    
+
     texto
 }
 
@@ -280,6 +284,22 @@ pub fn analizar(texto: &str) -> Vec<Token> {
                     }
                     "tprint" => {
                         lista.push(Token::TPrint);
+                        continue;
+                    }
+                    "tr" => {
+                        lista.push(Token::Try);
+                        continue;
+                    }
+                    "ct" => {
+                        lista.push(Token::Catch);
+                        continue;
+                    }
+                    "fy" => {
+                        lista.push(Token::Finally);
+                        continue;
+                    }
+                    "tw" => {
+                        lista.push(Token::Throw);
                         continue;
                     }
                     "i" => {
@@ -597,37 +617,37 @@ pub fn analizar(texto: &str) -> Vec<Token> {
 pub fn analizar_con_posiciones(texto: &str) -> Vec<TokenConPosicion> {
     let tokens = analizar(texto);
     let mut resultado = Vec::new();
-    
+
     let chars: Vec<char> = texto.chars().collect();
     let mut idx_char = 0;
-    
+
     for token in tokens {
         while idx_char < chars.len() {
             if chars[idx_char].is_whitespace() {
                 idx_char += 1;
                 continue;
             }
-            
+
             if idx_char + 1 < chars.len() && chars[idx_char] == '!' && chars[idx_char + 1] == '!' {
                 while idx_char < chars.len() && chars[idx_char] != '\n' {
                     idx_char += 1;
                 }
                 continue;
             }
-            
+
             break;
         }
-        
+
         resultado.push(TokenConPosicion {
             token: token.clone(),
             posicion: idx_char,
         });
-        
+
         if idx_char < chars.len() {
             idx_char += estimar_longitud_token_directo(&token, &chars[idx_char..]);
         }
     }
-    
+
     resultado
 }
 
@@ -664,6 +684,10 @@ fn estimar_longitud_token_directo(token: &Token, _resto: &[char]) -> usize {
         Return => 2,
         This => 2,
         TPrint => 6,
+        Try => 2,
+        Catch => 2,
+        Finally => 2,
+        Throw => 2,
         FlechaDoble => 2,
         Asignacion => 1,
         IgualIgual => 2,
@@ -681,9 +705,9 @@ fn estimar_longitud_token_directo(token: &Token, _resto: &[char]) -> usize {
         Verdadero => 4,
         Falso => 5,
         Nulo => 4,
-        ParentesisIzq | ParentesisDer | LlaveIzq | LlaveDer | CorcheteIzq | CorcheteDer |
-        PuntoYComa | Coma | DosPuntos | Punto | Flecha | Suma | Resta | Multiplicacion |
-        Division | Modulo | Menor | Mayor | Not | Asterisco => 1,
+        ParentesisIzq | ParentesisDer | LlaveIzq | LlaveDer | CorcheteIzq | CorcheteDer
+        | PuntoYComa | Coma | DosPuntos | Punto | Flecha | Suma | Resta | Multiplicacion
+        | Division | Modulo | Menor | Mayor | Not | Asterisco => 1,
         Interpolacion => 2,
         Desconocido(_) => 1,
     }

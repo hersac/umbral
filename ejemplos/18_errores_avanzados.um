@@ -1,0 +1,39 @@
+!! 18_errores_avanzados.um
+!! Este ejemplo demuestra el uso de la clase Error y capturas tipadas
+
+tprint("--- Manejo de Errores Avanzado ---");
+
+f: procesarDatos(id->Int) {
+    i: (id < 0) {
+        !! Lanzamos una instancia de la clase Error
+        tw: n: Error("ID inválido: no puede ser negativo");
+    }
+    
+    tprint("Procesando ID: &id");
+}
+
+tr: {
+    procesarDatos(10);
+    procesarDatos(-5);  !! Esto lanzará un error
+} ct: (c: e -> Error) {
+    !! Captura específica para objetos de tipo Error
+    tprint("Excepción de Sistema capturada:");
+    tprint(" - Mensaje: &e.mensaje");
+    !! Asumimos que la clase Error podría tener más propiedades en el futuro
+} fy: {
+    tprint("Limpiando recursos del proceso 18...");
+} 
+
+tprint("\n--- Bloques Anidados ---");
+
+tr: {
+    tr: {
+        tw: "Error interno";
+    } ct: (v: e) {
+        tprint("Capturado internamente: &e");
+        tprint("Relanzando error...");
+        tw: e; !! Re-throw
+    }
+} ct: (v: externo) {
+    tprint("Capturado en el nivel superior: &externo");
+}

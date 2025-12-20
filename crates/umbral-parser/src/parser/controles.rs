@@ -17,17 +17,20 @@ pub fn parsear_if(parseador: &mut Parser) -> Result<Sentencia, ParseError> {
     }))
 }
 
-fn parsear_condicion_entre_parentesis(parseador: &mut Parser, contexto: &str) -> Result<Expresion, ParseError> {
+fn parsear_condicion_entre_parentesis(
+    parseador: &mut Parser,
+    contexto: &str,
+) -> Result<Expresion, ParseError> {
     if !parseador.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
         return Err(parseador.crear_error(&format!("Se esperaba '(' después de {}", contexto)));
     }
-    
+
     let condicion = crate::parser::expresiones::parsear_expresion_principal(parseador)?;
-    
+
     if !parseador.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
         return Err(parseador.crear_error("Se esperaba ')'"));
     }
-    
+
     Ok(condicion)
 }
 
@@ -35,34 +38,36 @@ fn parsear_bloque_con_llaves(parseador: &mut Parser) -> Result<Vec<Sentencia>, P
     if !parseador.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
         return Err(parseador.crear_error("Se esperaba '{'"));
     }
-    
+
     parsear_bloque(parseador)
 }
 
 fn parsear_else_ifs(parseador: &mut Parser) -> Result<Vec<ElseIf>, ParseError> {
     let mut else_ifs = Vec::new();
-    
+
     while parseador.coincidir(|t| matches!(t, LexToken::ElseIf)) {
         let condicion = parsear_condicion_entre_parentesis(parseador, "else if")?;
         let bloque = parsear_bloque_con_llaves(parseador)?;
         else_ifs.push(ElseIf { condicion, bloque });
     }
-    
+
     Ok(else_ifs)
 }
 
-fn parsear_bloque_else_opcional(parseador: &mut Parser) -> Result<Option<Vec<Sentencia>>, ParseError> {
+fn parsear_bloque_else_opcional(
+    parseador: &mut Parser,
+) -> Result<Option<Vec<Sentencia>>, ParseError> {
     if !parseador.coincidir(|t| matches!(t, LexToken::Else)) {
         return Ok(None);
     }
-    
+
     let bloque = parsear_bloque_con_llaves(parseador)?;
     Ok(Some(bloque))
 }
 
 pub fn parsear_switch(parseador: &mut Parser) -> Result<Sentencia, ParseError> {
     let expresion = parsear_condicion_entre_parentesis(parseador, "switch")?;
-    
+
     if !parseador.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
         return Err(parseador.crear_error("Se esperaba '{'"));
     }
@@ -76,7 +81,9 @@ pub fn parsear_switch(parseador: &mut Parser) -> Result<Sentencia, ParseError> {
     }))
 }
 
-fn parsear_casos_switch(parseador: &mut Parser) -> Result<(Vec<Case>, Option<Vec<Sentencia>>), ParseError> {
+fn parsear_casos_switch(
+    parseador: &mut Parser,
+) -> Result<(Vec<Case>, Option<Vec<Sentencia>>), ParseError> {
     let mut casos = Vec::new();
     let mut default = None;
 
@@ -86,12 +93,12 @@ fn parsear_casos_switch(parseador: &mut Parser) -> Result<(Vec<Case>, Option<Vec
             casos.push(caso);
             continue;
         }
-        
+
         if parseador.coincidir(|t| matches!(t, LexToken::Default)) {
             default = Some(parsear_bloque_default(parseador)?);
             continue;
         }
-        
+
         return Err(parseador.crear_error("Se esperaba 'case' o 'default'"));
     }
 
@@ -100,14 +107,14 @@ fn parsear_casos_switch(parseador: &mut Parser) -> Result<(Vec<Case>, Option<Vec
 
 fn parsear_caso_individual(parseador: &mut Parser) -> Result<Case, ParseError> {
     let valor = crate::parser::expresiones::parsear_expresion_principal(parseador)?;
-    
+
     if !parseador.coincidir(|t| matches!(t, LexToken::FlechaDoble)) {
         return Err(parseador.crear_error("Se esperaba '=>'"));
     }
-    
+
     let mut bloque = Vec::new();
     bloque.push(parseador.parsear_sentencia()?);
-    
+
     Ok(Case { valor, bloque })
 }
 
@@ -115,10 +122,10 @@ fn parsear_bloque_default(parseador: &mut Parser) -> Result<Vec<Sentencia>, Pars
     if !parseador.coincidir(|t| matches!(t, LexToken::FlechaDoble)) {
         return Err(parseador.crear_error("Se esperaba '=>'"));
     }
-    
+
     let mut bloque = Vec::new();
     bloque.push(parseador.parsear_sentencia()?);
-    
+
     Ok(bloque)
 }
 
@@ -128,7 +135,7 @@ pub fn parsear_for(p: &mut Parser) -> Result<Sentencia, ParseError> {
     }
 
     let inicializacion = Box::new(p.parsear_sentencia()?);
-    
+
     let condicion = crate::parser::expresiones::parsear_expresion_principal(p)?;
     if !p.coincidir(|t| matches!(t, LexToken::PuntoYComa)) {
         return Err(p.crear_error("Se esperaba ';'"));
@@ -160,7 +167,7 @@ pub fn parsear_foreach(p: &mut Parser) -> Result<Sentencia, ParseError> {
     p.coincidir(|t| matches!(t, LexToken::DeclararVariable));
 
     let variable = p.parsear_identificador_consumir()?;
-    
+
     let tipo = if p.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
         p.parsear_tipo()?
     } else {
@@ -229,4 +236,71 @@ fn parsear_bloque(p: &mut Parser) -> Result<Vec<Sentencia>, ParseError> {
         sentencias.push(p.parsear_sentencia()?);
     }
     Ok(sentencias)
+}
+
+pub fn parsear_try_catch(p: &mut Parser) -> Result<Sentencia, ParseError> {
+    if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
+        return Err(p.crear_error("Se esperaba '{'"));
+    }
+
+    let bloque_try = parsear_bloque(p)?;
+
+    let mut bloque_catch = None;
+    if p.coincidir(|t| matches!(t, LexToken::Catch)) {
+        if !p.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
+            return Err(p.crear_error("Se esperaba '(' para captura de error"));
+        }
+
+        let (variable, tipo) = if p.coincidir(|t| matches!(t, LexToken::DeclararConstante)) {
+            let var = p.parsear_identificador_consumir()?;
+            let tipo = if p.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
+                match p.peekear() {
+                    Some(LexToken::Identificador(n)) | Some(LexToken::Tipo(n)) => {
+                        let t_name = n.clone();
+                        p.avanzar();
+                        Some(t_name)
+                    }
+                    _ => return Err(p.crear_error("Se esperaba tipo de error")),
+                }
+            } else {
+                None
+            };
+            (var, tipo)
+        } else if p.coincidir(|t| matches!(t, LexToken::DeclararVariable)) {
+            let var = p.parsear_identificador_consumir()?;
+            (var, None)
+        } else {
+            return Err(p.crear_error("Se esperaba declaracion de variable de error (v: o c:)"));
+        };
+
+        if !p.coincidir(|t| matches!(t, LexToken::ParentesisDer)) {
+            return Err(p.crear_error("Se esperaba ')'"));
+        }
+
+        if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
+            return Err(p.crear_error("Se esperaba '{'"));
+        }
+
+        let bloque = parsear_bloque(p)?;
+
+        bloque_catch = Some(Catch {
+            variable,
+            tipo,
+            bloque,
+        });
+    }
+
+    let mut bloque_finally = None;
+    if p.coincidir(|t| matches!(t, LexToken::Finally)) {
+        if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
+            return Err(p.crear_error("Se esperaba '{'"));
+        }
+        bloque_finally = Some(parsear_bloque(p)?);
+    }
+
+    Ok(Sentencia::TryCatch(TryCatch {
+        bloque_try,
+        bloque_catch,
+        bloque_finally,
+    }))
 }

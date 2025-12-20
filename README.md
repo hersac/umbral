@@ -29,6 +29,7 @@ Lenguaje de programación de propósito general con sintaxis expresiva y moderna
 
 - 🎯 **Sintaxis clara y concisa** - Fácil de leer y escribir
 - 🔄 **Tipado dinámico con anotaciones opcionales** - Flexibilidad sin sacrificar claridad
+- 🔒 **Manejo de errores** - Sistema try/catch con `Error` nativo
 - 🏗️ **Programación orientada a objetos** - Clases con herencia (`ext:`)
 - 🔧 **Funciones de primera clase** - Funciones como valores y recursividad
 - 🎨 **Interpolación de strings** - Sintaxis natural con `&variable`
@@ -44,8 +45,7 @@ Lenguaje de programación de propósito general con sintaxis expresiva y moderna
 ### 🚧 En desarrollo
 
 - ⚠️ **Interfaces** - Definición con `in:` e implementación con `imp:` (sintaxis definida, validación pendiente)
-- 🔒 **Manejo de errores** - Sistema try/catch
-- 🐛 **Debugger integrado** - Herramientas de depuración
+-  **Debugger integrado** - Herramientas de depuración
 - 📊 **Language Server Protocol (LSP)** - Soporte para editores
 
 ---
@@ -287,6 +287,33 @@ dw: {
     tprint(numero);
     numero++;
 } (numero < 5)
+```
+
+
+### Manejo de errores
+
+Umbral proporciona un sistema robusto de manejo de excepciones mediante bloques `try-catch-finally` (`tr`, `ct`, `fy`) y la sentencia `throw` (`tw`).
+
+```umbral
+!! Estructura básica
+tr: {
+    !! Código que puede fallar
+    tw: "Ocurrió un error inesperado";
+} ct: (v: e) {
+    !! Manejo del error
+    tprint("Capturado: &e");
+} fy: {
+    !! Bloque opcional, siempre se ejecuta
+    tprint("Limpiando recursos...");
+}
+
+!! Captura tipada con clase Error
+tr: {
+    v: errorCritico = n: Error("Fallo de conexión");
+    tw: errorCritico;
+} ct: (c: e -> Error) {
+    tprint("Error de sistema detectado: &e.mensaje");
+}
 ```
 
 ### Funciones
@@ -722,6 +749,7 @@ sentencia ::= declaracion_var
             | definicion_func
             | definicion_clase
             | control_flujo
+            | throw_stmt
             | expresion ';'
 
 declaracion_var ::= 'v:' identificador ('->' tipo)? '=' expresion ';'
@@ -733,7 +761,13 @@ definicion_func ::= 'f:' identificador '(' parametros? ')' ('->' tipo)? bloque
 
 definicion_clase ::= 'cs:' identificador '{' miembro_clase* '}'
 
-control_flujo ::= if_stmt | while_stmt | for_stmt | switch_stmt
+control_flujo ::= if_stmt | while_stmt | for_stmt | switch_stmt | try_stmt
+
+try_stmt ::= 'tr:' bloque catch_block? finally_block?
+catch_block ::= 'ct:' '(' identificador_var ':'? ('->' tipo)? ')' bloque
+finally_block ::= 'fy:' bloque
+
+throw_stmt ::= 'tw:' expresion ';'
 
 bloque ::= '{' sentencia* '}'
 ```
@@ -999,7 +1033,7 @@ El proyecto incluye una carpeta `ejemplos/` con código de demostración de toda
 
 - [ ] Validación completa de interfaces en runtime
 - ✅ Enums funcionales
-- [ ] Manejo de errores con try/catch
+- ✅ Manejo de errores con try/catch
 - [ ] Optimización de performance del intérprete
 - [ ] Expansión de la biblioteca estándar
 - [ ] Debugger integrado

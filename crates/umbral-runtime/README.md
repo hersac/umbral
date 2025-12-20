@@ -121,6 +121,8 @@ Núcleo de ejecución del runtime:
 - `ejecutar_foreach()` - Bucle foreach
 - `ejecutar_while()` - Bucle while
 - `ejecutar_do_while()` - Bucle do-while
+- `ejecutar_try_catch()` - Manejo de excepciones
+- `ejecutar_throw()` - Lanzamiento de errores
 
 **Funcionalidades especiales:**
 - Interpolación de strings con `&variable`
@@ -199,6 +201,13 @@ fn main() {
 - ✅ ForEach sobre iterables
 - ✅ While
 - ✅ Do-While
+- ✅ Try-Catch-Finally
+- ✅ Throw
+
+### Manejo de errores
+- ✅ Captura de excepciones
+- ✅ Propagación de errores
+- ✅ Clase Error nativa
 
 ### Estructuras de datos
 - ✅ Arrays con acceso por índice
