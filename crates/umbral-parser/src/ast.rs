@@ -81,6 +81,7 @@ pub struct DeclaracionFuncion {
     pub tipo_retorno: Option<Tipo>,
     pub cuerpo: Vec<Sentencia>,
     pub exportado: bool,
+    pub es_async: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -120,6 +121,7 @@ pub struct Metodo {
     pub tipo_retorno: Option<Tipo>,
     pub cuerpo: Vec<Sentencia>,
     pub publico: bool,
+    pub es_async: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -160,6 +162,7 @@ pub enum Expresion {
         operador: String,
         expresion: Box<Expresion>,
     },
+    Await(Box<Expresion>),
     Spread(Box<Expresion>),
     This,
     Agrupada(Box<Expresion>),

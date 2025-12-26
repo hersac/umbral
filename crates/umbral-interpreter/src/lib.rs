@@ -1,7 +1,7 @@
+use std::path::PathBuf;
 use umbral_lexer::{analizar_con_posiciones, TokenConPosicion};
 use umbral_parser::Parser;
 use umbral_runtime::Runtime;
-use std::path::PathBuf;
 
 pub mod error;
 pub use error::{InterpreterError, InterpreterResult};
@@ -21,15 +21,15 @@ impl Interpreter {
         self.runtime.establecer_directorio_base(ruta);
     }
 
-    pub fn ejecutar(&mut self, codigo: &str) -> InterpreterResult<()> {
+    pub async fn ejecutar(&mut self, codigo: &str) -> InterpreterResult<()> {
         let tokens = self.tokenizar(codigo)?;
         let ast = self.parsear(tokens, codigo)?;
-        self.evaluar(ast)?;
+        self.evaluar(ast).await?;
         Ok(())
     }
 
-    pub fn ejecutar_con_resultado(&mut self, codigo: &str) -> InterpreterResult<String> {
-        self.ejecutar(codigo)?;
+    pub async fn ejecutar_con_resultado(&mut self, codigo: &str) -> InterpreterResult<String> {
+        self.ejecutar(codigo).await?;
         Ok(String::new())
     }
 
@@ -39,26 +39,30 @@ impl Interpreter {
 
     fn tokenizar(&self, codigo: &str) -> InterpreterResult<Vec<TokenConPosicion>> {
         let tokens = analizar_con_posiciones(codigo);
-        
+
         if tokens.is_empty() {
             return Err(InterpreterError::LexerError(
-                "No se generaron tokens del código fuente".to_string()
+                "No se generaron tokens del código fuente".to_string(),
             ));
         }
-        
+
         Ok(tokens)
     }
 
-    fn parsear(&self, tokens: Vec<TokenConPosicion>, codigo: &str) -> InterpreterResult<umbral_parser::ast::Programa> {
+    fn parsear(
+        &self,
+        tokens: Vec<TokenConPosicion>,
+        codigo: &str,
+    ) -> InterpreterResult<umbral_parser::ast::Programa> {
         let mut parser = Parser::nuevo_con_posiciones(tokens, codigo.to_string());
-        
-        parser.parsear_programa().map_err(|e| {
-            InterpreterError::ParserError(e.formatear_error())
-        })
+
+        parser
+            .parsear_programa()
+            .map_err(|e| InterpreterError::ParserError(e.formatear_error()))
     }
 
-    fn evaluar(&mut self, programa: umbral_parser::ast::Programa) -> InterpreterResult<()> {
-        self.runtime.ejecutar(programa);
+    async fn evaluar(&mut self, programa: umbral_parser::ast::Programa) -> InterpreterResult<()> {
+        self.runtime.ejecutar(programa).await;
         Ok(())
     }
 }
@@ -73,51 +77,51 @@ impl Default for Interpreter {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_declaracion_variable_simple() {
+    #[tokio::test]
+    async fn test_declaracion_variable_simple() {
         let mut interprete = Interpreter::nuevo();
-        let resultado = interprete.ejecutar("v: x = 10;");
+        let resultado = interprete.ejecutar("v: x = 10;").await;
         assert!(resultado.is_ok());
     }
 
-    #[test]
-    fn test_declaracion_constante() {
+    #[tokio::test]
+    async fn test_declaracion_constante() {
         let mut interprete = Interpreter::nuevo();
-        let resultado = interprete.ejecutar("c: PI = 3.14;");
+        let resultado = interprete.ejecutar("c: PI = 3.14;").await;
         assert!(resultado.is_ok());
     }
 
-    #[test]
-    fn test_operacion_aritmetica() {
+    #[tokio::test]
+    async fn test_operacion_aritmetica() {
         let mut interprete = Interpreter::nuevo();
-        let resultado = interprete.ejecutar("v: suma = 5 + 10;");
+        let resultado = interprete.ejecutar("v: suma = 5 + 10;").await;
         assert!(resultado.is_ok());
     }
 
-    #[test]
-    fn test_funcion_simple() {
+    #[tokio::test]
+    async fn test_funcion_simple() {
         let mut interprete = Interpreter::nuevo();
         let codigo = r#"
             f: sumar(a->Int, b->Int)->Int {
                 r: (a + b);
             }
         "#;
-        let resultado = interprete.ejecutar(codigo);
+        let resultado = interprete.ejecutar(codigo).await;
         assert!(resultado.is_ok());
     }
 
-    #[test]
-    fn test_codigo_vacio() {
+    #[tokio::test]
+    async fn test_codigo_vacio() {
         let mut interprete = Interpreter::nuevo();
-        let resultado = interprete.ejecutar("");
+        let resultado = interprete.ejecutar("").await;
         assert!(resultado.is_err());
     }
 
-    #[test]
-    fn test_reiniciar_interprete() {
+    #[tokio::test]
+    async fn test_reiniciar_interprete() {
         let mut interprete = Interpreter::nuevo();
-        interprete.ejecutar("v: x = 10;").unwrap();
+        interprete.ejecutar("v: x = 10;").await.unwrap();
         interprete.reiniciar();
-        assert!(interprete.ejecutar("v: y = 20;").is_ok());
+        assert!(interprete.ejecutar("v: y = 20;").await.is_ok());
     }
 }

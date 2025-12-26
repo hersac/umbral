@@ -1,6 +1,6 @@
 # Umbral
 
-**Versión 1.2.5**
+**Versión 1.3.6**
 
 Lenguaje de programación de propósito general con sintaxis expresiva y moderna. Diseñado para ser fácil de aprender y productivo de usar.
 
@@ -30,8 +30,8 @@ Lenguaje de programación de propósito general con sintaxis expresiva y moderna
 - 🎯 **Sintaxis clara y concisa** - Fácil de leer y escribir
 - 🔄 **Tipado dinámico con anotaciones opcionales** - Flexibilidad sin sacrificar claridad
 - 🔒 **Manejo de errores** - Sistema try/catch con `Error` nativo
-- 🏗️ **Programación orientada a objetos** - Clases con herencia (`ext:`)
-- 🔧 **Funciones de primera clase** - Funciones como valores y recursividad
+- 🏗️ **Programación orientada a objetos** - Clases con herencia (`ext:`) y mutabilidad compartida
+- 🧠 **Gestión de memoria eficiente** - Objetos manipulados por referencia
 - 🎨 **Interpolación de strings** - Sintaxis natural con `&variable`
 - 🔄 **Control de flujo completo** - if/else, switch/case, for, foreach, while, do-while
 - 🚀 **REPL interactivo** - Experimenta en tiempo real con `umbral-repl`
@@ -56,19 +56,19 @@ Lenguaje de programación de propósito general con sintaxis expresiva y moderna
 
 Descarga la última versión desde [Releases](https://github.com/hersac/umbral/releases):
 
-- **Linux**: `umbral_1.2.5_amd64.deb`
-- **Windows**: `umbral_1.2.5_x64.exe`
-- **Código fuente**: `umbral-1.2.5.tar.gz` o `umbral-1.2.5.zip`
+- **Linux**: `umbral_1.3.6_amd64.deb`
+- **Windows**: `umbral_1.3.6_x64.exe`
+- **Código fuente**: `umbral-1.3.6.tar.gz` o `umbral-1.3.6.zip`
 
 #### Instalación en Linux (Debian/Ubuntu)
 
 ```bash
-sudo dpkg -i umbral_1.2.5_amd64.deb
+sudo dpkg -i umbral_1.3.6_amd64.deb
 ```
 
 #### Instalación en Windows
 
-Ejecuta el instalador `umbral_1.2.5_x64.exe` y sigue las instrucciones.
+Ejecuta el instalador `umbral_1.3.6_x64.exe` y sigue las instrucciones.
 
 ### Opción 2: Compilar desde código fuente
 
@@ -641,6 +641,17 @@ tprint(config.host);       !! localhost
 c: persona = n: Persona("Ana", 30);
 tprint(persona.nombre);    !! Ana
 persona.setEdad(31);
+
+!! Mutabilidad Compartida
+!! Los objetos se pasan por referencia. Si modificas un objeto dentro de una función
+!! o se asigna a otra variable, los cambios se reflejan en todas las referencias.
+f: cambiarNombre(p->Persona, nuevoNombre->Str) {
+    p.nombre = nuevoNombre; !! Esto modifica el objeto original
+}
+
+cambiarNombre(persona, "Lucía");
+tprint(persona.nombre); !! "Lucía"
+
 ```
 
 ### Comentarios
@@ -715,7 +726,7 @@ v: claves = Std.keys(dict);                !! ["a", "b"]
 
 ---
 
-## 📜 Especificación Formal (v1.2.5)
+## 📜 Especificación Formal (v1.3.6)
 
 ### Sistema de Tipos
 
@@ -777,7 +788,7 @@ bloque ::= '{' sentencia* '}'
 #### Igualdad
 *   **Igualdad Numérica**: `Int` y `Flo` son comparables. `10 == 10.0` es `true`.
 *   **Igualdad Estricta por Tipo**: Tipos diferentes (salvo numéricos) nunca son iguales. `10 == "10"` es `false`.
-*   **Identidad**: Objetos y Listas se comparan por referencia.
+*   **Identidad**: Objetos y Listas se comparan por referencia. Dos variables son idénticas solo si apuntan a la misma instancia en memoria.
 
 #### Alcance y Variables
 *   **Declaración Explícita**: Toda variable debe ser declarada con `v:` o `c:` antes de usarse.

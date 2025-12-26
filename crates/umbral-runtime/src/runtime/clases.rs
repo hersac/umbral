@@ -1,5 +1,6 @@
 use crate::runtime::valores::{Instancia, Valor};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use umbral_parser::ast::{DeclaracionClase, Metodo};
 
 #[derive(Debug, Clone)]
@@ -31,7 +32,10 @@ impl Clase {
 
     fn registrar_propiedades(&mut self, propiedades: &[umbral_parser::ast::Propiedad]) {
         for prop in propiedades {
-            let valor_inicial = prop.valor_inicial.as_ref().map_or(Valor::Nulo, |_| Valor::Nulo);
+            let valor_inicial = prop
+                .valor_inicial
+                .as_ref()
+                .map_or(Valor::Nulo, |_| Valor::Nulo);
             self.propiedades.insert(prop.nombre.clone(), valor_inicial);
         }
     }
@@ -49,7 +53,7 @@ impl Clase {
     pub fn crear_instancia(&self) -> Instancia {
         Instancia {
             clase: self.nombre.clone(),
-            propiedades: self.propiedades.clone(),
+            propiedades: Arc::new(Mutex::new(self.propiedades.clone())),
         }
     }
 
@@ -58,6 +62,7 @@ impl Clase {
     }
 }
 
+#[derive(Clone)]
 pub struct GestorClases {
     pub clases: HashMap<String, Clase>,
 }

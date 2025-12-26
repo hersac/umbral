@@ -27,9 +27,14 @@ impl Runtime {
         self.interpretador.establecer_directorio_base(ruta);
     }
 
-    pub fn ejecutar(&mut self, programa: Programa) {
+    pub async fn ejecutar(&mut self, programa: Programa) {
         for sentencia in programa.sentencias {
-            if self.interpretador.ejecutar_sentencia(sentencia).is_some() {
+            if self
+                .interpretador
+                .ejecutar_sentencia(sentencia)
+                .await
+                .is_some()
+            {
                 break;
             }
         }

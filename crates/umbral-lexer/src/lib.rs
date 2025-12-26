@@ -42,6 +42,8 @@ pub enum Token {
     Catch,
     Finally,
     Throw,
+    Asy,
+    Awa,
     OperadorTipo,
     FlechaDoble,
     Asignacion,
@@ -432,6 +434,16 @@ pub fn analizar(texto: &str) -> Vec<Token> {
                 continue;
             }
 
+            if palabra == "asy" {
+                lista.push(Token::Asy);
+                continue;
+            }
+
+            if palabra == "awa" {
+                lista.push(Token::Awa);
+                continue;
+            }
+
             lista.push(Token::Identificador(palabra.clone()));
 
             if iterador.peek().copied() == Some('-') && iterador.clone().nth(1) == Some('>') {
@@ -688,6 +700,8 @@ fn estimar_longitud_token_directo(token: &Token, _resto: &[char]) -> usize {
         Catch => 2,
         Finally => 2,
         Throw => 2,
+        Asy => 3,
+        Awa => 3,
         FlechaDoble => 2,
         Asignacion => 1,
         IgualIgual => 2,

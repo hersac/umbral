@@ -173,7 +173,11 @@ impl Parser {
             return Some(constantes::parsear_declaracion_constante(self, exportado));
         }
 
-        if self.coincidir(|t| matches!(t, LexToken::DeclararFuncion)) {
+        if let Some(LexToken::DeclararFuncion) = self.peekear() {
+            return Some(funciones::parsear_declaracion_funcion(self, exportado));
+        }
+
+        if let Some(LexToken::Asy) = self.peekear() {
             return Some(funciones::parsear_declaracion_funcion(self, exportado));
         }
 

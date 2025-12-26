@@ -1,0 +1,49 @@
+!! Ejemplo 19: Métodos Asíncronos y Async/Await
+!! Este ejemplo demuestra cómo definir y utilizar funciones y métodos asíncronos en Umbral.
+
+tprint("--- Inicio del Ejemplo de Async/Await ---");
+
+!! 1. Definición de una función asíncrona simple
+asy f: esperar_y_saludar(nombre->Str) {
+    tprint("  [Async] Iniciando saludo para: " + nombre);
+    !! Simulamos una operación que toma tiempo
+    tprint("  [Async] Procesando...");
+    tprint("  [Async] Terminando saludo.");
+    r: ("Hola, " + nombre + "!");
+}
+
+tprint("\n1. Llamando a función asíncrona...");
+c: promesa_saludo = esperar_y_saludar("Heri");
+tprint("   (El hilo principal continúa ejecutándose mientras la promesa se resuelve)");
+
+tprint("   Esperando el resultado...");
+c: saludo = awa promesa_saludo;
+tprint("   Resultado recibido: " + saludo);
+
+!! 2. Clases con métodos asíncronos
+cs: ProcesadorDatos {
+    pr: nombre->Str;
+
+    pu f: ProcesadorDatos(nombre->Str) {
+        th.nombre = nombre;
+    }
+
+    pu asy f: procesar(datos->Str) {
+        tprint("  [Clase] " + th.nombre + " comenzando a procesar: " + datos);
+        tprint("  [Clase] Analizando datos...");
+        r: ("Procesado: " + datos);
+    }
+}
+
+tprint("\n2. Usando métodos asíncronos en clases...");
+c: procesador = n: ProcesadorDatos("Servidor1");
+
+tprint("   Iniciando procesamiento...");
+c: promesa_datos = procesador.procesar("Archivo.txt");
+
+tprint("   Haciendo otra cosa mientras se procesa...");
+tprint("   Esperando resultado del procesador...");
+c: resultado_datos = awa promesa_datos;
+tprint("   Resultado final: " + resultado_datos);
+
+tprint("\n--- Fin del Ejemplo ---");

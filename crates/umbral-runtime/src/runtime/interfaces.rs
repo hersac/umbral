@@ -20,6 +20,7 @@ impl Interfaz {
     }
 }
 
+#[derive(Clone)]
 pub struct GestorInterfaces {
     interfaces: HashMap<String, Interfaz>,
 }

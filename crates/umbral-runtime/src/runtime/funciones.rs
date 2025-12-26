@@ -1,6 +1,7 @@
 use crate::runtime::entorno::Entorno;
 use crate::runtime::valores::{Funcion, Valor};
 
+#[derive(Clone)]
 pub struct GestorFunciones {}
 
 impl GestorFunciones {
@@ -8,7 +9,7 @@ impl GestorFunciones {
         Self {}
     }
 
-    pub fn ejecutar_funcion(
+    pub async fn ejecutar_funcion(
         funcion: &Funcion,
         argumentos: Vec<Valor>,
         interprete: &mut crate::runtime::interpretador::Interpretador,
@@ -25,7 +26,7 @@ impl GestorFunciones {
 
         let mut resultado = Valor::Nulo;
         for sentencia in &funcion.cuerpo {
-            if let Some(valor) = interprete.ejecutar_sentencia(sentencia.clone()) {
+            if let Some(valor) = interprete.ejecutar_sentencia(sentencia.clone()).await {
                 resultado = valor;
                 break;
             }

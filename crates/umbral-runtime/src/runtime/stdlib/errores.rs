@@ -24,6 +24,7 @@ pub fn crear_clase_error() -> Clase {
             valor: Expresion::Identificador("msg".to_string()),
         })],
         publico: true,
+        es_async: false,
     };
 
     Clase {

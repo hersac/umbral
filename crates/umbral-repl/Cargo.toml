@@ -9,3 +9,4 @@ repository.workspace = true
 [dependencies]
 umbral-interpreter = { path = "../umbral-interpreter" }
 rustyline = "14.0"
+tokio = { version = "1", features = ["full"] }

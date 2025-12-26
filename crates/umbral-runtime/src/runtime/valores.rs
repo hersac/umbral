@@ -1,5 +1,10 @@
 use std::collections::HashMap;
 use std::fmt;
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::{Arc, Mutex};
+
+pub type FutureValor = Pin<Box<dyn Future<Output = Valor> + Send>>;
 
 #[derive(Debug, Clone)]
 pub enum Valor {
@@ -12,10 +17,20 @@ pub enum Valor {
     Objeto(Instancia),
     Funcion(Funcion),
     FuncionNativa(String, NativeFn),
+    Promesa(SharedPromesa),
     Nulo,
 }
 
 pub type NativeFn = fn(Vec<Valor>) -> Valor;
+
+#[derive(Debug, Clone)]
+pub struct SharedPromesa(pub Arc<Mutex<Option<tokio::task::JoinHandle<Valor>>>>);
+
+impl PartialEq for SharedPromesa {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
 
 impl Valor {
     pub fn es_verdadero(&self) -> bool {
@@ -73,6 +88,7 @@ impl fmt::Display for Valor {
             Valor::Objeto(inst) => write!(f, "{}", inst),
             Valor::Funcion(func) => write!(f, "<función {}>", func.nombre),
             Valor::FuncionNativa(nombre, _) => write!(f, "<función nativa {}>", nombre),
+            Valor::Promesa(_) => write!(f, "<promesa>"),
         }
     }
 }
@@ -80,14 +96,15 @@ impl fmt::Display for Valor {
 #[derive(Debug, Clone)]
 pub struct Instancia {
     pub clase: String,
-    pub propiedades: HashMap<String, Valor>,
+    pub propiedades: Arc<Mutex<HashMap<String, Valor>>>,
 }
 
 impl fmt::Display for Instancia {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {{ ", self.clase)?;
+        let props = self.propiedades.lock().unwrap();
         let mut first = true;
-        for (key, value) in &self.propiedades {
+        for (key, value) in props.iter() {
             if !first {
                 write!(f, ", ")?;
             }
@@ -103,6 +120,7 @@ pub struct Funcion {
     pub nombre: String,
     pub parametros: Vec<String>,
     pub cuerpo: Vec<umbral_parser::ast::Sentencia>,
+    pub es_async: bool,
 }
 
 impl Funcion {
@@ -110,11 +128,13 @@ impl Funcion {
         nombre: String,
         parametros: Vec<String>,
         cuerpo: Vec<umbral_parser::ast::Sentencia>,
+        es_async: bool,
     ) -> Self {
         Self {
             nombre,
             parametros,
             cuerpo,
+            es_async,
         }
     }
 }

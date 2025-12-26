@@ -16,6 +16,7 @@ impl Enum {
     }
 }
 
+#[derive(Clone)]
 pub struct GestorEnums {
     enums: HashMap<String, Enum>,
 }

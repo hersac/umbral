@@ -5,7 +5,8 @@ use umbral_interpreter::Interpreter;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() == 1 {
@@ -22,7 +23,7 @@ fn main() {
         }
         ruta_archivo => {
             let codigo = leer_archivo(ruta_archivo);
-            ejecutar_codigo(&codigo, ruta_archivo);
+            ejecutar_codigo(&codigo, ruta_archivo).await;
         }
     }
 }
@@ -69,7 +70,7 @@ fn leer_archivo(ruta: &str) -> String {
     })
 }
 
-fn ejecutar_codigo(codigo: &str, ruta_archivo: &str) {
+async fn ejecutar_codigo(codigo: &str, ruta_archivo: &str) {
     let mut interprete = Interpreter::nuevo();
 
     if let Ok(ruta_abs) = fs::canonicalize(ruta_archivo) {
@@ -78,7 +79,7 @@ fn ejecutar_codigo(codigo: &str, ruta_archivo: &str) {
         }
     }
 
-    if let Err(e) = interprete.ejecutar(codigo) {
+    if let Err(e) = interprete.ejecutar(codigo).await {
         eprintln!("Error de ejecución:");
         eprintln!("{}", e);
         process::exit(1);

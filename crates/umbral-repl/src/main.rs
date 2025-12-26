@@ -6,18 +6,19 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PROMPT: &str = "umbral> ";
 const PROMPT_MULTILINE: &str = "     -> ";
 
-fn main() {
+#[tokio::main]
+async fn main() {
     mostrar_banner();
-    
+
     let mut interprete = Interpreter::nuevo();
     let mut editor = crear_editor();
     let mut buffer_multilinea = String::new();
-    
+
     loop {
         let prompt = obtener_prompt(&buffer_multilinea);
-        
+
         match leer_linea(&mut editor, prompt) {
-            Ok(linea) => procesar_entrada(&mut interprete, &mut buffer_multilinea, linea),
+            Ok(linea) => procesar_entrada(&mut interprete, &mut buffer_multilinea, linea).await,
             Err(ReadlineError::Interrupted) => manejar_interrupcion(&mut buffer_multilinea),
             Err(ReadlineError::Eof) => {
                 println!("Adiós!");
@@ -39,16 +40,16 @@ fn obtener_prompt(buffer: &str) -> &'static str {
     }
 }
 
-fn procesar_entrada(interprete: &mut Interpreter, buffer: &mut String, linea: String) {
+async fn procesar_entrada(interprete: &mut Interpreter, buffer: &mut String, linea: String) {
     if manejar_comando_especial(&linea, interprete, buffer) {
         return;
     }
-    
+
     buffer.push_str(&linea);
     buffer.push('\n');
-    
+
     if expresion_completa(buffer) {
-        ejecutar_codigo(interprete, buffer);
+        ejecutar_codigo(interprete, buffer).await;
         buffer.clear();
     }
 }
@@ -89,11 +90,11 @@ fn manejar_comando_especial(
     buffer: &mut String,
 ) -> bool {
     let linea_limpia = linea.trim();
-    
+
     if !linea_limpia.starts_with(':') {
         return false;
     }
-    
+
     ejecutar_comando(linea_limpia, interprete, buffer);
     true
 }
@@ -156,15 +157,15 @@ fn mostrar_ayuda() {
 
 fn expresion_completa(codigo: &str) -> bool {
     let codigo_limpio = codigo.trim();
-    
+
     if codigo_limpio.is_empty() {
         return false;
     }
-    
+
     if !termina_correctamente(codigo_limpio) {
         return false;
     }
-    
+
     cuenta_balanceada(codigo_limpio)
 }
 
@@ -172,7 +173,10 @@ fn termina_correctamente(codigo: &str) -> bool {
     codigo.ends_with(';') || codigo.ends_with('}')
 }
 
-fn procesar_string_triple(chars: &mut std::iter::Peekable<std::str::Chars>, en_triple: &mut bool) -> bool {
+fn procesar_string_triple(
+    chars: &mut std::iter::Peekable<std::str::Chars>,
+    en_triple: &mut bool,
+) -> bool {
     if chars.peek() == Some(&'\'') {
         chars.next();
         if chars.peek() == Some(&'\'') {
@@ -184,7 +188,12 @@ fn procesar_string_triple(chars: &mut std::iter::Peekable<std::str::Chars>, en_t
     false
 }
 
-fn actualizar_balances(caracter: char, llaves: &mut i32, parentesis: &mut i32, corchetes: &mut i32) {
+fn actualizar_balances(
+    caracter: char,
+    llaves: &mut i32,
+    parentesis: &mut i32,
+    corchetes: &mut i32,
+) {
     match caracter {
         '{' => *llaves += 1,
         '}' => *llaves -= 1,
@@ -203,34 +212,34 @@ fn cuenta_balanceada(codigo: &str) -> bool {
     let mut en_string = false;
     let mut en_string_triple = false;
     let mut chars = codigo.chars().peekable();
-    
+
     while let Some(caracter) = chars.next() {
         if caracter == '\'' && procesar_string_triple(&mut chars, &mut en_string_triple) {
             continue;
         }
-        
+
         if en_string_triple {
             continue;
         }
-        
+
         if caracter == '"' || caracter == '\'' {
             en_string = !en_string;
             continue;
         }
-        
+
         if en_string {
             continue;
         }
-        
+
         actualizar_balances(caracter, &mut llaves, &mut parentesis, &mut corchetes);
     }
-    
+
     llaves == 0 && parentesis == 0 && corchetes == 0
 }
 
-fn ejecutar_codigo(interprete: &mut Interpreter, codigo: &str) {
-    match interprete.ejecutar(codigo) {
-        Ok(()) => {},
+async fn ejecutar_codigo(interprete: &mut Interpreter, codigo: &str) {
+    match interprete.ejecutar(codigo).await {
+        Ok(()) => {}
         Err(e) => eprintln!("✗ {}", e),
     }
 }
