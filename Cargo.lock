@@ -431,7 +431,7 @@ dependencies = [
 
 [[package]]
 name = "umbral"
-version = "1.3.6"
+version = "1.3.7"
 dependencies = [
  "rustyline",
  "tokio",
@@ -440,7 +440,7 @@ dependencies = [
 
 [[package]]
 name = "umbral-cli"
-version = "1.3.6"
+version = "1.3.7"
 dependencies = [
  "tokio",
  "umbral-interpreter",
@@ -448,7 +448,7 @@ dependencies = [
 
 [[package]]
 name = "umbral-interpreter"
-version = "1.3.6"
+version = "1.3.7"
 dependencies = [
  "tokio",
  "umbral-lexer",
@@ -458,18 +458,18 @@ dependencies = [
 
 [[package]]
 name = "umbral-lexer"
-version = "1.3.6"
+version = "1.3.7"
 
 [[package]]
 name = "umbral-parser"
-version = "1.3.6"
+version = "1.3.7"
 dependencies = [
  "umbral-lexer",
 ]
 
 [[package]]
 name = "umbral-repl"
-version = "1.3.6"
+version = "1.3.7"
 dependencies = [
  "rustyline",
  "tokio",
@@ -478,7 +478,7 @@ dependencies = [
 
 [[package]]
 name = "umbral-runtime"
-version = "1.3.6"
+version = "1.3.7"
 dependencies = [
  "async-recursion",
  "rand",

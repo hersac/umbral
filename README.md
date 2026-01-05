@@ -1,6 +1,6 @@
 # Umbral
 
-**Versión 1.3.6**
+**Versión 1.3.7**
 
 Lenguaje de programación de propósito general con sintaxis expresiva y moderna. Diseñado para ser fácil de aprender y productivo de usar.
 
@@ -56,19 +56,19 @@ Lenguaje de programación de propósito general con sintaxis expresiva y moderna
 
 Descarga la última versión desde [Releases](https://github.com/hersac/umbral/releases):
 
-- **Linux**: `umbral_1.3.6_amd64.deb`
-- **Windows**: `umbral_1.3.6_x64.exe`
-- **Código fuente**: `umbral-1.3.6.tar.gz` o `umbral-1.3.6.zip`
+- **Linux**: `umbral_1.3.7_amd64.deb`
+- **Windows**: `umbral_1.3.7_x64.exe`
+- **Código fuente**: `umbral-1.3.7.tar.gz` o `umbral-1.3.7.zip`
 
 #### Instalación en Linux (Debian/Ubuntu)
 
 ```bash
-sudo dpkg -i umbral_1.3.6_amd64.deb
+sudo dpkg -i umbral_1.3.7_amd64.deb
 ```
 
 #### Instalación en Windows
 
-Ejecuta el instalador `umbral_1.3.6_x64.exe` y sigue las instrucciones.
+Ejecuta el instalador `umbral_1.3.7_x64.exe` y sigue las instrucciones.
 
 ### Opción 2: Compilar desde código fuente
 

@@ -1,0 +1,8 @@
+!! Exportación de funciones
+out f: sumar(a, b) {
+    r: (a + b);
+}
+
+out f: restar(a, b) {
+    r: (a - b);
+}

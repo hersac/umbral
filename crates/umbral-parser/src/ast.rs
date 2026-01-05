@@ -25,6 +25,7 @@ pub enum Sentencia {
     Importacion(Importacion),
     TryCatch(TryCatch),
     Throw(Throw),
+    Exportacion(String),
 }
 
 #[derive(Debug, Clone)]
@@ -257,6 +258,7 @@ pub enum ItemImportacion {
     Todo(Option<String>),
     Nombre(String, Option<String>),
     ListaNombres(Vec<ItemImportacion>),
+    Modulo(String),
 }
 
 #[derive(Debug, Clone)]

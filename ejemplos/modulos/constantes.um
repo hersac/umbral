@@ -1,0 +1,4 @@
+!! Exportación de constantes
+out c: PI = 3.14159;
+out c: VERSION = "1.0.0";
+out c: MAX_INTENTOS = 5;

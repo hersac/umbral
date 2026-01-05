@@ -87,6 +87,10 @@ impl Interpretador {
             Sentencia::Importacion(imp) => self.ejecutar_importacion(imp).await,
             Sentencia::TryCatch(stmt) => self.ejecutar_try_catch(stmt).await,
             Sentencia::Throw(stmt) => self.ejecutar_throw(stmt).await,
+            Sentencia::Exportacion(nombre) => {
+                self.exportaciones.insert(nombre, true);
+                None
+            }
             Sentencia::Expresion(expr) => {
                 self.evaluar_expresion(expr).await;
                 None
@@ -322,7 +326,10 @@ impl Interpretador {
     }
 
     fn es_ruta_relativa(&self, ruta: &str) -> bool {
-        ruta.contains('/') || ruta.starts_with("./") || ruta.starts_with("../")
+        ruta.contains('/')
+            || ruta.starts_with("./")
+            || ruta.starts_with("../")
+            || ruta.ends_with(".um")
     }
 
     fn buscar_ruta_relativa(&self, ruta: &str) -> Option<(String, PathBuf)> {
@@ -483,12 +490,48 @@ impl Interpretador {
         match item {
             ItemImportacion::Todo(alias) => self.importar_todo(alias, modulo),
             ItemImportacion::Nombre(nombre, alias) => self.importar_nombre(nombre, alias, modulo),
+            ItemImportacion::Modulo(nombre_var) => {
+                self.importar_modulo_como_objeto(nombre_var, modulo)
+            }
             ItemImportacion::ListaNombres(items) => {
                 for sub_item in items {
                     self.procesar_item_importacion(sub_item, modulo);
                 }
             }
         }
+    }
+
+    fn importar_modulo_como_objeto(&mut self, nombre_var: String, modulo: &Interpretador) {
+        let mut mapa_exportaciones = HashMap::new();
+
+        for (nombre, valor) in &modulo.entorno_actual.variables {
+            if modulo.exportaciones.get(nombre).copied().unwrap_or(false) {
+                mapa_exportaciones.insert(nombre.clone(), valor.clone());
+            }
+        }
+
+        for (nombre, valor) in &modulo.entorno_actual.constantes {
+            if modulo.exportaciones.get(nombre).copied().unwrap_or(false) {
+                mapa_exportaciones.insert(nombre.clone(), valor.clone());
+            }
+        }
+
+        for (nombre, clase) in &modulo.gestor_clases.clases {
+            if modulo.exportaciones.get(nombre).copied().unwrap_or(false) {
+                let nombre_unico = format!("__modulo_{}_{}", nombre_var, nombre);
+
+                let mut clase_copia = clase.clone();
+                clase_copia.nombre = nombre_unico.clone();
+                self.gestor_clases
+                    .clases
+                    .insert(nombre_unico.clone(), clase_copia);
+
+                mapa_exportaciones.insert(nombre.clone(), Valor::Clase(nombre_unico));
+            }
+        }
+
+        self.entorno_actual
+            .definir_variable(nombre_var, Valor::Diccionario(mapa_exportaciones));
     }
 
     fn importar_todo(&mut self, alias: Option<String>, modulo: &Interpretador) {
@@ -734,24 +777,14 @@ impl Interpretador {
             ">" => self.comparar_mayor(izquierda, derecha),
             "<=" => self.comparar_menor_igual(izquierda, derecha),
             ">=" => self.comparar_mayor_igual(izquierda, derecha),
-            // Handled above already but converting to match structure logic from original (logic was mixed)
-            // Original: "&&" => Valor::Booleano(izquierda.es_verdadero() && derecha.es_verdadero()),
-            // The above logic evaluated both. Short circuit is better but let's stick to original behavior + await if needed?
-            // Actually, original code evaluated BOTH `izquierda` and `derecha` BEFORE the match. So it DID NOT short-circuit properly in standard sense, or maybe it relied on `&&` operator behavior?
-            // Line 689: `let derecha = self.evaluar_expresion(der);` executed unconditionally!
-            // So I will replicate that behavior for now to be safe, but await.
-            _ => {
-                // "&&" and "||" fall through here if not handled above?
-                // Wait, I should match ALL ops here if I pre-calculate `derecha`.
-                match op {
-                    "&&" => Valor::Booleano(izquierda.es_verdadero() && derecha.es_verdadero()),
-                    "||" => Valor::Booleano(izquierda.es_verdadero() || derecha.es_verdadero()),
-                    _ => {
-                        eprintln!("Operador binario desconocido: {}", op);
-                        Valor::Nulo
-                    }
+            _ => match op {
+                "&&" => Valor::Booleano(izquierda.es_verdadero() && derecha.es_verdadero()),
+                "||" => Valor::Booleano(izquierda.es_verdadero() || derecha.es_verdadero()),
+                _ => {
+                    eprintln!("Operador binario desconocido: {}", op);
+                    Valor::Nulo
                 }
-            }
+            },
         }
     }
 
@@ -1454,6 +1487,9 @@ impl Interpretador {
 
                 return match funcion_val {
                     Valor::FuncionNativa(_, native_fn) => native_fn(args),
+                    Valor::Clase(nombre_clase) => {
+                        self.crear_y_inicializar_instancia(nombre_clase, args).await
+                    }
                     Valor::Funcion(func) => {
                         self.valor_retorno = None;
                         let resultado = GestorFunciones::ejecutar_funcion(func, args, self).await;
@@ -1743,6 +1779,7 @@ impl Interpretador {
     ) -> String {
         let mut expr = String::new();
         let mut nivel_parentesis = 0;
+        let mut nivel_brackets = 0;
 
         while let Some(&ch) = chars.peek() {
             if self.procesar_parentesis_apertura(ch, &mut nivel_parentesis, &mut expr, chars) {
@@ -1751,9 +1788,26 @@ impl Interpretador {
 
             if ch == ')' {
                 if self.procesar_parentesis_cierre(ch, &mut nivel_parentesis, &mut expr, chars) {
-                    break;
+                    if nivel_brackets == 0 {
+                        break;
+                    }
                 }
                 continue;
+            }
+
+            if ch == '[' {
+                nivel_brackets += 1;
+                expr.push(chars.next().unwrap());
+                continue;
+            }
+
+            if ch == ']' {
+                if nivel_brackets > 0 {
+                    nivel_brackets -= 1;
+                    expr.push(chars.next().unwrap());
+                    continue;
+                }
+                break;
             }
 
             if nivel_parentesis > 0 {
@@ -1860,8 +1914,8 @@ impl Interpretador {
             return self.resolver_llamada_metodo_interpolacion(&expr).await;
         }
 
-        if expr.contains('.') {
-            return self.resolver_acceso_encadenado(&expr);
+        if expr.contains('.') || expr.contains('[') {
+            return self.resolver_acceso_encadenado(&expr).await;
         }
 
         let nombre_variable = if expr == "th" { "__this__" } else { &expr };
@@ -2157,27 +2211,90 @@ impl Interpretador {
             .unwrap_or(Valor::Nulo)
     }
 
-    fn resolver_acceso_encadenado(&mut self, expr: &str) -> Valor {
-        let partes: Vec<&str> = expr.split('.').collect();
+    async fn resolver_acceso_encadenado(&mut self, expr: &str) -> Valor {
+        let partes = self.tokenizar_encadenamiento(expr);
+        if partes.is_empty() {
+            return Valor::Nulo;
+        }
 
         let primer_elemento = if partes[0] == "th" {
             "__this__"
         } else {
-            partes[0]
+            partes[0].as_str()
         };
 
         let Some(mut valor_actual) = self.entorno_actual.obtener(primer_elemento) else {
             return Valor::Nulo;
         };
 
-        for &parte in &partes[1..] {
-            valor_actual = self.navegar_propiedad(valor_actual, parte);
+        for parte in &partes[1..] {
+            if parte.starts_with('[') && parte.ends_with(']') {
+                let indice_str = &parte[1..parte.len() - 1];
+                let indice_valor = self.parsear_argumento_simple(indice_str);
+
+                if let Valor::Lista(items) = valor_actual {
+                    if let Valor::Entero(idx) = indice_valor {
+                        valor_actual = self.acceder_elemento_lista(items, idx);
+                    } else {
+                        return Valor::Nulo;
+                    }
+                } else {
+                    return Valor::Nulo;
+                }
+            } else {
+                valor_actual = self.navegar_propiedad(valor_actual, parte);
+            }
+
             if matches!(valor_actual, Valor::Nulo) {
                 break;
             }
         }
 
         valor_actual
+    }
+
+    fn tokenizar_encadenamiento(&self, expr: &str) -> Vec<String> {
+        let mut partes = Vec::new();
+        let mut parte_actual = String::new();
+        let mut chars = expr.chars().peekable();
+
+        while let Some(c) = chars.next() {
+            if c == '.' {
+                if !parte_actual.is_empty() {
+                    partes.push(parte_actual.clone());
+                    parte_actual.clear();
+                }
+                continue;
+            }
+
+            if c == '[' {
+                if !parte_actual.is_empty() {
+                    partes.push(parte_actual.clone());
+                    parte_actual.clear();
+                }
+
+                let mut indice = String::new();
+                indice.push('[');
+                while let Some(&ic) = chars.peek() {
+                    if ic == ']' {
+                        chars.next();
+                        indice.push(']');
+                        break;
+                    }
+                    indice.push(chars.next().unwrap());
+                }
+                partes.push(indice);
+                continue;
+            }
+
+            parte_actual.push(c);
+        }
+
+        if !parte_actual.is_empty() {
+            partes.push(parte_actual);
+        }
+
+        partes
     }
 
     fn navegar_propiedad(&self, valor: Valor, propiedad: &str) -> Valor {

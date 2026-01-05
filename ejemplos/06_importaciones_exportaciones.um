@@ -1,5 +1,35 @@
 tprint('=== Sistema de Importaciones/Exportaciones ===');
-tprint('Consulta los comentarios para ver:');
-tprint('- 7 sintaxis de importación');
-tprint('- 6 tipos de exportación con out');
-tprint('- Elementos públicos vs privados');
+
+!! 1. Importación como objeto (Namespace)
+equip constantes origin "./modulos/constantes.um";
+
+!! 2. Importación destructurada
+equip { sumar, restar } origin "./modulos/funciones.um";
+
+!! 3. Importación como objeto con alias
+equip clases as misClases origin "./modulos/clases.um";
+
+!! 4. Sintaxis inversa: Origin primero (Namespace)
+origin "./modulos/funciones.um" equip funciones;
+
+!! 5. Sintaxis inversa: Origin primero (Destructurada)
+origin "./modulos/constantes.um" equip { PI, VERSION };
+
+!! 6. Sintaxis inversa: Origin primero (Namespace con Alias)
+origin "./modulos/clases.um" equip clases as aliasClases;
+
+!! --- Ejecución de pruebas ---
+
+tprint("1. Constantes (Namespace): &constantes.PI");
+
+v: resSuma = sumar(10, 5);
+tprint("2. Funciones (Destructurada): &resSuma");
+
+tprint("3. Clases (Alias): " + misClases.Calculadora("Casio").obtenerMarca());
+
+v: resResta = funciones.restar(10, 5);
+tprint("4. Funciones (Inverso Namespace): &resResta");
+
+tprint("5. Constantes (Inverso Destructurada): " + VERSION);
+
+tprint("6. Clases (Inverso Alias): " + aliasClases.Calculadora("HP").obtenerMarca());

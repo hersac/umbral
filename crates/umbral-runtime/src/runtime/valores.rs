@@ -18,6 +18,7 @@ pub enum Valor {
     Funcion(Funcion),
     FuncionNativa(String, NativeFn),
     Promesa(SharedPromesa),
+    Clase(String),
     Nulo,
 }
 
@@ -89,6 +90,7 @@ impl fmt::Display for Valor {
             Valor::Funcion(func) => write!(f, "<función {}>", func.nombre),
             Valor::FuncionNativa(nombre, _) => write!(f, "<función nativa {}>", nombre),
             Valor::Promesa(_) => write!(f, "<promesa>"),
+            Valor::Clase(nombre) => write!(f, "<clase {}>", nombre),
         }
     }
 }

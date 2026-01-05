@@ -142,9 +142,18 @@ impl Parser {
     fn parsear_sentencia(&mut self) -> Result<Sentencia, ParseError> {
         let exportado = self.coincidir(|t| matches!(t, LexToken::Out));
 
+        if let Some(res) = self.intentar_parsear_declaraciones(exportado) {
+            return res;
+        }
+
+        if exportado {
+            let nombre = self.parsear_identificador_consumir()?;
+            self.coincidir(|t| matches!(t, LexToken::PuntoYComa));
+            return Ok(Sentencia::Exportacion(nombre));
+        }
+
         let resultado = self
-            .intentar_parsear_declaraciones(exportado)
-            .or_else(|| self.intentar_parsear_controles())
+            .intentar_parsear_controles()
             .or_else(|| self.intentar_parsear_comandos());
 
         if let Some(sentencia) = resultado {

@@ -1,0 +1,12 @@
+!! Exportación de clases
+out cs: Calculadora {
+    pr: marca;
+
+    pu f: Calculadora(marca) {
+        th.marca = marca;
+    }
+
+    pu f: obtenerMarca() {
+        r: (th.marca);
+    }
+}
