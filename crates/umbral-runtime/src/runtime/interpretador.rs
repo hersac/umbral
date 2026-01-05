@@ -656,40 +656,10 @@ impl Interpretador {
                     .await
             }
             Expresion::LlamadoFuncion { nombre, argumentos } => {
-                let mut args = Vec::new();
-                for arg in argumentos {
-                    args.push(self.evaluar_expresion(arg).await);
-                }
-
-                if self.es_funcion_builtin(&nombre) {
-                    return self.ejecutar_funcion_builtin(&nombre, args).await;
-                }
-
-                self.ejecutar_funcion_usuario(&nombre, args).await
+                self.evaluar_llamada_funcion_expresion(nombre, argumentos)
+                    .await
             }
-            Expresion::Await(expr) => {
-                let valor = self.evaluar_expresion(*expr).await;
-                if let Valor::Promesa(SharedPromesa(arc_mutex)) = valor {
-                    let handle_opt = {
-                        let mut guard = arc_mutex.lock().unwrap();
-                        guard.take()
-                    };
-
-                    if let Some(handle) = handle_opt {
-                        match handle.await {
-                            Ok(v) => v,
-                            Err(e) => {
-                                eprintln!("Error en tarea asincrona: {:?}", e);
-                                Valor::Nulo
-                            }
-                        }
-                    } else {
-                        Valor::Nulo
-                    }
-                } else {
-                    valor
-                }
-            }
+            Expresion::Await(expr) => self.evaluar_await_expresion(*expr).await,
         }
     }
 
@@ -698,6 +668,50 @@ impl Interpretador {
         let contenido = s.trim_matches('"').to_string();
         let interpolado = self.procesar_interpolaciones(contenido).await;
         Valor::Texto(interpolado)
+    }
+
+    #[async_recursion]
+    async fn evaluar_llamada_funcion_expresion(
+        &mut self,
+        nombre: String,
+        argumentos: Vec<Expresion>,
+    ) -> Valor {
+        let mut args = Vec::new();
+        for arg in argumentos {
+            args.push(self.evaluar_expresion(arg).await);
+        }
+
+        if self.es_funcion_builtin(&nombre) {
+            return self.ejecutar_funcion_builtin(&nombre, args).await;
+        }
+
+        self.ejecutar_funcion_usuario(&nombre, args).await
+    }
+
+    #[async_recursion]
+    async fn evaluar_await_expresion(&mut self, expr: Expresion) -> Valor {
+        let valor = self.evaluar_expresion(expr).await;
+
+        let Valor::Promesa(SharedPromesa(arc_mutex)) = valor else {
+            return valor;
+        };
+
+        let handle_opt = {
+            let mut guard = arc_mutex.lock().unwrap();
+            guard.take()
+        };
+
+        let Some(handle) = handle_opt else {
+            return Valor::Nulo;
+        };
+
+        match handle.await {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("Error en tarea asincrona: {:?}", e);
+                Valor::Nulo
+            }
+        }
     }
 
     fn evaluar_identificador(&self, nombre: &str) -> Valor {
@@ -751,7 +765,6 @@ impl Interpretador {
     #[async_recursion]
     async fn evaluar_binaria(&mut self, izq: Expresion, op: &str, der: Expresion) -> Valor {
         let izquierda = self.evaluar_expresion(izq).await;
-        // Logical operators short-circuit
         if op == "&&" {
             return Valor::Booleano(
                 izquierda.es_verdadero() && self.evaluar_expresion(der).await.es_verdadero(),
@@ -777,14 +790,10 @@ impl Interpretador {
             ">" => self.comparar_mayor(izquierda, derecha),
             "<=" => self.comparar_menor_igual(izquierda, derecha),
             ">=" => self.comparar_mayor_igual(izquierda, derecha),
-            _ => match op {
-                "&&" => Valor::Booleano(izquierda.es_verdadero() && derecha.es_verdadero()),
-                "||" => Valor::Booleano(izquierda.es_verdadero() || derecha.es_verdadero()),
-                _ => {
-                    eprintln!("Operador binario desconocido: {}", op);
-                    Valor::Nulo
-                }
-            },
+            _ => {
+                eprintln!("Operador binario desconocido: {}", op);
+                Valor::Nulo
+            }
         }
     }
 
@@ -2228,22 +2237,11 @@ impl Interpretador {
         };
 
         for parte in &partes[1..] {
-            if parte.starts_with('[') && parte.ends_with(']') {
-                let indice_str = &parte[1..parte.len() - 1];
-                let indice_valor = self.parsear_argumento_simple(indice_str);
-
-                if let Valor::Lista(items) = valor_actual {
-                    if let Valor::Entero(idx) = indice_valor {
-                        valor_actual = self.acceder_elemento_lista(items, idx);
-                    } else {
-                        return Valor::Nulo;
-                    }
-                } else {
-                    return Valor::Nulo;
-                }
+            valor_actual = if parte.starts_with('[') && parte.ends_with(']') {
+                self.evaluar_acceso_array_interpolacion(valor_actual, parte)
             } else {
-                valor_actual = self.navegar_propiedad(valor_actual, parte);
-            }
+                self.navegar_propiedad(valor_actual, parte)
+            };
 
             if matches!(valor_actual, Valor::Nulo) {
                 break;
@@ -2295,6 +2293,21 @@ impl Interpretador {
         }
 
         partes
+    }
+
+    fn evaluar_acceso_array_interpolacion(&self, valor_actual: Valor, parte: &str) -> Valor {
+        let indice_str = &parte[1..parte.len() - 1];
+        let indice_valor = self.parsear_argumento_simple(indice_str);
+
+        let Valor::Lista(items) = valor_actual else {
+            return Valor::Nulo;
+        };
+
+        if let Valor::Entero(idx) = indice_valor {
+            return self.acceder_elemento_lista(items, idx);
+        }
+
+        Valor::Nulo
     }
 
     fn navegar_propiedad(&self, valor: Valor, propiedad: &str) -> Valor {
