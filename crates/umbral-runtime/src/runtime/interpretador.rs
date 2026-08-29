@@ -104,6 +104,14 @@ impl Interpretador {
 
     async fn ejecutar_declaracion_variable(&mut self, decl: DeclaracionVariable) -> Option<Valor> {
         let valor = self.evaluar_expresion(decl.valor).await;
+        let tipo_esperado = decl.tipo.as_ref().map(|t| t.nombre.as_str());
+
+        if !self.validar_tipo_valor(&decl.nombre, &valor, tipo_esperado) {
+            return None;
+        }
+        if let Some(tipo) = &decl.tipo {
+            self.entorno_actual.registrar_tipo(&decl.nombre, &tipo.nombre);
+        }
 
         if self.entorno_actual.existe(&decl.nombre) {
             eprintln!(
@@ -125,6 +133,15 @@ impl Interpretador {
         decl: DeclaracionConstante,
     ) -> Option<Valor> {
         let valor = self.evaluar_expresion(decl.valor).await;
+        let tipo_esperado = decl.tipo.as_ref().map(|t| t.nombre.as_str());
+
+        if !self.validar_tipo_valor(&decl.nombre, &valor, tipo_esperado) {
+            return None;
+        }
+        if let Some(tipo) = &decl.tipo {
+            self.entorno_actual.registrar_tipo(&decl.nombre, &tipo.nombre);
+        }
+
         self.entorno_actual
             .definir_constante(decl.nombre.clone(), valor);
         if decl.exportado {
@@ -138,6 +155,10 @@ impl Interpretador {
 
         match asig.objetivo {
             umbral_parser::ast::ObjetivoAsignacion::Variable(nombre) => {
+                let tipo_actual = self.entorno_actual.obtener_tipo(&nombre);
+                if !self.validar_tipo_valor(&nombre, &valor, tipo_actual.as_deref()) {
+                    return None;
+                }
                 if !self.entorno_actual.asignar(&nombre, valor.clone()) {
                     eprintln!(
                         "Error: Variable '{}' no definida. Use 'v:' para declarar.",
@@ -152,6 +173,22 @@ impl Interpretador {
         }
 
         None
+    }
+
+    fn validar_tipo_valor(&self, nombre: &str, valor: &Valor, tipo_esperado: Option<&str>) -> bool {
+        let Some(tipo_esperado) = tipo_esperado else {
+            return true;
+        };
+        if !valor.es_tipo_compatible(tipo_esperado) {
+            eprintln!(
+                "Error: Tipo incompatible para '{}': se esperaba '{}' pero se recibió {}.",
+                nombre,
+                tipo_esperado,
+                valor.nombre_tipo()
+            );
+            return false;
+        }
+        true
     }
 
     async fn asignar_propiedad_objeto(

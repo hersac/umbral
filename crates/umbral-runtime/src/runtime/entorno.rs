@@ -5,6 +5,7 @@ use std::collections::HashMap;
 pub struct Entorno {
     pub variables: HashMap<String, Valor>,
     pub constantes: HashMap<String, Valor>,
+    pub tipos: HashMap<String, String>,
     pub parent: Option<Box<Entorno>>,
 }
 
@@ -13,6 +14,7 @@ impl Entorno {
         Self {
             variables: HashMap::new(),
             constantes: HashMap::new(),
+            tipos: HashMap::new(),
             parent: parent.map(Box::new),
         }
     }
@@ -23,6 +25,17 @@ impl Entorno {
 
     pub fn definir_constante(&mut self, nombre: String, valor: Valor) {
         self.constantes.insert(nombre, valor);
+    }
+
+    pub fn registrar_tipo(&mut self, nombre: &str, tipo: &str) {
+        self.tipos.insert(nombre.to_string(), tipo.to_string());
+    }
+
+    pub fn obtener_tipo(&self, nombre: &str) -> Option<String> {
+        self.tipos
+            .get(nombre)
+            .cloned()
+            .or_else(|| self.parent.as_ref().and_then(|p| p.obtener_tipo(nombre)))
     }
     
     pub fn asignar(&mut self, nombre: &str, valor: Valor) -> bool {

@@ -54,6 +54,43 @@ impl Valor {
             _ => None,
         }
     }
+
+    pub fn nombre_tipo(&self) -> String {
+        match self {
+            Valor::Entero(_) => "Int".to_string(),
+            Valor::Flotante(_) => "Flo".to_string(),
+            Valor::Booleano(_) => "Bool".to_string(),
+            Valor::Texto(_) => "Str".to_string(),
+            Valor::Lista(_) => "Array".to_string(),
+            Valor::Diccionario(_) => "Objeto".to_string(),
+            Valor::Objeto(inst) => inst.clase.clone(),
+            Valor::Funcion(f) => format!("Func({})", f.nombre),
+            Valor::FuncionNativa(n, _) => format!("FuncNativa({})", n),
+            Valor::Promesa(_) => "Promesa".to_string(),
+            Valor::Clase(n) => format!("Clase({})", n),
+            Valor::Nulo => "Null".to_string(),
+        }
+    }
+
+    pub fn es_tipo_compatible(&self, tipo: &str) -> bool {
+        let t = tipo.trim();
+        if t == "Any" {
+            return true;
+        }
+        match self {
+            Valor::Entero(_) => t == "Int" || t == "Flo",
+            Valor::Flotante(_) => t == "Flo",
+            Valor::Booleano(_) => t == "Bool",
+            Valor::Texto(_) => t == "Str",
+            Valor::Lista(_) => t.starts_with("[]") || t == "Array",
+            Valor::Diccionario(_) => t == "Objeto" || t == "Obj",
+            Valor::Objeto(inst) => t == "Objeto" || t == "Obj" || t == inst.clase,
+            Valor::Funcion(_) | Valor::FuncionNativa(..) => t == "Func",
+            Valor::Promesa(_) => t == "Promesa",
+            Valor::Clase(_) => t == "Clase",
+            Valor::Nulo => true,
+        }
+    }
 }
 
 impl fmt::Display for Valor {
