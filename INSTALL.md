@@ -122,41 +122,35 @@ umbral-repl
 
 ## 🪟 Instalación en Windows
 
-### Paso 1: Instalar Rust
+### Opción A: Instalador gráfico (.exe) — recomendada
 
-1. Descarga el instalador desde: https://rustup.rs/
-2. Ejecuta `rustup-init.exe`
-3. Sigue las instrucciones en pantalla
-4. Reinicia tu terminal después de la instalación
+Si se dispone de un instalador compilado (`umbral-setup-<versión>.exe`), es la forma más sencilla:
 
-### Paso 2: Instalar Git
+1. Ejecuta `umbral-setup-<versión>.exe`
+2. En el asistente, selecciona el directorio donde quieres instalar Umbral
+3. El instalador copia `umbral.exe` y `umbral-repl.exe` y agrega automáticamente el directorio al `PATH` del usuario
+4. Al finalizar puedes iniciar el REPL directamente
 
-1. Descarga desde: https://git-scm.com/download/win
-2. Ejecuta el instalador
-3. Usa las opciones por defecto
+Para **desinstalar**, usa "Agregar o quitar programas" de Windows o ejecuta `uninstall.exe` en la carpeta de instalación. El desinstalador también elimina la entrada del `PATH`.
 
-### Paso 3: Clonar el repositorio
+### Opción B: Compilar e instalar desde el código fuente
 
-Abre **PowerShell** y ejecuta:
-
-```powershell
-git clone https://github.com/hersac/umbral.git
-cd umbral
-```
-
-### Paso 4: Ejecutar el instalador
-
-**IMPORTANTE**: Abre **PowerShell como Administrador** (clic derecho → "Ejecutar como administrador")
-
-```powershell
-PowerShell -ExecutionPolicy Bypass -File install.ps1
-```
-
-El script hará lo siguiente:
-1. ✅ Verificará que Rust esté instalado
-2. 📦 Compilará Umbral en modo release
-3. 🚀 Instalará los binarios en `%USERPROFILE%\.cargo\bin`
-4. ⚙️ Configurará automáticamente el PATH del sistema
+1. Instala Rust (https://rustup.rs/) y Git (https://git-scm.com/download/win)
+2. Clona el repositorio:
+   ```powershell
+   git clone https://github.com/hersac/umbral.git
+   cd umbral
+   ```
+3. Ejecuta el instalador:
+   **IMPORTANTE**: Abre **PowerShell como Administrador** (clic derecho → "Ejecutar como administrador")
+   ```powershell
+   PowerShell -ExecutionPolicy Bypass -File install.ps1
+   ```
+   El script hará lo siguiente:
+   1. ✅ Verificará que Rust esté instalado
+   2. 📦 Compilará Umbral en modo release
+   3. 🚀 Instalará los binarios en `%USERPROFILE%\.cargo\bin`
+   4. ⚙️ Configurará automáticamente el PATH del sistema
 
 ### Paso 5: Reiniciar terminal
 
@@ -168,6 +162,20 @@ El script hará lo siguiente:
 umbral --version
 umbral-repl
 ```
+
+### Generar el instalador .exe (para distribución)
+
+Para producir `umbral-setup-<versión>.exe` desde el código fuente:
+
+```bash
+./windows/build.sh
+```
+
+Requisitos:
+- **Rust** con el target `x86_64-pc-windows-gnu` (en Windows se usa el nativo; el script agrega el target automáticamente)
+- **makensis** (NSIS) — en Linux: `sudo apt install nsis`; en Windows descárgalo de https://nsis.sourceforge.net/
+
+El script compila los binarios para Windows, los copia a `target/release/` y genera el instalador en `windows/`. El asistente permite elegir el directorio de instalación y agrega ese directorio al `PATH` del usuario (HKCU), sin requerir permisos de administrador. El desinstalador elimina los archivos y la entrada del `PATH`.
 
 ---
 
