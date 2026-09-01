@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Instalar cargo-deb
+        run: cargo install cargo-deb
+
+      - name: Generar el paquete .deb
+        run: cargo deb
+
+      - name: Subir .deb al release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/debian/*.deb
+
+  build-installer:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Compilar en modo release
+        run: cargo build --release
+
+      - name: Instalar NSIS
+        shell: bash
+        run: choco install nsis -y --no-progress
+
+      - name: Generar el instalador
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          "/c/Program Files (x86)/NSIS/makensis.exe" \
+            -DVERSION="${VERSION}" windows/umbral.nsi
+
+      - name: Subir instalador al release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: windows/umbral-setup-*.exe
