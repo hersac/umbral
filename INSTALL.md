@@ -1,6 +1,6 @@
 # Guía de Instalación de Umbral
 
-Esta guía te ayudará a instalar Umbral v1.1.5 en tu sistema operativo.
+Esta guía te ayudará a instalar Umbral v1.4.0 en tu sistema operativo.
 
 ---
 
@@ -210,7 +210,7 @@ Deberías ver el banner de bienvenida:
 
 ```
 ╔════════════════════════════════════════╗
-║     Umbral REPL v1.1.5                 ║
+║     Umbral REPL v1.4.0                 ║
 ║     Lenguaje de Programación Umbral   ║
 ╚════════════════════════════════════════╝
 ```

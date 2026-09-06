@@ -88,27 +88,21 @@ pub fn parsear_asignacion(parseador: &mut Parser) -> Result<Sentencia, ParseErro
 }
 
 pub fn parsear_return(parseador: &mut Parser) -> Result<Sentencia, ParseError> {
-    validar_parentesis_apertura(parseador, "return")?;
+    if !parseador.coincidir(|t| matches!(t, LexToken::ParentesisIzq)) {
+        return Err(parseador.crear_error("Se esperaba '(' después de retorno"));
+    }
+
     let valor = crate::parser::expresiones::parsear_expresion_principal(parseador)?;
-    validar_parentesis_cierre(parseador)?;
+
+    parseador.coincidir(|t| matches!(t, LexToken::ParentesisDer));
+
     parseador.coincidir(|t| matches!(t, LexToken::PuntoYComa));
+
     Ok(Sentencia::Return(valor))
 }
 
 pub fn parsear_throw(parseador: &mut Parser) -> Result<Sentencia, ParseError> {
     let valor = crate::parser::expresiones::parsear_expresion_principal(parseador)?;
-    // tw doesn't strictly need semicolon based on user example `tw: Error(...)`,
-    // but usually statements end with semicolon.
-    // Example: `tw: Error("...")` inside a block.
-    // Standard Umbral statements use semicolon. I will enforce it for consistency unless user example implies otherwise.
-    // User example:
-    // tw: Error("instalacion fallida")
-    // }
-    // It is inside `i: ... {}`.
-    // Usually blocks in Umbral don't force semicolons on the last statement?
-    // `parsear_bloque` calls `parsear_sentencia` which calls specific parsers.
-    // `parsear_return` checks for semicolon. `parsear_asignacion` checks for semicolon.
-    // I should check for semicolon.
     parseador.coincidir(|t| matches!(t, LexToken::PuntoYComa));
     Ok(Sentencia::Throw(Throw { valor }))
 }
