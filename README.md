@@ -41,6 +41,7 @@ Lenguaje de programación de propósito general con sintaxis expresiva y moderna
 - 📖 **Biblioteca estándar** - Funciones esenciales para strings, números, archivos y colecciones
 - 🎨 **Arrays y diccionarios** - Estructuras de datos con métodos integrados
 - ⚡ **Operadores completos** - Aritméticos, lógicos, comparación, incremento/decremento y spread
+- 🌐 **Cliente HTTP nativo** - Función global `pulse` con todos los verbos, conversión automática a JSON y respuesta con `.parse()` / `.json()` / `.text()`
 
 ### 🚧 En desarrollo
 
@@ -591,6 +592,74 @@ tprint("Respuesta: &respuesta");
 - ✅ Compatible con rutas relativas tradicionales
 
 **Más información:** [UMP Package Manager](https://github.com/hersac/ump)
+
+
+### Cliente HTTP (`pulse`)
+
+Umbral incluye la función global y asíncrona `pulse` para solicitudes HTTP. Retorna una `Promesa`, por lo que se resuelve con `awa`:
+
+```umbral
+c: resp = awa pulse("https://api.ejemplo.com/datos", "GET");
+tprint(resp.status);   !! 200
+tprint(resp.ok);       !! true si el estado es 2xx
+```
+
+#### Verbos y argumentos
+
+```umbral
+pulse(url, metodo, [cuerpo], [opciones]);
+```
+
+- `url` (Str, obligatorio): dirección de la solicitud.
+- `metodo` (Str, obligatorio): `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS` (`OPTION` funciona como alias) y `HEAD`. El cuerpo se ignora en `GET`, `HEAD` y `OPTIONS`.
+- `cuerpo` (opcional): solo se envía en `POST`, `PUT`, `PATCH` y `DELETE`.
+- `opciones` (opcional): diccionario con `headers`, `timeout`, `query`/`params`, `auth`/`bearer`/`token` y `body`.
+
+Los dos últimos argumentos aceptan orden dinámico: si el 3er argumento trae claves de opciones (`headers`, `timeout`, ...) se trata como opciones; si no, como cuerpo.
+
+```umbral
+c: cuerpo = [
+    "title" => "prueba",
+    "userId" => 1
+];
+c: opciones = [
+    "headers" => ["Authorization" => "Bearer token_aqui"],
+    "timeout" => 10000
+];
+
+c: r1 = awa pulse("https://api.ejemplo.com/posts", "POST", cuerpo, opciones);
+c: r2 = awa pulse("https://api.ejemplo.com/posts", "GET", opciones);
+```
+
+#### Conversión automática del cuerpo
+
+No necesitas convertir el cuerpo a JSON: si pasas un diccionario o lista en sintaxis Umbral, `pulse` lo serializa a JSON y agrega `Content-Type: application/json` si no lo definiste. Si pasas texto, se envía crudo tal cual.
+
+```umbral
+!! Se envía como {"title":"prueba","userId":1} con Content-Type JSON automático
+c: creado = awa pulse("https://api.ejemplo.com/posts", "POST", cuerpo);
+```
+
+`timeout` se expresa en milisegundos (también `timeout_ms`; `timeout_secs` en segundos). `query`/`params` agregan parámetros a la URL y `bearer` genera el header `Authorization: Bearer <token>`.
+
+#### Respuesta
+
+La respuesta es un diccionario con `status`, `ok`, `headers`, `body`, `url` y `error` (`error` es `null` si todo salió bien; en fallos de red `ok` es `false` y `status` es `0`):
+
+```umbral
+c: datos = resp.parse();  !! entrada: {"a": 1} -> ["a" => 1] (sintaxis Umbral)
+c: salida = resp.json();  !! salida: ["a" => 1] -> '{"a":1}' (texto JSON)
+c: crudo = resp.text();   !! cuerpo tal cual llegó
+```
+
+Los métodos `.json()` (diccionarios y listas a JSON) y `.parse()` (texto JSON a sintaxis Umbral) también funcionan fuera de `pulse`:
+
+```umbral
+c: persona = ["nombre" => "Ana", "edad" => 28];
+tprint(persona.json());                       !! '{"nombre":"Ana","edad":28}'
+c: objeto = '{"nombre": "Ana"}'.parse();
+tprint(objeto);                               !! ["nombre" => "Ana"]
+```
 
 
 ### Strings e interpolación

@@ -17,7 +17,8 @@ pub fn crear_modulo() -> Valor {
     Valor::Diccionario(mapa)
 }
 
-fn parsear_texto_json(texto: &str) -> Valor {
+/// Parsea un texto JSON a `Valor` de Umbral (`Nulo` si el texto no es JSON válido).
+pub(crate) fn parsear_texto_json(texto: &str) -> Valor {
     match serde_json::from_str::<serde_json::Value>(texto) {
         Ok(valor_json) => json_a_valor(&valor_json),
         Err(_) => Valor::Nulo,
@@ -103,7 +104,8 @@ fn convertir_diccionario_json(diccionario: &HashMap<String, Valor>) -> serde_jso
     serde_json::Value::Object(objeto)
 }
 
-fn valor_a_json(valor: &Valor) -> serde_json::Value {
+/// Convierte un `Valor` de Umbral a `serde_json::Value`.
+pub(crate) fn valor_a_json(valor: &Valor) -> serde_json::Value {
     match valor {
         Valor::Nulo => serde_json::Value::Null,
         Valor::Booleano(booleano) => serde_json::Value::Bool(*booleano),

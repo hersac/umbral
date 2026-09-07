@@ -1,0 +1,85 @@
+!! Ejemplo 20: pulse() - Cliente HTTP nativo
+!! Verbos: GET, POST, PUT, DELETE, PATCH, OPTIONS (OPTION como alias)
+!! Uso: c: resp = awa pulse(url, metodo, [cuerpo], [opciones]);
+!!
+!! Conversiones de la respuesta:
+!!   resp.parse()  !! entrada: JSON {"a": 1} -> sintaxis Umbral ["a" => 1]
+!!   resp.json()   !! salida: sintaxis Umbral -> texto JSON '{"a":1}'
+!!   resp.text()   !! crudo: cuerpo tal cual llego
+
+!! 1. GET simple: pulse() retorna una Promesa, se resuelve con awa
+tprint("--- 1. GET simple ---");
+c: promesa_get = pulse("https://jsonplaceholder.typicode.com/todos/1", "GET");
+c: resp = awa promesa_get;
+tprint(resp.status);
+tprint(resp.ok);
+c: datos = resp.parse();
+tprint(datos);
+tprint(resp.json());
+tprint(resp.text());
+
+!! 2. POST con cuerpo y opciones (headers + timeout en milisegundos)
+tprint("--- 2. POST con cuerpo + opciones ---");
+c: cuerpo = [
+    "title" => "prueba",
+    "body" => "contenido de prueba",
+    "userId" => 1
+];
+c: opciones = [
+    "headers" => [
+        "Content-Type" => "application/json"
+    ],
+    "timeout" => 10000
+];
+c: resp2 = awa pulse("https://jsonplaceholder.typicode.com/posts", "POST", cuerpo, opciones);
+tprint(resp2.status);
+tprint(resp2.ok);
+tprint(resp2.parse());
+
+!! 3. El 3er argumento acepta cuerpo u opciones en cualquier orden
+tprint("--- 3. GET con opciones como 3er argumento (orden dinamico) ---");
+c: ops = [
+    "query" => [
+        "userId" => "1"
+    ],
+    "timeout" => 10000
+];
+c: resp3 = awa pulse("https://jsonplaceholder.typicode.com/posts", "GET", ops);
+tprint(resp3.status);
+tprint(resp3.ok);
+
+!! 4. PUT con cuerpo directo como 3er argumento
+tprint("--- 4. PUT con cuerpo ---");
+c: cambio = [
+    "id" => 1,
+    "title" => "titulo actualizado",
+    "userId" => 1
+];
+c: resp4 = awa pulse("https://jsonplaceholder.typicode.com/posts/1", "PUT", cambio);
+tprint(resp4.status);
+tprint(resp4.parse());
+
+!! 5. DELETE solo necesita url y metodo
+tprint("--- 5. DELETE ---");
+c: resp5 = awa pulse("https://jsonplaceholder.typicode.com/posts/1", "DELETE");
+tprint(resp5.status);
+tprint(resp5.ok);
+
+!! 6. .json() y .parse() tambien funcionan fuera de pulse:
+!!    diccionario.json() convierte sintaxis Umbral a texto JSON,
+!!    texto.parse() convierte texto JSON a sintaxis Umbral
+tprint("--- 6. Conversiones .parse() / .json() ---");
+c: persona = [
+    "nombre" => "Ana García",
+    "edad" => 28,
+    "profesion" => "Desarrolladora",
+    "activo" => true,
+    "ciudad" => "Madrid"
+];
+tprint(persona.json());
+c: crudo = '{"propiedad1": "valor1", "propiedad2": "valor2"}';
+c: objeto = crudo.parse();
+tprint(objeto);
+tprint(objeto.json());
+
+tprint("--- Fin del ejemplo pulse ---");

@@ -5,6 +5,7 @@ use std::collections::HashMap;
 pub mod collections;
 pub mod errores;
 pub mod fs;
+pub mod http;
 pub mod json;
 pub mod num;
 pub mod path;
@@ -50,6 +51,10 @@ pub fn registrar_stdlib(interpretador: &mut Interpretador) {
     interpretador
         .entorno_actual
         .definir_variable("Std".to_string(), Valor::Diccionario(std_map));
+
+    interpretador
+        .entorno_actual
+        .definir_variable("pulse".to_string(), http::crear_funcion_pulse());
 
     let error_class = errores::crear_clase_error();
     interpretador.gestor_clases.registrar_clase(error_class);

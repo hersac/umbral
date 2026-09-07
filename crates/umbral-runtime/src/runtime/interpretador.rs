@@ -3,6 +3,7 @@ use crate::runtime::entorno::Entorno;
 use crate::runtime::enums::GestorEnums;
 use crate::runtime::funciones::GestorFunciones;
 use crate::runtime::interfaces::{GestorInterfaces, Interfaz};
+use crate::runtime::stdlib::http;
 use crate::runtime::valores::{Funcion, SharedPromesa, Valor};
 use async_recursion::async_recursion;
 use std::collections::HashMap;
@@ -1517,6 +1518,9 @@ impl Interpretador {
                 "len" => {
                     return Valor::Entero(items.len() as i64);
                 }
+                "json" if argumentos.is_empty() => {
+                    return http::valor_a_json_texto(&Valor::Lista(items.clone()));
+                }
                 _ => {
                     eprintln!("Método '{}' no existe para arreglos", metodo);
                     return Valor::Nulo;
@@ -1525,6 +1529,15 @@ impl Interpretador {
         }
 
         if let Valor::Diccionario(mapa) = obj_valor {
+            if http::es_respuesta_pulse(&mapa) && argumentos.is_empty() {
+                match metodo {
+                    "parse" => return http::respuesta_parse(&mapa),
+                    "json" => return http::respuesta_json(&mapa),
+                    "text" | "string" => return http::respuesta_texto(&mapa),
+                    _ => {}
+                }
+            }
+
             if let Some(funcion_val) = mapa.get(metodo) {
                 let mut args = Vec::new();
                 for arg in argumentos {
@@ -1547,10 +1560,22 @@ impl Interpretador {
                         Valor::Nulo
                     }
                 };
-            } else {
-                eprintln!("Método '{}' no encontrado en el diccionario", metodo);
-                return Valor::Nulo;
             }
+
+            if argumentos.is_empty() && metodo == "json" {
+                return http::valor_a_json_texto(&Valor::Diccionario(mapa));
+            }
+
+            eprintln!("Método '{}' no encontrado en el diccionario", metodo);
+            return Valor::Nulo;
+        }
+
+        if let Valor::Texto(texto) = &obj_valor {
+            if metodo == "parse" && argumentos.is_empty() {
+                return http::texto_a_valor_umbral(texto);
+            }
+            eprintln!("Método '{}' no existe para texto", metodo);
+            return Valor::Nulo;
         }
 
         let instancia = match obj_valor {
@@ -2135,6 +2160,24 @@ impl Interpretador {
                 self.ejecutar_metodo_objeto(instancia, metodo, argumentos)
                     .await
             }
+            Valor::Diccionario(ref mapa)
+                if http::es_respuesta_pulse(mapa) && args_str.trim().is_empty() =>
+            {
+                match metodo {
+                    "parse" => http::respuesta_parse(mapa),
+                    "json" => http::respuesta_json(mapa),
+                    "text" | "string" => http::respuesta_texto(mapa),
+                    _ => Valor::Nulo,
+                }
+            }
+            Valor::Diccionario(ref mapa)
+                if metodo == "json" && args_str.trim().is_empty() =>
+            {
+                http::valor_a_json_texto(&Valor::Diccionario(mapa.clone()))
+            }
+            Valor::Texto(ref texto) if metodo == "parse" && args_str.trim().is_empty() => {
+                http::texto_a_valor_umbral(texto)
+            }
             _ => Valor::Nulo,
         }
     }
@@ -2144,6 +2187,9 @@ impl Interpretador {
             "len" => Valor::Entero(items.len() as i64),
             "push" => self.ejecutar_push_lista(items, args_str),
             "pop" => self.ejecutar_pop_lista(items),
+            "json" if args_str.trim().is_empty() => {
+                http::valor_a_json_texto(&Valor::Lista(items.to_vec()))
+            }
             _ => Valor::Nulo,
         }
     }
