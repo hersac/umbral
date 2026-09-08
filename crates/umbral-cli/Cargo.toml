@@ -8,4 +8,6 @@ repository.workspace = true
 
 [dependencies]
 umbral-interpreter = { path = "../umbral-interpreter" }
+umbral-lexer = { path = "../umbral-lexer" }
+umbral-parser = { path = "../umbral-parser" }
 tokio = { version = "1", features = ["full"] }

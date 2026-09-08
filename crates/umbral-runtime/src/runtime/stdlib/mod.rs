@@ -12,6 +12,7 @@ pub mod path;
 pub mod proc;
 pub mod str;
 pub mod time;
+pub mod umdocs;
 
 pub fn registrar_stdlib(interpretador: &mut Interpretador) {
     let mut std_map = HashMap::new();
@@ -46,6 +47,10 @@ pub fn registrar_stdlib(interpretador: &mut Interpretador) {
 
     if let Valor::Diccionario(proc_funcs) = proc::crear_modulo() {
         std_map.extend(proc_funcs);
+    }
+
+    if let Valor::Diccionario(doc_funcs) = umdocs::crear_modulo() {
+        std_map.extend(doc_funcs);
     }
 
     interpretador

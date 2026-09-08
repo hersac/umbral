@@ -160,6 +160,7 @@ pub struct Funcion {
     pub parametros: Vec<String>,
     pub cuerpo: Vec<umbral_parser::ast::Sentencia>,
     pub es_async: bool,
+    pub doc: Option<umbral_parser::ast::UmDoc>,
 }
 
 impl Funcion {
@@ -174,6 +175,34 @@ impl Funcion {
             parametros,
             cuerpo,
             es_async,
+            doc: None,
+        }
+    }
+
+    pub fn con_doc(
+        nombre: String,
+        parametros: Vec<String>,
+        cuerpo: Vec<umbral_parser::ast::Sentencia>,
+        es_async: bool,
+        doc: Option<umbral_parser::ast::UmDoc>,
+    ) -> Self {
+        Self {
+            nombre,
+            parametros,
+            cuerpo,
+            es_async,
+            doc,
+        }
+    }
+
+    pub fn firma(&self) -> String {
+        format!("({})", self.parametros.join(", "))
+    }
+
+    pub fn texto_ayuda(&self) -> String {
+        match &self.doc {
+            Some(d) => d.formatear(&self.nombre, &self.firma()),
+            None => format!("{} {}\n  (sin documentación umdocs)", self.nombre, self.firma()),
         }
     }
 }

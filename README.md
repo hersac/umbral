@@ -345,6 +345,71 @@ v: resultado = sumar(10, 20);
 tprint(factorial(5));
 ```
 
+### Documentación de métodos (umdocs)
+
+Umbral usa **umdocs**, al estilo JSDoc/Javadoc/PHPDoc, para documentar funciones, métodos y clases. El bloque abre con `!!$` (o `!! $`) y cierra con `$!!`. Cada línea puede llevar el prefijo `$`.
+
+```umbral
+!!$
+ $ Suma dos números y devuelve el resultado.
+ $
+ $ @param->[Int] a - El primer número a sumar.
+ $ @param->[Int] b - El segundo número a sumar.
+ $ @returns->[Int] La suma total de ambos números.
+$!!
+f: sumar(a->Int, b->Int)->Int {
+    r: (a + b);
+}
+```
+
+Los tipos entre corchetes son **opcionales** (el lenguaje tiene inferencia, si los omites no pasa nada):
+
+```umbral
+!!$
+ $ Saluda a alguien.
+ $ @param nombre - Nombre a saludar.
+$!!
+f: saludar(nombre) {
+    tprint("Hola, &nombre!");
+}
+```
+
+También funciona en métodos y clases:
+
+```umbral
+!!$
+ $ Representa una persona.
+$!!
+cs: Persona {
+    !!$
+     $ Se presenta por pantalla.
+    $!!
+    pu f: presentarse()->Void {
+        tprint("Hola, soy &th.nombre");
+    }
+}
+```
+
+#### Consultar la documentación
+
+```umbral
+help(sumar);            !! Imprime y devuelve la documentación
+doc(sumar);             !! Alias de help
+tprint(sumar.doc);      !! Propiedad .doc (también .help)
+tprint(Std.doc(sumar)); !! Vía biblioteca estándar
+help("Persona");        !! Clases por nombre
+help(p);                !! Instancia -> doc de su clase
+tprint(p.saludar.doc);  !! Doc de un método
+```
+
+Sin ejecutar el programa, desde la terminal:
+
+```bash
+umbral --doc programa.um
+```
+
+> Ver ejemplo completo en [`ejemplos/21_umdocs.um`](./ejemplos/21_umdocs.um).
+
 ### Clases y POO
 
 ```umbral
@@ -939,6 +1004,9 @@ umbral archivo.um
 umbral main.um
 umbral codigo-ejemplo/main.um
 umbral /ruta/completa/programa.um
+
+# Ver documentación umdocs sin ejecutar
+umbral --doc programa.um
 ```
 
 ### REPL - Modo interactivo

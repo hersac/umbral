@@ -1,0 +1,60 @@
+!! Documentación de métodos con umdocs (!!$ ... $!!)
+!! Los tipos en @param/@returns son opcionales (hay inferencia).
+!! Ver con: umbral --doc ejemplos/21_umdocs.um
+
+!!$
+ $ Suma dos números y devuelve el resultado.
+ $
+ $ @param->[Int] a - El primer número a sumar.
+ $ @param->[Int] b - El segundo número a sumar.
+ $ @returns->[Int] La suma total de ambos números.
+$!!
+f: sumar(a->Int, b->Int)->Int {
+    r: (a + b);
+}
+
+!!$
+ $ Saluda sin tipos en la doc (inferencia, no pasa nada si se omiten).
+ $ @param nombre - Nombre a saludar.
+$!!
+f: saludar(nombre) {
+    tprint("Hola, &nombre!");
+}
+
+!!$
+ $ Representa una persona.
+$!!
+cs: Persona {
+    pr: nombre->Str;
+
+    !!$
+     $ Crea una persona.
+     $ @param->[Str] nombre - El nombre.
+    $!!
+    pu f: Persona(nombre->Str) {
+        th.nombre = nombre;
+    }
+
+    !!$
+     $ Se presenta por pantalla.
+    $!!
+    pu f: presentarse()->Void {
+        tprint("Hola, soy &th.nombre");
+    }
+}
+
+!! Uso
+v: r = sumar(10, 20);
+tprint(r);
+saludar("María");
+
+c: p = n: Persona("Ana");
+p.presentarse();
+
+!! Introspección en tiempo de ejecución
+help(sumar);
+tprint(sumar.doc);
+tprint(Std.doc(saludar));
+help("Persona");
+help(p);
+tprint(p.presentarse.doc);

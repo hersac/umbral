@@ -51,6 +51,7 @@ fn validar_inicio_funcion(p: &mut Parser) -> Result<bool, ParseError> {
 pub fn parsear_declaracion_funcion(
     p: &mut Parser,
     exportado: bool,
+    doc: Option<UmDoc>,
 ) -> Result<Sentencia, ParseError> {
     let es_async = validar_inicio_funcion(p)?;
     let nombre = p.parsear_identificador_consumir()?;
@@ -68,6 +69,7 @@ pub fn parsear_declaracion_funcion(
         cuerpo: p.parsear_bloque()?,
         exportado,
         es_async,
+        doc,
     }))
 }
 
@@ -75,6 +77,7 @@ pub fn parsear_funcion_interna(
     p: &mut Parser,
     publico: bool,
     es_async_externo: bool,
+    doc: Option<UmDoc>,
 ) -> Result<Metodo, ParseError> {
     let es_async = es_async_externo || p.coincidir(|t| matches!(t, LexToken::Asy));
 
@@ -99,6 +102,7 @@ pub fn parsear_funcion_interna(
         cuerpo: p.parsear_bloque()?,
         publico,
         es_async,
+        doc,
     })
 }
 

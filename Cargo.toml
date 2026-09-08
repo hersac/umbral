@@ -36,6 +36,8 @@ path = "crates/umbral-repl/src/main.rs"
 
 [dependencies]
 umbral-interpreter = { path = "crates/umbral-interpreter" }
+umbral-lexer = { path = "crates/umbral-lexer" }
+umbral-parser = { path = "crates/umbral-parser" }
 rustyline = "14.0"
 tokio = { version = "1", features = ["full"] }
 deb = "0.5.20"

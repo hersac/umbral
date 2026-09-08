@@ -25,6 +25,7 @@ pub fn crear_clase_error() -> Clase {
         })],
         publico: true,
         es_async: false,
+        doc: None,
     };
 
     Clase {
@@ -32,5 +33,6 @@ pub fn crear_clase_error() -> Clase {
         propiedades,
         metodos: HashMap::new(),
         constructor: Some(constructor),
+        doc: None,
     }
 }

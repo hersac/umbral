@@ -9,6 +9,7 @@ pub struct Clase {
     pub propiedades: HashMap<String, Valor>,
     pub metodos: HashMap<String, Metodo>,
     pub constructor: Option<Metodo>,
+    pub doc: Option<umbral_parser::ast::UmDoc>,
 }
 
 impl Clase {
@@ -18,36 +19,59 @@ impl Clase {
             propiedades: HashMap::new(),
             metodos: HashMap::new(),
             constructor: None,
+            doc: None,
         }
     }
 
     pub fn desde_declaracion(decl: &DeclaracionClase) -> Self {
         let mut clase = Self::nueva(&decl.nombre);
-
+        clase.doc = decl.doc.clone();
         clase.registrar_propiedades(&decl.propiedades);
         clase.registrar_metodos(&decl.metodos, &decl.nombre);
-
         clase
     }
 
-    fn registrar_propiedades(&mut self, propiedades: &[umbral_parser::ast::Propiedad]) {
-        for prop in propiedades {
-            let valor_inicial = prop
-                .valor_inicial
-                .as_ref()
-                .map_or(Valor::Nulo, |_| Valor::Nulo);
-            self.propiedades.insert(prop.nombre.clone(), valor_inicial);
+    pub fn texto_ayuda(&self) -> String {
+        let base = match &self.doc {
+            Some(d) => d.formatear(&self.nombre, ""),
+            None => format!("{} (sin documentación umdocs)\n", self.nombre),
+        };
+        let lista = self.lista_metodos();
+        if lista.is_empty() {
+            return base;
         }
+        format!("{}{}", base, lista)
+    }
+
+    fn lista_metodos(&self) -> String {
+        if self.metodos.is_empty() {
+            return String::new();
+        }
+        let nombres = self.nombres_ordenados();
+        let cuerpo: String = nombres
+            .iter()
+            .map(|n| format!("    - {}\n", n))
+            .collect();
+        format!("  Métodos:\n{}", cuerpo)
+    }
+
+    fn nombres_ordenados(&self) -> Vec<&String> {
+        let mut nombres: Vec<&String> = self.metodos.keys().collect();
+        nombres.sort();
+        nombres
+    }
+
+    fn registrar_propiedades(&mut self, propiedades: &[umbral_parser::ast::Propiedad]) {
+        let pares = propiedades.iter().map(|p| (p.nombre.clone(), Valor::Nulo));
+        self.propiedades.extend(pares);
     }
 
     fn registrar_metodos(&mut self, metodos: &[Metodo], nombre_clase: &str) {
-        for metodo in metodos {
-            if metodo.nombre == nombre_clase {
-                self.constructor = Some(metodo.clone());
-                continue;
-            }
-            self.metodos.insert(metodo.nombre.clone(), metodo.clone());
-        }
+        let filtrados = metodos.iter().filter(|m| m.nombre != nombre_clase);
+        let pares = filtrados.map(|m| (m.nombre.clone(), m.clone()));
+        self.metodos.extend(pares);
+        let ctor = metodos.iter().find(|m| m.nombre == nombre_clase).cloned();
+        self.constructor = ctor;
     }
 
     pub fn crear_instancia(&self) -> Instancia {

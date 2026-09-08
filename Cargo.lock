@@ -1255,6 +1255,8 @@ dependencies = [
  "rustyline",
  "tokio",
  "umbral-interpreter",
+ "umbral-lexer",
+ "umbral-parser",
 ]
 
 [[package]]
@@ -1263,6 +1265,8 @@ version = "1.4.0"
 dependencies = [
  "tokio",
  "umbral-interpreter",
+ "umbral-lexer",
+ "umbral-parser",
 ]
 
 [[package]]

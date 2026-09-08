@@ -10,6 +10,7 @@ pub mod interfaces;
 pub mod objetos;
 pub mod sentencias;
 pub mod tokens;
+pub mod umdocs;
 pub mod utilidades;
 pub mod variables;
 
@@ -108,15 +109,15 @@ impl Parser {
         Ok(Programa { sentencias })
     }
 
-    fn esta_fin(&self) -> bool {
+    pub fn esta_fin(&self) -> bool {
         self.posicion >= self.tokens.len()
     }
 
-    fn peekear(&self) -> Option<&LexToken> {
+    pub fn peekear(&self) -> Option<&LexToken> {
         self.tokens.get(self.posicion)
     }
 
-    fn avanzar(&mut self) -> Option<&LexToken> {
+    pub fn avanzar(&mut self) -> Option<&LexToken> {
         if self.esta_fin() {
             None
         } else {
@@ -130,21 +131,31 @@ impl Parser {
     where
         F: FnOnce(&LexToken) -> bool,
     {
-        if let Some(t) = self.peekear() {
-            if pred(t) {
-                self.avanzar();
-                return true;
-            }
+        let Some(t) = self.peekear() else {
+            return false;
+        };
+        if !pred(t) {
+            return false;
         }
-        false
+        self.avanzar();
+        true
+    }
+
+    fn resolver_doc(a: Option<UmDoc>, b: Option<UmDoc>) -> Option<UmDoc> {
+        if b.is_some() {
+            return b;
+        }
+        a
     }
 
     fn parsear_sentencia(&mut self) -> Result<Sentencia, ParseError> {
+        let doc_previo = umdocs::consumir_doc(self);
         let exportado = self.coincidir(|t| matches!(t, LexToken::Out));
-
-        if let Some(res) = self.intentar_parsear_declaraciones(exportado) {
+        let doc = Self::resolver_doc(doc_previo, umdocs::consumir_doc(self));
+        if let Some(res) = self.intentar_parsear_declaraciones(exportado, doc.clone()) {
             return res;
         }
+        let _ = doc;
 
         if exportado {
             let nombre = self.parsear_identificador_consumir()?;
@@ -166,6 +177,7 @@ impl Parser {
     fn intentar_parsear_declaraciones(
         &mut self,
         exportado: bool,
+        doc: Option<UmDoc>,
     ) -> Option<Result<Sentencia, ParseError>> {
         if self.coincidir(|t| matches!(t, LexToken::Equip))
             || self.coincidir(|t| matches!(t, LexToken::Origin))
@@ -183,15 +195,15 @@ impl Parser {
         }
 
         if let Some(LexToken::DeclararFuncion) = self.peekear() {
-            return Some(funciones::parsear_declaracion_funcion(self, exportado));
+            return Some(funciones::parsear_declaracion_funcion(self, exportado, doc));
         }
 
         if let Some(LexToken::Asy) = self.peekear() {
-            return Some(funciones::parsear_declaracion_funcion(self, exportado));
+            return Some(funciones::parsear_declaracion_funcion(self, exportado, doc));
         }
 
         if self.coincidir(|t| matches!(t, LexToken::DeclararClase)) {
-            return Some(clases::parsear_declaracion_clase(self, exportado));
+            return Some(clases::parsear_declaracion_clase_con_doc(self, exportado, doc));
         }
 
         if self.coincidir(|t| matches!(t, LexToken::DeclararInterfaz)) {

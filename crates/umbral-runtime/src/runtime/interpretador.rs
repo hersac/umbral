@@ -236,7 +236,13 @@ impl Interpretador {
 
     fn registrar_funcion(&mut self, func: DeclaracionFuncion) -> Option<Valor> {
         let parametros: Vec<String> = func.parametros.iter().map(|p| p.nombre.clone()).collect();
-        let funcion = Funcion::nueva(func.nombre.clone(), parametros, func.cuerpo, func.es_async);
+        let funcion = Funcion::con_doc(
+            func.nombre.clone(),
+            parametros,
+            func.cuerpo,
+            func.es_async,
+            func.doc.clone(),
+        );
         self.entorno_actual
             .definir_variable(func.nombre.clone(), Valor::Funcion(funcion));
         if func.exportado {
@@ -1200,7 +1206,7 @@ impl Interpretador {
     }
 
     fn es_funcion_builtin(&self, nombre: &str) -> bool {
-        nombre == "tprint"
+        nombre == "tprint" || nombre == "help" || nombre == "doc"
     }
 
     async fn ejecutar_funcion_builtin(&mut self, nombre: &str, argumentos: Vec<Valor>) -> Valor {
@@ -1211,8 +1217,129 @@ impl Interpretador {
                 }
                 Valor::Nulo
             }
+            "help" | "doc" => {
+                let texto = self.texto_ayuda_de_valores(&argumentos);
+                println!("{}", texto);
+                Valor::Texto(texto)
+            }
             _ => Valor::Nulo,
         }
+    }
+
+    fn texto_ayuda_de_valores(&self, valores: &[Valor]) -> String {
+        if valores.is_empty() {
+            return self.listar_ayuda_disponible();
+        }
+        valores
+            .iter()
+            .map(|v| self.texto_ayuda_de_valor(v))
+            .collect::<Vec<String>>()
+            .join("\n")
+    }
+
+    fn texto_ayuda_de_valor(&self, valor: &Valor) -> String {
+        match valor {
+            Valor::Funcion(f) => f.texto_ayuda(),
+            Valor::FuncionNativa(n, _) => format!("{} (función nativa, sin umdocs)", n),
+            Valor::Clase(nombre) => self
+                .gestor_clases
+                .obtener_clase(nombre)
+                .map(|c| c.texto_ayuda())
+                .unwrap_or_else(|| format!("Clase '{}' no encontrada", nombre)),
+            Valor::Objeto(inst) => self
+                .gestor_clases
+                .obtener_clase(&inst.clase)
+                .map(|c| c.texto_ayuda())
+                .unwrap_or_else(|| format!("{} (sin documentación umdocs)", inst.clase)),
+            Valor::Texto(nombre) => self.texto_ayuda_por_nombre(nombre),
+            Valor::Diccionario(mapa) if http::es_respuesta_pulse(mapa) => {
+                "Respuesta pulse (sin umdocs)".to_string()
+            }
+            otro => format!("{} (sin documentación umdocs)", otro.nombre_tipo()),
+        }
+    }
+
+    fn texto_ayuda_por_nombre(&self, nombre: &str) -> String {
+        let clave = nombre.trim();
+        if let Some(texto) = self.buscar_en_entorno(clave) {
+            return texto;
+        }
+        if let Some(texto) = self.buscar_en_clases(clave) {
+            return texto;
+        }
+        if let Some(texto) = self.buscar_metodo_compuesto(clave) {
+            return texto;
+        }
+        format!("'{}' no encontrado (sin documentación umdocs)", clave)
+    }
+
+    fn buscar_en_entorno(&self, clave: &str) -> Option<String> {
+        let valor = self.entorno_actual.obtener(clave)?;
+        Some(self.texto_ayuda_de_valor(&valor))
+    }
+
+    fn buscar_en_clases(&self, clave: &str) -> Option<String> {
+        let clase = self.gestor_clases.obtener_clase(clave)?;
+        Some(clase.texto_ayuda())
+    }
+
+    fn buscar_metodo_compuesto(&self, clave: &str) -> Option<String> {
+        let (clase_n, metodo_n) = clave.split_once('.')?;
+        let clase = self.gestor_clases.obtener_clase(clase_n.trim())?;
+        let metodo = clase.obtener_metodo(metodo_n.trim());
+        if let Some(m) = metodo {
+            return Some(texto_ayuda_metodo(clase_n.trim(), m));
+        }
+        Some(format!(
+            "Método '{}' no encontrado en clase '{}'",
+            metodo_n.trim(),
+            clase_n.trim()
+        ))
+    }
+
+    fn listar_ayuda_disponible(&self) -> String {
+        let nombres = self.nombres_ordenados();
+        let docs = self.funciones_documentadas(&nombres);
+        self.formatear_lista_ayuda(docs)
+    }
+
+    fn nombres_ordenados(&self) -> Vec<String> {
+        let mut lista: Vec<String> = self
+            .entorno_actual
+            .variables
+            .keys()
+            .chain(self.entorno_actual.constantes.keys())
+            .cloned()
+            .collect();
+        lista.sort();
+        lista.dedup();
+        lista
+    }
+
+    fn funciones_documentadas(&self, nombres: &[String]) -> Vec<String> {
+        nombres
+            .iter()
+            .filter(|n| self.es_funcion_documentada(n))
+            .cloned()
+            .collect()
+    }
+
+    fn es_funcion_documentada(&self, nombre: &str) -> bool {
+        let Some(v) = self.entorno_actual.obtener(nombre) else {
+            return false;
+        };
+        matches!(v, Valor::Funcion(f) if f.doc.is_some())
+    }
+
+    fn formatear_lista_ayuda(&self, docs: Vec<String>) -> String {
+        let mut lineas = vec!["Ayuda umdocs. Uso: help(funcion) | doc(funcion) | Std.doc(funcion)".to_string()];
+        if docs.is_empty() {
+            lineas.push("  (no hay funciones con umdocs en este ámbito)".to_string());
+            return lineas.join("\n");
+        }
+        lineas.push("  Funciones documentadas:".to_string());
+        lineas.extend(docs.iter().map(|n| format!("    - {}", n)));
+        lineas.join("\n")
     }
 
     async fn ejecutar_funcion_usuario(&mut self, nombre: &str, argumentos: Vec<Valor>) -> Valor {
@@ -1421,11 +1548,12 @@ impl Interpretador {
 
         let parametros: Vec<String> = metodo.parametros.iter().map(|p| p.nombre.clone()).collect();
 
-        let funcion = Funcion::nueva(
+        let funcion = Funcion::con_doc(
             propiedad.to_string(),
             parametros,
             metodo.cuerpo.clone(),
             metodo.es_async,
+            metodo.doc.clone(),
         );
 
         Some(Valor::Funcion(funcion))
@@ -1454,11 +1582,35 @@ impl Interpretador {
     async fn evaluar_acceso_propiedad(&mut self, objeto: Expresion, propiedad: &str) -> Valor {
         let obj_valor = self.evaluar_expresion(objeto.clone()).await;
 
+        if es_propiedad_doc(propiedad) {
+            if let Some(texto) = self.texto_doc_propiedad(&obj_valor) {
+                return Valor::Texto(texto);
+            }
+        }
+
         match obj_valor {
             Valor::Objeto(ref instancia) => self.acceder_propiedad_objeto(instancia, propiedad),
             Valor::Diccionario(mapa) => self.acceder_clave_diccionario(mapa, propiedad),
             Valor::Lista(ref items) if propiedad == "length" => Valor::Entero(items.len() as i64),
             _ => self.error_acceso_propiedad_invalido(propiedad, &obj_valor),
+        }
+    }
+
+    fn texto_doc_propiedad(&self, valor: &Valor) -> Option<String> {
+        match valor {
+            Valor::Funcion(f) => Some(f.texto_ayuda()),
+            Valor::FuncionNativa(n, _) => {
+                Some(format!("{} (función nativa, sin umdocs)", n))
+            }
+            Valor::Clase(nombre) => self
+                .gestor_clases
+                .obtener_clase(nombre)
+                .map(|c| c.texto_ayuda()),
+            Valor::Objeto(inst) => self
+                .gestor_clases
+                .obtener_clase(&inst.clase)
+                .map(|c| c.texto_ayuda()),
+            _ => None,
         }
     }
 
@@ -2395,16 +2547,35 @@ impl Interpretador {
 
     fn navegar_propiedad(&self, valor: Valor, propiedad: &str) -> Valor {
         match valor {
-            Valor::Objeto(ref inst) => {
-                if let Ok(props) = inst.propiedades.lock() {
-                    props.get(propiedad).cloned().unwrap_or(Valor::Nulo)
-                } else {
-                    Valor::Nulo
-                }
-            }
+            Valor::Objeto(ref inst) => propiedad_de_objeto(inst, propiedad),
             Valor::Diccionario(ref mapa) => mapa.get(propiedad).cloned().unwrap_or(Valor::Nulo),
             Valor::Lista(ref items) if propiedad == "length" => Valor::Entero(items.len() as i64),
             _ => Valor::Nulo,
         }
     }
+}
+
+fn propiedad_de_objeto(inst: &crate::runtime::valores::Instancia, propiedad: &str) -> Valor {
+    let Ok(props) = inst.propiedades.lock() else {
+        return Valor::Nulo;
+    };
+    props.get(propiedad).cloned().unwrap_or(Valor::Nulo)
+}
+
+fn es_propiedad_doc(nombre: &str) -> bool {
+    nombre == "doc" || nombre == "help"
+}
+
+fn texto_ayuda_metodo(nombre_clase: &str, metodo: &umbral_parser::ast::Metodo) -> String {
+    let firma = firma_metodo(metodo);
+    let nombre = format!("{}.{}", nombre_clase, metodo.nombre);
+    match &metodo.doc {
+        Some(d) => d.formatear(&nombre, &firma),
+        None => format!("{} {}\n  (sin documentación umdocs)", nombre, firma),
+    }
+}
+
+fn firma_metodo(metodo: &umbral_parser::ast::Metodo) -> String {
+    let params: Vec<String> = metodo.parametros.iter().map(|p| p.nombre.clone()).collect();
+    format!("({})", params.join(", "))
 }

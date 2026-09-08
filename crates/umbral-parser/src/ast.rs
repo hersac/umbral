@@ -76,6 +76,50 @@ pub struct Parametro {
 }
 
 #[derive(Debug, Clone)]
+pub struct UmDocParam {
+    pub nombre: String,
+    pub tipo: Option<String>,
+    pub descripcion: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct UmDocReturn {
+    pub tipo: Option<String>,
+    pub descripcion: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct UmDoc {
+    pub descripcion: String,
+    pub params: Vec<UmDocParam>,
+    pub returns: Option<UmDocReturn>,
+    pub crudo: String,
+}
+
+impl UmDoc {
+    pub fn formatear(&self, nombre: &str, firma: &str) -> String {
+        let mut out = String::new();
+        out.push_str(&format!("{} {}\n", nombre, firma));
+        if !self.descripcion.is_empty() {
+            out.push_str(&format!("  {}\n", self.descripcion));
+        }
+        for p in &self.params {
+            match &p.tipo {
+                Some(t) => out.push_str(&format!("  @param [{}] {} - {}\n", t, p.nombre, p.descripcion)),
+                None => out.push_str(&format!("  @param {} - {}\n", p.nombre, p.descripcion)),
+            }
+        }
+        if let Some(r) = &self.returns {
+            match &r.tipo {
+                Some(t) => out.push_str(&format!("  @returns [{}] {}\n", t, r.descripcion)),
+                None => out.push_str(&format!("  @returns {}\n", r.descripcion)),
+            }
+        }
+        out
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct DeclaracionFuncion {
     pub nombre: String,
     pub parametros: Vec<Parametro>,
@@ -83,6 +127,7 @@ pub struct DeclaracionFuncion {
     pub cuerpo: Vec<Sentencia>,
     pub exportado: bool,
     pub es_async: bool,
+    pub doc: Option<UmDoc>,
 }
 
 #[derive(Debug, Clone)]
@@ -105,6 +150,7 @@ pub struct DeclaracionClase {
     pub propiedades: Vec<Propiedad>,
     pub metodos: Vec<Metodo>,
     pub exportado: bool,
+    pub doc: Option<UmDoc>,
 }
 
 #[derive(Debug, Clone)]
@@ -123,6 +169,7 @@ pub struct Metodo {
     pub cuerpo: Vec<Sentencia>,
     pub publico: bool,
     pub es_async: bool,
+    pub doc: Option<UmDoc>,
 }
 
 #[derive(Debug, Clone)]

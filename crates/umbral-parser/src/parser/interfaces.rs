@@ -51,6 +51,7 @@ pub fn parsear_declaracion_interfaz(
             cuerpo: Vec::new(),
             publico: true,
             es_async: false,
+            doc: None,
         });
     }
 
