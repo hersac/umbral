@@ -17,7 +17,7 @@ c: promesa_saludo = esperar_y_saludar("Heri");
 tprint("   (El hilo principal continúa ejecutándose mientras la promesa se resuelve)");
 
 tprint("   Esperando el resultado...");
-c: saludo = awa promesa_saludo;
+c: saludo = awa: promesa_saludo;
 tprint("   Resultado recibido: " + saludo);
 
 !! 2. Clases con métodos asíncronos
@@ -43,7 +43,7 @@ c: promesa_datos = procesador.procesar("Archivo.txt");
 
 tprint("   Haciendo otra cosa mientras se procesa...");
 tprint("   Esperando resultado del procesador...");
-c: resultado_datos = awa promesa_datos;
+c: resultado_datos = awa: promesa_datos;
 tprint("   Resultado final: " + resultado_datos);
 
 tprint("\n--- Fin del Ejemplo ---");

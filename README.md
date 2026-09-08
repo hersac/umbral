@@ -596,10 +596,10 @@ tprint("Respuesta: &respuesta");
 
 ### Cliente HTTP (`pulse`)
 
-Umbral incluye la función global y asíncrona `pulse` para solicitudes HTTP. Retorna una `Promesa`, por lo que se resuelve con `awa`:
+Umbral incluye la función global y asíncrona `pulse` para solicitudes HTTP. Retorna una `Promesa`, por lo que se resuelve con `awa:`:
 
 ```umbral
-c: resp = awa pulse("https://api.ejemplo.com/datos", "GET");
+c: resp = awa: pulse("https://api.ejemplo.com/datos", "GET");
 tprint(resp.status);   !! 200
 tprint(resp.ok);       !! true si el estado es 2xx
 ```
@@ -627,8 +627,8 @@ c: opciones = [
     "timeout" => 10000
 ];
 
-c: r1 = awa pulse("https://api.ejemplo.com/posts", "POST", cuerpo, opciones);
-c: r2 = awa pulse("https://api.ejemplo.com/posts", "GET", opciones);
+c: r1 = awa: pulse("https://api.ejemplo.com/posts", "POST", cuerpo, opciones);
+c: r2 = awa: pulse("https://api.ejemplo.com/posts", "GET", opciones);
 ```
 
 #### Conversión automática del cuerpo
@@ -637,7 +637,7 @@ No necesitas convertir el cuerpo a JSON: si pasas un diccionario o lista en sint
 
 ```umbral
 !! Se envía como {"title":"prueba","userId":1} con Content-Type JSON automático
-c: creado = awa pulse("https://api.ejemplo.com/posts", "POST", cuerpo);
+c: creado = awa: pulse("https://api.ejemplo.com/posts", "POST", cuerpo);
 ```
 
 `timeout` se expresa en milisegundos (también `timeout_ms`; `timeout_secs` en segundos). `query`/`params` agregan parámetros a la URL y `bearer` genera el header `Authorization: Bearer <token>`.

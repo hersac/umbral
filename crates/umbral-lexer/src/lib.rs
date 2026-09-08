@@ -376,6 +376,14 @@ pub fn analizar(texto: &str) -> Vec<Token> {
                         lista.push(Token::DeclararClase);
                         continue;
                     }
+                    "asy" => {
+                        lista.push(Token::Asy);
+                        continue;
+                    }
+                    "awa" => {
+                        lista.push(Token::Awa);
+                        continue;
+                    }
                     _ => {
                         lista.push(Token::Identificador(palabra.clone()));
                         lista.push(Token::DosPuntos);
@@ -436,11 +444,6 @@ pub fn analizar(texto: &str) -> Vec<Token> {
 
             if palabra == "asy" {
                 lista.push(Token::Asy);
-                continue;
-            }
-
-            if palabra == "awa" {
-                lista.push(Token::Awa);
                 continue;
             }
 

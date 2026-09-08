@@ -1,16 +1,16 @@
 !! Ejemplo 20: pulse() - Cliente HTTP nativo
 !! Verbos: GET, POST, PUT, DELETE, PATCH, OPTIONS (OPTION como alias)
-!! Uso: c: resp = awa pulse(url, metodo, [cuerpo], [opciones]);
+!! Uso: c: resp = awa: pulse(url, metodo, [cuerpo], [opciones]);
 !!
 !! Conversiones de la respuesta:
 !!   resp.parse()  !! entrada: JSON {"a": 1} -> sintaxis Umbral ["a" => 1]
 !!   resp.json()   !! salida: sintaxis Umbral -> texto JSON '{"a":1}'
 !!   resp.text()   !! crudo: cuerpo tal cual llego
 
-!! 1. GET simple: pulse() retorna una Promesa, se resuelve con awa
+!! 1. GET simple: pulse() retorna una Promesa, se resuelve con awa:
 tprint("--- 1. GET simple ---");
 c: promesa_get = pulse("https://jsonplaceholder.typicode.com/todos/1", "GET");
-c: resp = awa promesa_get;
+c: resp = awa: promesa_get;
 tprint(resp.status);
 tprint(resp.ok);
 c: datos = resp.parse();
@@ -31,7 +31,7 @@ c: opciones = [
     ],
     "timeout" => 10000
 ];
-c: resp2 = awa pulse("https://jsonplaceholder.typicode.com/posts", "POST", cuerpo, opciones);
+c: resp2 = awa: pulse("https://jsonplaceholder.typicode.com/posts", "POST", cuerpo, opciones);
 tprint(resp2.status);
 tprint(resp2.ok);
 tprint(resp2.parse());
@@ -44,7 +44,7 @@ c: ops = [
     ],
     "timeout" => 10000
 ];
-c: resp3 = awa pulse("https://jsonplaceholder.typicode.com/posts", "GET", ops);
+c: resp3 = awa: pulse("https://jsonplaceholder.typicode.com/posts", "GET", ops);
 tprint(resp3.status);
 tprint(resp3.ok);
 
@@ -55,13 +55,13 @@ c: cambio = [
     "title" => "titulo actualizado",
     "userId" => 1
 ];
-c: resp4 = awa pulse("https://jsonplaceholder.typicode.com/posts/1", "PUT", cambio);
+c: resp4 = awa: pulse("https://jsonplaceholder.typicode.com/posts/1", "PUT", cambio);
 tprint(resp4.status);
 tprint(resp4.parse());
 
 !! 5. DELETE solo necesita url y metodo
 tprint("--- 5. DELETE ---");
-c: resp5 = awa pulse("https://jsonplaceholder.typicode.com/posts/1", "DELETE");
+c: resp5 = awa: pulse("https://jsonplaceholder.typicode.com/posts/1", "DELETE");
 tprint(resp5.status);
 tprint(resp5.ok);
 
