@@ -40,6 +40,8 @@ Lenguaje de programación de propósito general con sintaxis expresiva y moderna
 - 🔧 **Gestor de paquetes UMP** - Instalación automática de librerías
 - 📖 **Biblioteca estándar** - Funciones esenciales para strings, números, archivos y colecciones
 - 🎨 **Arrays y diccionarios** - Estructuras de datos con métodos integrados
+- 📦 **Parámetros rest (`...args`)** - Funciones con argumentos indefinidos, con tipo por elemento o sin tipo
+- 🧬 **Genéricos (`<T>`)** - Interfaces, clases y funciones parametrizadas por tipo
 - ⚡ **Operadores completos** - Aritméticos, lógicos, comparación, incremento/decremento y spread
 - 🌐 **Cliente HTTP nativo** - Función global `pulse` con todos los verbos, conversión automática a JSON y respuesta con `.parse()` / `.json()` / `.text()`
 
@@ -345,6 +347,44 @@ v: resultado = sumar(10, 20);
 tprint(factorial(5));
 ```
 
+#### Parámetros rest (`...args`)
+
+Una función puede recibir un número indefinido de argumentos con `...nombre`.
+Dentro del cuerpo, ese parámetro es un Array. Si lleva tipo (`...args->Int`),
+cada elemento debe ser de ese tipo; sin tipo acepta valores de cualquier tipo.
+El rest siempre debe ser el último parámetro.
+
+```umbral
+f: prueba(...args->Int) {
+    tprint(args);
+    tprint(args.length);
+}
+
+f: otraPrueba(...args) {
+    tprint(args);
+}
+
+f: mixta(primero->Str, ...resto) {
+    tprint(primero);
+    tprint(resto);
+}
+
+c: dato1->Int = 10;
+c: dato2->Int = 20;
+c: dato3->Int = 15;
+c: dato4->Str = 'Nombre';
+
+prueba(dato1, dato2, dato3);      !! [10, 20, 15]
+otraPrueba(dato1, dato3, dato4);  !! [10, 15, Nombre] (mixto, sin error)
+mixta('hola', 1, 2, 3);           !! hola + [1, 2, 3]
+
+!! Spread en la llamada: &lista expande sus elementos
+v: lista = {100, 200};
+prueba(&lista);                   !! equivale a prueba(100, 200)
+```
+
+> Ver ejemplo completo en [`ejemplos/22_genericos_y_rest.um`](./ejemplos/22_genericos_y_rest.um).
+
 ### Documentación de métodos (umdocs)
 
 Umbral usa **umdocs**, al estilo JSDoc/Javadoc/PHPDoc, para documentar funciones, métodos y clases. El bloque abre con `!!$` (o `!! $`) y cierra con `$!!`. Cada línea puede llevar el prefijo `$`.
@@ -506,6 +546,66 @@ cs: Rectangulo ext: Forma imp: Dibujable {
     !! Implementa métodos de la interfaz Dibujable
 }
 ```
+
+### Genéricos
+
+Interfaces, clases y funciones aceptan parámetros de tipo `<T>` que se fijan
+al implementar, heredar o anotar (`imp: IPrueba<Prueba>`, `v: caja->Caja<Int>`).
+Un `T` sin fijar se comporta como `Any` (borrado de tipos en ejecución).
+Al implementar una interfaz genérica se valida la aridad y que las firmas
+coincidan tras sustituir `T` por el tipo concreto.
+
+```umbral
+!! Interfaz genérica con propiedad y métodos que usan T
+in: IPrueba<T> {
+    pu: meta->IMeta;
+    pu: data->T;
+    f: obtenerMeta()->IMeta;
+    f: obtenerData()->T;
+}
+
+!! Implementación que fija T = Prueba
+cs: PruebaBase imp: IPrueba<Prueba> {
+    pr: meta->IMeta;
+    pr: data->Prueba;
+    
+    pu f: PruebaBase(meta->IMeta, data->Prueba) {
+        th.meta = meta;
+        th.data = data;
+    }
+    
+    pu f: obtenerMeta()->IMeta {
+        r: (th.meta);
+    }
+    
+    pu f: obtenerData()->Prueba {
+        r: (th.data);
+    }
+}
+
+!! Clase genérica reutilizable
+cs: Caja<T> {
+    pr: valor->T;
+    
+    pu f: Caja(valor->T) {
+        th.valor = valor;
+    }
+    
+    pu f: obtener()->T {
+        r: (th.valor);
+    }
+}
+
+!! Función genérica
+f: id<T>(x->T)->T {
+    r: (x);
+}
+
+v: caja->Caja<Int> = n: Caja(10);
+tprint(caja.obtener());  !! 10
+```
+
+> Ver ejemplo completo en [`ejemplos/22_genericos_y_rest.um`](./ejemplos/22_genericos_y_rest.um).
 
 ### Enumeraciones (Enums)
 
@@ -902,9 +1002,15 @@ declaracion_const ::= 'c:' identificador ('->' tipo)? '=' expresion ';'
 
 asignacion ::= identificador '=' expresion ';'
 
-definicion_func ::= 'f:' identificador '(' parametros? ')' ('->' tipo)? bloque
+definicion_func ::= 'f:' identificador ('<' params_tipo '>')? '(' parametros? ')' ('->' tipo)? bloque
 
-definicion_clase ::= 'cs:' identificador '{' miembro_clase* '}'
+parametros ::= parametro (',' parametro)*
+parametro ::= ('...')? identificador ('->' tipo)?
+params_tipo ::= identificador (',' identificador)*
+
+tipo ::= ('[]')* nombre_base ('<' tipo (',' tipo)* '>')?
+
+definicion_clase ::= 'cs:' identificador ('<' params_tipo '>')? '{' miembro_clase* '}'
 
 control_flujo ::= if_stmt | while_stmt | for_stmt | switch_stmt | try_stmt
 

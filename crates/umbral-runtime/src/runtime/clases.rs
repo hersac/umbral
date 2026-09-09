@@ -6,7 +6,9 @@ use umbral_parser::ast::{DeclaracionClase, Metodo};
 #[derive(Debug, Clone)]
 pub struct Clase {
     pub nombre: String,
+    pub parametros_tipo: Vec<String>,
     pub propiedades: HashMap<String, Valor>,
+    pub tipos_propiedades: HashMap<String, String>,
     pub metodos: HashMap<String, Metodo>,
     pub constructor: Option<Metodo>,
     pub doc: Option<umbral_parser::ast::UmDoc>,
@@ -16,7 +18,9 @@ impl Clase {
     pub fn nueva(nombre: &str) -> Self {
         Self {
             nombre: nombre.to_string(),
+            parametros_tipo: Vec::new(),
             propiedades: HashMap::new(),
+            tipos_propiedades: HashMap::new(),
             metodos: HashMap::new(),
             constructor: None,
             doc: None,
@@ -26,6 +30,7 @@ impl Clase {
     pub fn desde_declaracion(decl: &DeclaracionClase) -> Self {
         let mut clase = Self::nueva(&decl.nombre);
         clase.doc = decl.doc.clone();
+        clase.parametros_tipo = decl.parametros_tipo.clone();
         clase.registrar_propiedades(&decl.propiedades);
         clase.registrar_metodos(&decl.metodos, &decl.nombre);
         clase
@@ -64,6 +69,12 @@ impl Clase {
     fn registrar_propiedades(&mut self, propiedades: &[umbral_parser::ast::Propiedad]) {
         let pares = propiedades.iter().map(|p| (p.nombre.clone(), Valor::Nulo));
         self.propiedades.extend(pares);
+        let tipos = propiedades.iter().filter_map(|p| {
+            p.tipo
+                .as_ref()
+                .map(|t| (p.nombre.clone(), t.nombre.clone()))
+        });
+        self.tipos_propiedades.extend(tipos);
     }
 
     fn registrar_metodos(&mut self, metodos: &[Metodo], nombre_clase: &str) {

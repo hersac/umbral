@@ -3,13 +3,22 @@ use crate::error::ParseError;
 use crate::parser::Parser;
 use umbral_lexer::Token as LexToken;
 
-fn parsear_extensiones(p: &mut Parser) -> Result<Vec<String>, ParseError> {
+fn parsear_referencia_tipo(p: &mut Parser) -> Result<Tipo, ParseError> {
+    let nombre = p.parsear_identificador_consumir()?;
+    if p.coincidir(|t| matches!(t, LexToken::Menor)) {
+        let args = p.parsear_argumentos_genericos()?;
+        return Ok(Tipo::generico(nombre, args));
+    }
+    Ok(Tipo::simple(nombre))
+}
+
+fn parsear_extensiones(p: &mut Parser) -> Result<Vec<Tipo>, ParseError> {
     let mut extensiones = Vec::new();
     if !p.coincidir(|t| matches!(t, LexToken::Extension)) {
         return Ok(extensiones);
     }
     loop {
-        extensiones.push(p.parsear_identificador_consumir()?);
+        extensiones.push(parsear_referencia_tipo(p)?);
         if !p.coincidir(|t| matches!(t, LexToken::Coma)) {
             break;
         }
@@ -17,13 +26,13 @@ fn parsear_extensiones(p: &mut Parser) -> Result<Vec<String>, ParseError> {
     Ok(extensiones)
 }
 
-fn parsear_implementaciones(p: &mut Parser) -> Result<Vec<String>, ParseError> {
+fn parsear_implementaciones(p: &mut Parser) -> Result<Vec<Tipo>, ParseError> {
     let mut implementaciones = Vec::new();
     if !p.coincidir(|t| matches!(t, LexToken::Implementacion)) {
         return Ok(implementaciones);
     }
     loop {
-        implementaciones.push(p.parsear_identificador_consumir()?);
+        implementaciones.push(parsear_referencia_tipo(p)?);
         if !p.coincidir(|t| matches!(t, LexToken::Coma)) {
             break;
         }
@@ -92,6 +101,7 @@ pub fn parsear_declaracion_clase_con_doc(
     doc: Option<UmDoc>,
 ) -> Result<Sentencia, ParseError> {
     let nombre = p.parsear_identificador_consumir()?;
+    let parametros_tipo = p.parsear_parametros_tipo()?;
     let extensiones = parsear_extensiones(p)?;
     let implementaciones = parsear_implementaciones(p)?;
     if !p.coincidir(|t| matches!(t, LexToken::LlaveIzq)) {
@@ -100,6 +110,7 @@ pub fn parsear_declaracion_clase_con_doc(
     let (propiedades, metodos) = recolectar_miembros(p)?;
     Ok(Sentencia::Clase(DeclaracionClase {
         nombre,
+        parametros_tipo,
         extensiones,
         implementaciones,
         propiedades,

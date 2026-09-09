@@ -11,9 +11,11 @@ pub fn crear_clase_error() -> Clase {
     // Constructor: Error(msg) { th.mensaje = msg; }
     let constructor = Metodo {
         nombre: "Error".to_string(),
+        parametros_tipo: Vec::new(),
         parametros: vec![Parametro {
             nombre: "msg".to_string(),
             tipo: None,
+            es_rest: false,
         }],
         tipo_retorno: None,
         cuerpo: vec![Sentencia::Asignacion(Asignacion {
@@ -30,7 +32,9 @@ pub fn crear_clase_error() -> Clase {
 
     Clase {
         nombre: "Error".to_string(),
+        parametros_tipo: Vec::new(),
         propiedades,
+        tipos_propiedades: HashMap::new(),
         metodos: HashMap::new(),
         constructor: Some(constructor),
         doc: None,

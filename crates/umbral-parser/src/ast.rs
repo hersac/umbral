@@ -67,12 +67,53 @@ pub struct LlamadoTPrint {
 #[derive(Debug, Clone)]
 pub struct Tipo {
     pub nombre: String,
+    pub base: String,
+    pub args: Vec<Tipo>,
+}
+
+impl Tipo {
+    pub fn simple(nombre: impl Into<String>) -> Self {
+        let nombre = nombre.into();
+        Self {
+            base: nombre.clone(),
+            nombre,
+            args: Vec::new(),
+        }
+    }
+
+    pub fn con_prefijo(prefijo: &str, base: impl Into<String>) -> Self {
+        let base = base.into();
+        let nombre = format!("{}{}", prefijo, base);
+        Self {
+            base: nombre.clone(),
+            nombre,
+            args: Vec::new(),
+        }
+    }
+
+    pub fn generico(base: impl Into<String>, args: Vec<Tipo>) -> Self {
+        let base = base.into();
+        let interior = args
+            .iter()
+            .map(|a| a.nombre.clone())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let nombre = format!("{}<{}>", base, interior);
+        Self { nombre, base, args }
+    }
+
+    pub fn es_parametro_tipo(&self) -> bool {
+        self.args.is_empty()
+            && self.base.len() == 1
+            && self.base.chars().next().is_some_and(|c| c.is_ascii_uppercase())
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct Parametro {
     pub nombre: String,
     pub tipo: Option<Tipo>,
+    pub es_rest: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -122,6 +163,7 @@ impl UmDoc {
 #[derive(Debug, Clone)]
 pub struct DeclaracionFuncion {
     pub nombre: String,
+    pub parametros_tipo: Vec<String>,
     pub parametros: Vec<Parametro>,
     pub tipo_retorno: Option<Tipo>,
     pub cuerpo: Vec<Sentencia>,
@@ -145,8 +187,9 @@ pub struct Clase {
 #[derive(Debug, Clone)]
 pub struct DeclaracionClase {
     pub nombre: String,
-    pub extensiones: Vec<String>,
-    pub implementaciones: Vec<String>,
+    pub parametros_tipo: Vec<String>,
+    pub extensiones: Vec<Tipo>,
+    pub implementaciones: Vec<Tipo>,
     pub propiedades: Vec<Propiedad>,
     pub metodos: Vec<Metodo>,
     pub exportado: bool,
@@ -164,6 +207,7 @@ pub struct Propiedad {
 #[derive(Debug, Clone)]
 pub struct Metodo {
     pub nombre: String,
+    pub parametros_tipo: Vec<String>,
     pub parametros: Vec<Parametro>,
     pub tipo_retorno: Option<Tipo>,
     pub cuerpo: Vec<Sentencia>,
@@ -175,7 +219,9 @@ pub struct Metodo {
 #[derive(Debug, Clone)]
 pub struct DeclaracionInterfaz {
     pub nombre: String,
+    pub parametros_tipo: Vec<String>,
     pub metodos: Vec<Metodo>,
+    pub propiedades: Vec<Propiedad>,
     pub exportado: bool,
 }
 

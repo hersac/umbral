@@ -1,0 +1,100 @@
+!! 22 - Genéricos y parámetros rest (...args)
+
+!! ============ PARÁMETROS REST ============
+!! ...args junta todos los argumentos sobrantes en un Array.
+!! Con tipo (->Int) cada elemento debe ser de ese tipo.
+!! Sin tipo acepta valores de cualquier tipo.
+
+f: prueba(...args->Int) {
+    tprint(args);
+    tprint(args.length);
+}
+
+f: otraPrueba(...args) {
+    tprint(args);
+}
+
+f: mixta(primero->Str, ...resto) {
+    tprint(primero);
+    tprint(resto);
+}
+
+c: dato1->Int = 10;
+c: dato2->Int = 20;
+c: dato3->Int = 15;
+c: dato4->Str = 'Nombre';
+
+prueba(dato1, dato2, dato3);
+otraPrueba(dato1, dato3, dato4);
+mixta('hola', 1, 2, 3);
+
+!! Spread en la llamada: &lista expande sus elementos
+v: lista = {100, 200};
+prueba(&lista);
+
+!! ============ GENÉRICOS ============
+!! in: Nombre<T> declara parámetros de tipo.
+!! imp: Nombre<Concreto> los fija al implementar.
+
+in: IPrueba<T> {
+    pu: meta->IMeta;
+    pu: data->T;
+    f: obtenerMeta()->IMeta;
+    f: obtenerData()->T;
+}
+
+cs: IMeta {
+    pr: limit->Int;
+    pr: page->Int;
+    pu f: IMeta(limit->Int, page->Int) {
+        th.limit = limit;
+        th.page = page;
+    }
+}
+
+cs: Prueba {
+    pr: valor->Int;
+    pu f: Prueba(valor->Int) {
+        th.valor = valor;
+    }
+}
+
+cs: PruebaBase imp: IPrueba<Prueba> {
+    pr: meta->IMeta;
+    pr: data->Prueba;
+    pu f: PruebaBase(meta->IMeta, data->Prueba) {
+        th.meta = meta;
+        th.data = data;
+    }
+    pu f: obtenerMeta()->IMeta {
+        r: (th.meta);
+    }
+    pu f: obtenerData()->Prueba {
+        r: (th.data);
+    }
+}
+
+!! Clase genérica reutilizable
+cs: Caja<T> {
+    pr: valor->T;
+    pu f: Caja(valor->T) {
+        th.valor = valor;
+    }
+    pu f: obtener()->T {
+        r: (th.valor);
+    }
+}
+
+!! Función genérica
+f: id<T>(x->T)->T {
+    r: (x);
+}
+
+v: meta = n: IMeta(10, 1);
+v: p = n: Prueba(42);
+v: base = n: PruebaBase(meta, p);
+tprint(base.obtenerData().valor);
+
+v: caja->Caja<Int> = n: Caja(10);
+tprint(caja.obtener());
+tprint(id('genérico'));

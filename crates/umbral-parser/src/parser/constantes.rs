@@ -39,9 +39,7 @@ fn obtener_tipo_explicito(parseador: &mut Parser) -> Result<Option<Tipo>, ParseE
 }
 
 fn crear_tipo(nombre: &str) -> Tipo {
-    Tipo {
-        nombre: nombre.to_string(),
-    }
+    Tipo::simple(nombre)
 }
 
 fn inferir_tipo(expresion: &Expresion) -> Tipo {

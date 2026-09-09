@@ -4,12 +4,17 @@ use crate::parser::Parser;
 use umbral_lexer::Token as LexToken;
 
 fn parsear_parametro(p: &mut Parser) -> Result<Parametro, ParseError> {
+    let es_rest = p.coincidir(|t| matches!(t, LexToken::PuntosSuspensivos));
     let nombre = p.parsear_identificador_consumir()?;
     let mut tipo = None;
     if p.coincidir(|t| matches!(t, LexToken::OperadorTipo)) {
         tipo = p.parsear_tipo()?;
     }
-    Ok(Parametro { nombre, tipo })
+    Ok(Parametro {
+        nombre,
+        tipo,
+        es_rest,
+    })
 }
 
 pub fn parsear_parametros(p: &mut Parser) -> Result<Vec<Parametro>, ParseError> {
@@ -19,8 +24,16 @@ pub fn parsear_parametros(p: &mut Parser) -> Result<Vec<Parametro>, ParseError> 
     }
     loop {
         lista.push(parsear_parametro(p)?);
+        if lista.last().is_some_and(|param: &Parametro| param.es_rest)
+            && !matches!(p.peekear(), Some(LexToken::ParentesisDer))
+        {
+            return Err(p.crear_error("El parámetro rest ('...') debe ser el último"));
+        }
         if !p.coincidir(|t| matches!(t, LexToken::Coma)) {
             break;
+        }
+        if lista.last().is_some_and(|param: &Parametro| param.es_rest) {
+            return Err(p.crear_error("El parámetro rest ('...') debe ser el último"));
         }
     }
     Ok(lista)
@@ -55,6 +68,7 @@ pub fn parsear_declaracion_funcion(
 ) -> Result<Sentencia, ParseError> {
     let es_async = validar_inicio_funcion(p)?;
     let nombre = p.parsear_identificador_consumir()?;
+    let parametros_tipo = p.parsear_parametros_tipo()?;
     let parametros = parsear_lista_parametros(p)?;
 
     let mut tipo_retorno = None;
@@ -64,6 +78,7 @@ pub fn parsear_declaracion_funcion(
 
     Ok(Sentencia::Funcion(DeclaracionFuncion {
         nombre,
+        parametros_tipo,
         parametros,
         tipo_retorno,
         cuerpo: p.parsear_bloque()?,
@@ -86,6 +101,7 @@ pub fn parsear_funcion_interna(
     }
 
     let nombre = p.parsear_identificador_consumir()?;
+    let parametros_tipo = p.parsear_parametros_tipo()?;
     let parametros = parsear_lista_parametros(p)?;
 
     let mut tipo_retorno = None;
@@ -97,6 +113,7 @@ pub fn parsear_funcion_interna(
 
     Ok(Metodo {
         nombre,
+        parametros_tipo,
         parametros,
         tipo_retorno,
         cuerpo: p.parsear_bloque()?,

@@ -83,6 +83,7 @@ pub enum Token {
     Not,
     Rango,
     RangoIncluyente,
+    PuntosSuspensivos,
     Spread,
     Verdadero,
     Falso,
@@ -718,6 +719,11 @@ fn manejar_punto(iter: &mut Peekable<Chars>, lista: &mut Vec<Token>) {
         return;
     }
     iter.next();
+    if iter.peek().copied() == Some('.') {
+        iter.next();
+        lista.push(Token::PuntosSuspensivos);
+        return;
+    }
     if iter.peek().copied() == Some('=') {
         iter.next();
         lista.push(Token::RangoIncluyente);
@@ -905,6 +911,7 @@ fn longitud_reservada(token: &Token) -> usize {
         OperadorTipo => 2,
         Rango => 2,
         RangoIncluyente => 3,
+        PuntosSuspensivos => 3,
         Spread => 1,
         Verdadero => 4,
         Falso => 5,

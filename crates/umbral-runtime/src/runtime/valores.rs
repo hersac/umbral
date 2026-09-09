@@ -77,17 +77,23 @@ impl Valor {
         if t == "Any" {
             return true;
         }
+        if es_parametro_tipo(t) {
+            return true;
+        }
+        let base = base_de_tipo(t);
         match self {
-            Valor::Entero(_) => t == "Int" || t == "Flo",
-            Valor::Flotante(_) => t == "Flo",
-            Valor::Booleano(_) => t == "Bool",
-            Valor::Texto(_) => t == "Str",
-            Valor::Lista(_) => t.starts_with("[]") || t == "Array",
-            Valor::Diccionario(_) => t == "Objeto" || t == "Obj",
-            Valor::Objeto(inst) => t == "Objeto" || t == "Obj" || t == inst.clase,
-            Valor::Funcion(_) | Valor::FuncionNativa(..) => t == "Func",
-            Valor::Promesa(_) => t == "Promesa",
-            Valor::Clase(_) => t == "Clase",
+            Valor::Entero(_) => base == "Int" || base == "Flo",
+            Valor::Flotante(_) => base == "Flo",
+            Valor::Booleano(_) => base == "Bool",
+            Valor::Texto(_) => base == "Str",
+            Valor::Lista(_) => base.starts_with("[]") || base == "Array",
+            Valor::Diccionario(_) => base == "Objeto" || base == "Obj",
+            Valor::Objeto(inst) => {
+                base == "Objeto" || base == "Obj" || base == inst.clase
+            }
+            Valor::Funcion(_) | Valor::FuncionNativa(..) => base == "Func",
+            Valor::Promesa(_) => base == "Promesa",
+            Valor::Clase(_) => base == "Clase",
             Valor::Nulo => true,
         }
     }
@@ -154,10 +160,38 @@ impl fmt::Display for Instancia {
     }
 }
 
+pub fn base_de_tipo(tipo: &str) -> &str {
+    match tipo.find('<') {
+        Some(idx) => tipo[..idx].trim(),
+        None => tipo.trim(),
+    }
+}
+
+pub fn es_parametro_tipo(tipo: &str) -> bool {
+    let t = tipo.trim();
+    t.len() == 1 && t.chars().next().is_some_and(|c| c.is_ascii_uppercase())
+}
+
+/// Documenta un parámetro rest para mostrarlo en firmas de ayuda.
+/// Con tipo produce `...nombre->Tipo`; sin tipo produce `...nombre`.
+pub fn formatear_rest(rest: &ParametroRest) -> String {
+    rest.tipo.as_ref().map_or_else(
+        || format!("...{}", rest.nombre),
+        |t| format!("...{}->{}", rest.nombre, t),
+    )
+}
+
+#[derive(Debug, Clone)]
+pub struct ParametroRest {
+    pub nombre: String,
+    pub tipo: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Funcion {
     pub nombre: String,
     pub parametros: Vec<String>,
+    pub parametro_rest: Option<ParametroRest>,
     pub cuerpo: Vec<umbral_parser::ast::Sentencia>,
     pub es_async: bool,
     pub doc: Option<umbral_parser::ast::UmDoc>,
@@ -173,6 +207,7 @@ impl Funcion {
         Self {
             nombre,
             parametros,
+            parametro_rest: None,
             cuerpo,
             es_async,
             doc: None,
@@ -189,6 +224,25 @@ impl Funcion {
         Self {
             nombre,
             parametros,
+            parametro_rest: None,
+            cuerpo,
+            es_async,
+            doc,
+        }
+    }
+
+    pub fn con_rest(
+        nombre: String,
+        parametros: Vec<String>,
+        parametro_rest: Option<ParametroRest>,
+        cuerpo: Vec<umbral_parser::ast::Sentencia>,
+        es_async: bool,
+        doc: Option<umbral_parser::ast::UmDoc>,
+    ) -> Self {
+        Self {
+            nombre,
+            parametros,
+            parametro_rest,
             cuerpo,
             es_async,
             doc,
@@ -196,7 +250,10 @@ impl Funcion {
     }
 
     pub fn firma(&self) -> String {
-        format!("({})", self.parametros.join(", "))
+        let fijos = self.parametros.iter().cloned();
+        let resto = self.parametro_rest.iter().map(formatear_rest);
+        let partes: Vec<String> = fijos.chain(resto).collect();
+        format!("({})", partes.join(", "))
     }
 
     pub fn texto_ayuda(&self) -> String {

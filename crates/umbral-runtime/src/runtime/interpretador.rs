@@ -234,11 +234,49 @@ impl Interpretador {
         Some(valor)
     }
 
+    fn dividir_parametros(
+        parametros: &[Parametro],
+    ) -> (Vec<String>, Option<crate::runtime::valores::ParametroRest>) {
+        let fijos = parametros
+            .iter()
+            .filter(|p| !p.es_rest)
+            .map(|p| p.nombre.clone())
+            .collect();
+        let resto = parametros
+            .iter()
+            .find(|p| p.es_rest)
+            .map(|p| crate::runtime::valores::ParametroRest {
+                nombre: p.nombre.clone(),
+                tipo: p.tipo.as_ref().map(|t| t.nombre.clone()),
+            });
+        (fijos, resto)
+    }
+
+    fn vincular_resto(&mut self, contexto: &str, parametros: &[Parametro], args: &[Valor]) {
+        let resto_def = parametros.iter().find(|p| p.es_rest);
+        let Some(def) = resto_def else { return };
+        let fijos = parametros.iter().filter(|p| !p.es_rest).count();
+        let resto: Vec<Valor> = args.iter().skip(fijos).cloned().collect();
+        def.tipo.as_ref().map(|t| {
+            crate::runtime::funciones::validar_elementos_rest(
+                contexto,
+                &crate::runtime::valores::ParametroRest {
+                    nombre: def.nombre.clone(),
+                    tipo: Some(t.nombre.clone()),
+                },
+                &resto,
+            )
+        });
+        self.entorno_actual
+            .definir_variable(def.nombre.clone(), Valor::Lista(resto));
+    }
+
     fn registrar_funcion(&mut self, func: DeclaracionFuncion) -> Option<Valor> {
-        let parametros: Vec<String> = func.parametros.iter().map(|p| p.nombre.clone()).collect();
-        let funcion = Funcion::con_doc(
+        let (parametros, parametro_rest) = Self::dividir_parametros(&func.parametros);
+        let funcion = Funcion::con_rest(
             func.nombre.clone(),
             parametros,
+            parametro_rest,
             func.cuerpo,
             func.es_async,
             func.doc.clone(),
@@ -302,23 +340,70 @@ impl Interpretador {
         None
     }
 
+    fn separar_prefijo(base: &str) -> (String, &str) {
+        let Some(resto) = base.strip_prefix("[]") else {
+            return (String::new(), base);
+        };
+        let (prefijo, nucleo) = Self::separar_prefijo(resto);
+        (format!("[]{}", prefijo), nucleo)
+    }
+
+    fn sustituir_tipo(tipo: &Tipo, mapa: &HashMap<String, String>) -> String {
+        let (prefijo, nucleo) = Self::separar_prefijo(&tipo.base);
+        if tipo.args.is_empty() {
+            let res = mapa.get(nucleo).map(|s| s.as_str()).unwrap_or(nucleo);
+            return format!("{}{}", prefijo, res);
+        }
+        let args = tipo
+            .args
+            .iter()
+            .map(|a| Self::sustituir_tipo(a, mapa))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let base_res = mapa.get(nucleo).map(|s| s.as_str()).unwrap_or(nucleo);
+        format!("{}{}<{}>", prefijo, base_res, args)
+    }
+
     fn validar_implementaciones(&self, clase: &DeclaracionClase) {
-        for nombre_interfaz in &clase.implementaciones {
-            self.validar_implementacion_interfaz(clase, nombre_interfaz);
+        for referencia in &clase.implementaciones {
+            self.validar_implementacion_interfaz(clase, referencia);
         }
     }
 
-    fn validar_implementacion_interfaz(&self, clase: &DeclaracionClase, nombre_interfaz: &str) {
-        let interfaz_opt = self.gestor_interfaces.obtener(nombre_interfaz);
+    fn validar_implementacion_interfaz(&self, clase: &DeclaracionClase, referencia: &Tipo) {
+        let base = crate::runtime::valores::base_de_tipo(&referencia.base);
+        let interfaz_opt = self.gestor_interfaces.obtener(base);
 
         if interfaz_opt.is_none() {
-            eprintln!("Error: La interfaz '{}' no está definida.", nombre_interfaz);
+            eprintln!("Error: La interfaz '{}' no está definida.", referencia.nombre);
             return;
         }
 
-        let interfaz = interfaz_opt.unwrap();
+        let interfaz = interfaz_opt.unwrap().clone();
+        if interfaz.parametros_tipo.len() != referencia.args.len() {
+            eprintln!(
+                "Error: La interfaz '{}' espera {} argumento(s) genérico(s) pero '{}' le pasa {} en la clase '{}'.",
+                interfaz.nombre,
+                interfaz.parametros_tipo.len(),
+                referencia.nombre,
+                referencia.args.len(),
+                clase.nombre
+            );
+            return;
+        }
+
+        let mapa: HashMap<String, String> = interfaz
+            .parametros_tipo
+            .iter()
+            .cloned()
+            .zip(referencia.args.iter().map(|t| t.nombre.clone()))
+            .collect();
+
         for (nombre_metodo, metodo_interfaz) in &interfaz.metodos {
-            self.validar_metodo_interfaz(clase, nombre_interfaz, nombre_metodo, metodo_interfaz);
+            self.validar_metodo_interfaz(clase, &referencia.nombre, nombre_metodo, metodo_interfaz, &mapa);
+        }
+        for (nombre_prop, prop_interfaz) in &interfaz.propiedades {
+            self.validar_propiedad_interfaz(clase, &referencia.nombre, nombre_prop, prop_interfaz, &mapa);
         }
     }
 
@@ -328,6 +413,7 @@ impl Interpretador {
         nombre_interfaz: &str,
         nombre_metodo: &str,
         metodo_interfaz: &Metodo,
+        mapa: &HashMap<String, String>,
     ) {
         let metodo_clase_opt = clase.metodos.iter().find(|m| m.nombre == *nombre_metodo);
 
@@ -340,11 +426,126 @@ impl Interpretador {
         }
 
         let metodo_clase = metodo_clase_opt.unwrap();
-        if metodo_clase.parametros.len() != metodo_interfaz.parametros.len() {
+        let arity_ok = Self::misma_aridad(metodo_interfaz, metodo_clase);
+        if !arity_ok {
             eprintln!(
                 "Error: La clase '{}' implementa incorrectamente el método '{}' de la interfaz '{}'. Diferente número de parámetros.",
                 clase.nombre, nombre_metodo, nombre_interfaz
             );
+            return;
+        }
+
+        self.validar_fijos(metodo_clase, metodo_interfaz, &clase.nombre, nombre_interfaz, nombre_metodo, mapa);
+        self.validar_retorno(metodo_clase, metodo_interfaz, &clase.nombre, nombre_interfaz, nombre_metodo, mapa);
+    }
+
+    fn misma_aridad(interfaz: &Metodo, clase: &Metodo) -> bool {
+        let fijos = |m: &Metodo| m.parametros.iter().filter(|p| !p.es_rest).count();
+        let tiene_rest = |m: &Metodo| m.parametros.iter().any(|p| p.es_rest);
+        fijos(interfaz) == fijos(clase) && tiene_rest(interfaz) == tiene_rest(clase)
+    }
+
+    fn validar_fijos(
+        &self,
+        clase: &Metodo,
+        interfaz: &Metodo,
+        nombre_clase: &str,
+        nombre_interfaz: &str,
+        nombre_metodo: &str,
+        mapa: &HashMap<String, String>,
+    ) {
+        for (pi, pc) in interfaz.parametros.iter().zip(clase.parametros.iter()) {
+            let nombre = Self::nombre_parametro(pi);
+            self.validar_tipo_parametro(
+                nombre_clase,
+                nombre_interfaz,
+                nombre_metodo,
+                &nombre,
+                pi.tipo.as_ref().map(|t| Self::sustituir_tipo(t, mapa)),
+                pc.tipo.as_ref().map(|t| t.nombre.clone()),
+            );
+        }
+    }
+
+    fn nombre_parametro(p: &Parametro) -> String {
+        match p.es_rest {
+            true => format!("...{}", p.nombre),
+            false => p.nombre.clone(),
+        }
+    }
+
+    fn validar_retorno(
+        &self,
+        clase: &Metodo,
+        interfaz: &Metodo,
+        nombre_clase: &str,
+        nombre_interfaz: &str,
+        nombre_metodo: &str,
+        mapa: &HashMap<String, String>,
+    ) {
+        let tipos = (
+            interfaz.tipo_retorno.as_ref().map(|t| Self::sustituir_tipo(t, mapa)),
+            clase.tipo_retorno.as_ref().map(|t| t.nombre.clone()),
+        );
+        let (Some(esperado), Some(recibido)) = tipos else {
+            return;
+        };
+        if esperado != recibido {
+            eprintln!(
+                "Error: La clase '{}' implementa incorrectamente el método '{}' de la interfaz '{}'. Retorno esperado '{}' pero se declaró '{}'.",
+                nombre_clase, nombre_metodo, nombre_interfaz, esperado, recibido
+            );
+        }
+    }
+
+    fn validar_tipo_parametro(
+        &self,
+        clase: &str,
+        interfaz: &str,
+        metodo: &str,
+        param: &str,
+        esperado: Option<String>,
+        recibido: Option<String>,
+    ) {
+        if let (Some(esperado), Some(recibido)) = (esperado, recibido) {
+            if esperado != recibido {
+                eprintln!(
+                    "Error: La clase '{}' implementa incorrectamente el parámetro '{}' del método '{}' de la interfaz '{}'. Se esperaba '{}' pero se declaró '{}'.",
+                    clase, param, metodo, interfaz, esperado, recibido
+                );
+            }
+        }
+    }
+
+    fn validar_propiedad_interfaz(
+        &self,
+        clase: &DeclaracionClase,
+        nombre_interfaz: &str,
+        nombre_prop: &str,
+        prop_interfaz: &umbral_parser::ast::Propiedad,
+        mapa: &HashMap<String, String>,
+    ) {
+        let prop_clase_opt = clase.propiedades.iter().find(|p| p.nombre == *nombre_prop);
+
+        if prop_clase_opt.is_none() {
+            eprintln!(
+                "Error: La clase '{}' no implementa la propiedad '{}' de la interfaz '{}'.",
+                clase.nombre, nombre_prop, nombre_interfaz
+            );
+            return;
+        }
+
+        let prop_clase = prop_clase_opt.unwrap();
+        let esperado =
+            prop_interfaz.tipo.as_ref().map(|t| Self::sustituir_tipo(t, mapa));
+        let recibido = prop_clase.tipo.as_ref().map(|t| t.nombre.clone());
+        if let (Some(esperado), Some(recibido)) = (esperado, recibido) {
+            if esperado != recibido {
+                eprintln!(
+                    "Error: La clase '{}' implementa incorrectamente la propiedad '{}' de la interfaz '{}'. Se esperaba '{}' pero se declaró '{}'.",
+                    clase.nombre, nombre_prop, nombre_interfaz, esperado, recibido
+                );
+            }
         }
     }
 
@@ -722,7 +923,7 @@ impl Interpretador {
     ) -> Valor {
         let mut args = Vec::new();
         for arg in argumentos {
-            args.push(self.evaluar_expresion(arg).await);
+            args.extend(self.expandir_argumento(arg).await);
         }
 
         if self.es_funcion_builtin(&nombre) {
@@ -1189,10 +1390,26 @@ impl Interpretador {
         None
     }
 
+    #[async_recursion]
+    async fn expandir_argumento(&mut self, arg: Expresion) -> Vec<Valor> {
+        match arg {
+            Expresion::Spread(expr) => self.expandir_spread(*expr).await,
+            otro => vec![self.evaluar_expresion(otro).await],
+        }
+    }
+
+    #[async_recursion]
+    async fn expandir_spread(&mut self, expr: Expresion) -> Vec<Valor> {
+        match self.evaluar_expresion(expr).await {
+            Valor::Lista(elementos) => elementos,
+            otro => vec![otro],
+        }
+    }
+
     async fn evaluar_llamado_funcion(&mut self, llamado: &LlamadoFuncion) -> Valor {
         let mut argumentos = Vec::new();
         for arg in &llamado.argumentos {
-            argumentos.push(self.evaluar_expresion(arg.clone()).await);
+            argumentos.extend(self.expandir_argumento(arg.clone()).await);
         }
 
         if self.es_funcion_builtin(&llamado.nombre) {
@@ -1403,7 +1620,7 @@ impl Interpretador {
     async fn evaluar_argumentos(&mut self, argumentos: Vec<Expresion>) -> Vec<Valor> {
         let mut valores = Vec::new();
         for arg in argumentos {
-            valores.push(self.evaluar_expresion(arg).await);
+            valores.extend(self.expandir_argumento(arg).await);
         }
         valores
     }
@@ -1501,12 +1718,12 @@ impl Interpretador {
         parametros: &[umbral_parser::ast::Parametro],
         args: &[Valor],
     ) {
-        for (i, param) in parametros.iter().enumerate() {
-            if let Some(valor) = args.get(i) {
-                self.entorno_actual
-                    .definir_variable(param.nombre.clone(), valor.clone());
-            }
+        let (fijos, _) = Self::dividir_parametros(parametros);
+        for (valor, nombre) in args.iter().zip(fijos.iter()) {
+            self.entorno_actual
+                .definir_variable(nombre.clone(), valor.clone());
         }
+        self.vincular_resto("constructor", parametros, args);
     }
 
     async fn ejecutar_cuerpo_constructor(
@@ -1546,11 +1763,12 @@ impl Interpretador {
         let clase = self.gestor_clases.obtener_clase(&instancia.clase)?;
         let metodo = clase.obtener_metodo(propiedad)?;
 
-        let parametros: Vec<String> = metodo.parametros.iter().map(|p| p.nombre.clone()).collect();
+        let (parametros, parametro_rest) = Self::dividir_parametros(&metodo.parametros);
 
-        let funcion = Funcion::con_doc(
+        let funcion = Funcion::con_rest(
             propiedad.to_string(),
             parametros,
+            parametro_rest,
             metodo.cuerpo.clone(),
             metodo.es_async,
             metodo.doc.clone(),
@@ -1691,10 +1909,7 @@ impl Interpretador {
             }
 
             if let Some(funcion_val) = mapa.get(metodo) {
-                let mut args = Vec::new();
-                for arg in argumentos {
-                    args.push(self.evaluar_expresion(arg).await);
-                }
+                let args = self.evaluar_argumentos(argumentos).await;
 
                 return match funcion_val {
                     Valor::FuncionNativa(_, native_fn) => native_fn(args),
@@ -1818,12 +2033,12 @@ impl Interpretador {
         self.entorno_actual
             .definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
 
-        for (i, param) in parametros.iter().enumerate() {
-            if let Some(valor) = args.get(i) {
-                self.entorno_actual
-                    .definir_variable(param.nombre.clone(), valor.clone());
-            }
+        let (fijos, _) = Self::dividir_parametros(parametros);
+        for (valor, nombre) in args.iter().zip(fijos.iter()) {
+            self.entorno_actual
+                .definir_variable(nombre.clone(), valor.clone());
         }
+        self.vincular_resto("método", parametros, args);
         self.valor_retorno = None;
     }
 
@@ -2576,6 +2791,14 @@ fn texto_ayuda_metodo(nombre_clase: &str, metodo: &umbral_parser::ast::Metodo) -
 }
 
 fn firma_metodo(metodo: &umbral_parser::ast::Metodo) -> String {
-    let params: Vec<String> = metodo.parametros.iter().map(|p| p.nombre.clone()).collect();
+    let params: Vec<String> = metodo.parametros.iter().map(formatear_parametro).collect();
     format!("({})", params.join(", "))
+}
+
+fn formatear_parametro(p: &umbral_parser::ast::Parametro) -> String {
+    match (p.es_rest, &p.tipo) {
+        (true, Some(t)) => format!("...{}->{}", p.nombre, t.nombre),
+        (true, None) => format!("...{}", p.nombre),
+        (false, _) => p.nombre.clone(),
+    }
 }

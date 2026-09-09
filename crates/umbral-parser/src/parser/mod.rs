@@ -314,21 +314,91 @@ impl Parser {
             prefijo.push_str("[]");
         }
 
-        match self.peekear() {
+        let base = match self.peekear() {
             Some(LexToken::Tipo(n)) => {
-                let nombre = format!("{}{}", prefijo, n);
+                let n = n.clone();
                 self.avanzar();
-                Ok(Some(Tipo { nombre }))
+                n
             }
             Some(LexToken::Identificador(n))
                 if n.chars().next().unwrap_or('a').is_ascii_uppercase() =>
             {
-                let nombre = format!("{}{}", prefijo, n);
+                let n = n.clone();
                 self.avanzar();
-                Ok(Some(Tipo { nombre }))
+                n
             }
             _ if !prefijo.is_empty() => {
-                Err(self.crear_error("Se esperaba nombre de tipo después de []"))
+                return Err(self.crear_error("Se esperaba nombre de tipo después de []"));
+            }
+            _ => return Ok(None),
+        };
+
+        let nombre_base = format!("{}{}", prefijo, base);
+        if self.coincidir(|t| matches!(t, LexToken::Menor)) {
+            let args = self.parsear_argumentos_genericos()?;
+            return Ok(Some(Tipo::generico(nombre_base, args)));
+        }
+
+        Ok(Some(Tipo::simple(nombre_base)))
+    }
+
+    pub fn parsear_argumentos_genericos(&mut self) -> Result<Vec<Tipo>, ParseError> {
+        let mut args = Vec::new();
+        loop {
+            let siguiente = self.parsear_tipo()?;
+            let Some(tipo) = siguiente else {
+                return Err(self.crear_error("Se esperaba un tipo dentro de '<>'"));
+            };
+            args.push(tipo);
+            if self.coincidir(|t| matches!(t, LexToken::Coma)) {
+                continue;
+            }
+            break;
+        }
+        if !self.coincidir(|t| matches!(t, LexToken::Mayor)) {
+            return Err(self.crear_error("Se esperaba '>' para cerrar los argumentos genéricos"));
+        }
+        Ok(args)
+    }
+
+    pub fn parsear_parametros_tipo(&mut self) -> Result<Vec<String>, ParseError> {
+        if !self.coincidir(|t| matches!(t, LexToken::Menor)) {
+            return Ok(Vec::new());
+        }
+        let mut params = Vec::new();
+        loop {
+            self.consumir_parametro_tipo(&mut params)?;
+            if self.coincidir(|t| matches!(t, LexToken::Coma)) {
+                continue;
+            }
+            break;
+        }
+        if !self.coincidir(|t| matches!(t, LexToken::Mayor)) {
+            return Err(self.crear_error("Se esperaba '>' para cerrar los parámetros genéricos"));
+        }
+        Ok(params)
+    }
+
+    fn consumir_parametro_tipo(&mut self, params: &mut Vec<String>) -> Result<(), ParseError> {
+        let nombre = self.leer_nombre_tipo()?;
+        let Some(nombre) = nombre else {
+            return Err(self.crear_error("Se esperaba un parámetro genérico (ej. T)"));
+        };
+        if params.contains(&nombre) {
+            return Err(self.crear_error(format!("Parámetro genérico '{}' duplicado", nombre)));
+        }
+        params.push(nombre);
+        Ok(())
+    }
+
+    fn leer_nombre_tipo(&mut self) -> Result<Option<String>, ParseError> {
+        match self.peekear() {
+            Some(LexToken::Identificador(n)) | Some(LexToken::Tipo(n))
+                if n.chars().next().unwrap_or('a').is_ascii_uppercase() =>
+            {
+                let nombre = n.clone();
+                self.avanzar();
+                Ok(Some(nombre))
             }
             _ => Ok(None),
         }
