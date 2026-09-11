@@ -79,7 +79,7 @@ pub struct Clase {
     pub nombre: String,
     pub propiedades: HashMap<String, Valor>,
     pub metodos: HashMap<String, Metodo>,
-    pub constructor: Option<Metodo>,
+    pub constructores: Vec<Metodo>,
 }
 ```
 

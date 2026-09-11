@@ -10,7 +10,7 @@ pub struct Clase {
     pub propiedades: HashMap<String, Valor>,
     pub tipos_propiedades: HashMap<String, String>,
     pub metodos: HashMap<String, Metodo>,
-    pub constructor: Option<Metodo>,
+    pub constructores: Vec<Metodo>,
     pub doc: Option<umbral_parser::ast::UmDoc>,
     pub entorno_capturado: Option<HashMap<String, Valor>>,
 }
@@ -23,7 +23,7 @@ impl Clase {
             propiedades: HashMap::new(),
             tipos_propiedades: HashMap::new(),
             metodos: HashMap::new(),
-            constructor: None,
+            constructores: Vec::new(),
             doc: None,
             entorno_capturado: None,
         }
@@ -92,11 +92,17 @@ impl Clase {
     }
 
     fn registrar_metodos(&mut self, metodos: &[Metodo], nombre_clase: &str) {
-        let filtrados = metodos.iter().filter(|m| m.nombre != nombre_clase);
-        let pares = filtrados.map(|m| (m.nombre.clone(), m.clone()));
-        self.metodos.extend(pares);
-        let ctor = metodos.iter().find(|m| m.nombre == nombre_clase).cloned();
-        self.constructor = ctor;
+        let resto: HashMap<String, Metodo> = metodos
+            .iter()
+            .filter(|actual| actual.nombre != nombre_clase)
+            .map(|actual| (actual.nombre.clone(), actual.clone()))
+            .collect();
+        self.metodos.extend(resto);
+        self.constructores = metodos
+            .iter()
+            .filter(|actual| actual.nombre == nombre_clase)
+            .cloned()
+            .collect();
     }
 
     pub fn crear_instancia(&self) -> Instancia {

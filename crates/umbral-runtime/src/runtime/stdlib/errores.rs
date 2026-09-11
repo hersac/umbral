@@ -39,7 +39,7 @@ pub fn crear_clase_error() -> Clase {
         propiedades,
         tipos_propiedades: HashMap::new(),
         metodos: HashMap::new(),
-        constructor: Some(constructor),
+        constructores: vec![constructor],
         doc: None,
         entorno_capturado: None,
     }

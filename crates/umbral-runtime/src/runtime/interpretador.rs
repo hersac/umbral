@@ -1816,12 +1816,79 @@ impl Interpretador {
         args: &[Valor],
         instancia: &mut crate::runtime::valores::Instancia,
     ) {
-        let Some(constructor) = self.obtener_constructor(tipo) else {
+        let lista = self.obtener_constructores(tipo);
+        if lista.is_empty() {
+            return;
+        }
+        let Some(elegido) = Self::elegir_constructor(&lista, args.len()) else {
+            self.reportar_constructor(tipo, args.len(), &lista);
             return;
         };
 
-        self.ejecutar_constructor(constructor, args, instancia)
+        self.ejecutar_constructor(elegido, args, instancia)
             .await;
+    }
+
+    fn obtener_constructores(&self, tipo: &str) -> Vec<umbral_parser::ast::Metodo> {
+        self.gestor_clases
+            .obtener_clase(tipo)
+            .map(|actual| actual.constructores.clone())
+            .unwrap_or_default()
+    }
+
+    /// Elige el constructor compatible con la cantidad de argumentos.
+    fn elegir_constructor(
+        lista: &[umbral_parser::ast::Metodo],
+        total: usize,
+    ) -> Option<umbral_parser::ast::Metodo> {
+        let compatibles: Vec<umbral_parser::ast::Metodo> = lista
+            .iter()
+            .filter(|actual| Self::es_compatible(actual, total))
+            .cloned()
+            .collect();
+        let Some(exacto) = compatibles
+            .iter()
+            .find(|actual| !Self::tiene_resto(actual))
+            .cloned()
+        else {
+            return compatibles.into_iter().next();
+        };
+        Some(exacto)
+    }
+
+    fn es_compatible(metodo: &umbral_parser::ast::Metodo, total: usize) -> bool {
+        let fijos = Self::contar_fijos(metodo);
+        Self::tiene_resto(metodo) && total >= fijos || !Self::tiene_resto(metodo) && total == fijos
+    }
+
+    fn contar_fijos(metodo: &umbral_parser::ast::Metodo) -> usize {
+        metodo
+            .parametros
+            .iter()
+            .filter(|actual| !actual.es_rest)
+            .count()
+    }
+
+    fn tiene_resto(metodo: &umbral_parser::ast::Metodo) -> bool {
+        metodo.parametros.iter().any(|actual| actual.es_rest)
+    }
+
+    fn reportar_constructor(
+        &self,
+        tipo: &str,
+        total: usize,
+        lista: &[umbral_parser::ast::Metodo],
+    ) {
+        let esperadas: Vec<String> = lista
+            .iter()
+            .map(|actual| Self::contar_fijos(actual).to_string())
+            .collect();
+        eprintln!(
+            "Error: La clase '{}' no tiene constructor con {} argumento(s). Esperados: {}.",
+            tipo,
+            total,
+            esperadas.join(", ")
+        );
     }
 
     async fn ejecutar_constructor(
@@ -1856,12 +1923,6 @@ impl Interpretador {
         if let Some(parent) = self.entorno_actual.parent.take() {
             self.entorno_actual = *parent;
         }
-    }
-
-    fn obtener_constructor(&self, tipo: &str) -> Option<umbral_parser::ast::Metodo> {
-        self.gestor_clases
-            .obtener_clase(tipo)
-            .and_then(|c| c.constructor.clone())
     }
 
     fn vincular_parametros_constructor(
