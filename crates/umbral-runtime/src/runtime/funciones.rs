@@ -56,6 +56,20 @@ impl GestorFunciones {
         let anterior = std::mem::replace(&mut interprete.entorno_actual, Entorno::nuevo(None));
         interprete.entorno_actual = Entorno::nuevo(Some(anterior));
 
+        // Si la función trae captura de su módulo de origen, pre-poblamos el
+        // nuevo ámbito con esos globales para que el cuerpo los vea aunque la
+        // llamada ocurra desde otro módulo. Los parámetros (definidos después)
+        // tienen prioridad por shadowing.
+        if let Some(captura) = &funcion.entorno_capturado {
+            for (nombre, valor) in captura {
+                // No sobrescribir si ya existe en este ámbito fresco (no debería),
+                // simplemente inyectamos los globales del módulo origen.
+                interprete
+                    .entorno_actual
+                    .definir_variable(nombre.clone(), valor.clone());
+            }
+        }
+
         let (fijos, resto) = dividir_argumentos(
             funcion.parametros.len(),
             funcion.parametro_rest.is_some(),

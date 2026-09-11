@@ -195,6 +195,10 @@ pub struct Funcion {
     pub cuerpo: Vec<umbral_parser::ast::Sentencia>,
     pub es_async: bool,
     pub doc: Option<umbral_parser::ast::UmDoc>,
+    /// Captura del entorno del módulo donde se definió/importó la función.
+    /// Permite que una función exportada vea sus globales aunque se llame
+    /// desde otro módulo (closure de módulo).
+    pub entorno_capturado: Option<HashMap<String, Valor>>,
 }
 
 impl Funcion {
@@ -211,6 +215,7 @@ impl Funcion {
             cuerpo,
             es_async,
             doc: None,
+            entorno_capturado: None,
         }
     }
 
@@ -228,6 +233,7 @@ impl Funcion {
             cuerpo,
             es_async,
             doc,
+            entorno_capturado: None,
         }
     }
 
@@ -246,7 +252,14 @@ impl Funcion {
             cuerpo,
             es_async,
             doc,
+            entorno_capturado: None,
         }
+    }
+
+    /// Adjunta una captura del entorno del módulo de origen.
+    pub fn con_captura(mut self, captura: HashMap<String, Valor>) -> Self {
+        self.entorno_capturado = Some(captura);
+        self
     }
 
     pub fn firma(&self) -> String {

@@ -38,5 +38,6 @@ pub fn crear_clase_error() -> Clase {
         metodos: HashMap::new(),
         constructor: Some(constructor),
         doc: None,
+        entorno_capturado: None,
     }
 }

@@ -746,18 +746,69 @@ impl Interpretador {
         }
     }
 
+    fn captura_de_modulo(modulo: &Interpretador) -> HashMap<String, Valor> {
+        let mut captura = HashMap::new();
+        for (nombre, valor) in &modulo.entorno_actual.variables {
+            captura.insert(nombre.clone(), valor.clone());
+        }
+        for (nombre, valor) in &modulo.entorno_actual.constantes {
+            captura.insert(nombre.clone(), valor.clone());
+        }
+        captura
+    }
+
+    fn adjuntar_captura_a_valor(valor: Valor, captura: &HashMap<String, Valor>) -> Valor {
+        match valor {
+            Valor::Funcion(mut f) => {
+                // No capturar la propia función para evitar recursión infinita
+                // de clones, pero sí el resto de globales (incluye forward refs
+                // porque la captura se toma con el módulo ya ejecutado).
+                let mut sin_misma = captura.clone();
+                sin_misma.remove(&f.nombre);
+                f.entorno_capturado = Some(sin_misma);
+                Valor::Funcion(f)
+            }
+            Valor::Diccionario(mapa) => {
+                let nuevo: HashMap<String, Valor> = mapa
+                    .into_iter()
+                    .map(|(k, v)| {
+                        let nv = Self::adjuntar_captura_a_valor(v, captura);
+                        (k, nv)
+                    })
+                    .collect();
+                Valor::Diccionario(nuevo)
+            }
+            otro => otro,
+        }
+    }
+
+    fn importar_clases_transitivas(&mut self, modulo: &Interpretador) {
+        let captura = Self::captura_de_modulo(modulo);
+        for (nombre, clase) in &modulo.gestor_clases.clases {
+            if self.gestor_clases.clases.contains_key(nombre) {
+                continue;
+            }
+            let mut copia = clase.clone();
+            copia.entorno_capturado = Some(captura.clone());
+            self.gestor_clases.clases.insert(nombre.clone(), copia);
+        }
+    }
+
     fn importar_modulo_como_objeto(&mut self, nombre_var: String, modulo: &Interpretador) {
+        let captura = Self::captura_de_modulo(modulo);
         let mut mapa_exportaciones = HashMap::new();
 
         for (nombre, valor) in &modulo.entorno_actual.variables {
             if modulo.exportaciones.get(nombre).copied().unwrap_or(false) {
-                mapa_exportaciones.insert(nombre.clone(), valor.clone());
+                let v = Self::adjuntar_captura_a_valor(valor.clone(), &captura);
+                mapa_exportaciones.insert(nombre.clone(), v);
             }
         }
 
         for (nombre, valor) in &modulo.entorno_actual.constantes {
             if modulo.exportaciones.get(nombre).copied().unwrap_or(false) {
-                mapa_exportaciones.insert(nombre.clone(), valor.clone());
+                let v = Self::adjuntar_captura_a_valor(valor.clone(), &captura);
+                mapa_exportaciones.insert(nombre.clone(), v);
             }
         }
 
@@ -767,6 +818,7 @@ impl Interpretador {
 
                 let mut clase_copia = clase.clone();
                 clase_copia.nombre = nombre_unico.clone();
+                clase_copia.entorno_capturado = Some(captura.clone());
                 self.gestor_clases
                     .clases
                     .insert(nombre_unico.clone(), clase_copia);
@@ -774,6 +826,10 @@ impl Interpretador {
                 mapa_exportaciones.insert(nombre.clone(), Valor::Clase(nombre_unico));
             }
         }
+
+        // Las instancias capturadas (ej. `c: user = n: User(...)`) necesitan
+        // resolver su clase aunque no esté exportada.
+        self.importar_clases_transitivas(modulo);
 
         self.entorno_actual
             .definir_variable(nombre_var, Valor::Diccionario(mapa_exportaciones));
@@ -787,28 +843,40 @@ impl Interpretador {
     }
 
     fn importar_variables_exportadas(&mut self, alias: &str, modulo: &Interpretador) {
+        let captura = Self::captura_de_modulo(modulo);
         for (nombre, valor) in &modulo.entorno_actual.variables {
             if !modulo.exportaciones.get(nombre).copied().unwrap_or(false) {
                 continue;
             }
 
             let nombre_final = format!("{}_{}", alias, nombre);
-            self.entorno_actual
-                .definir_variable(nombre_final, valor.clone());
+            let v = Self::adjuntar_captura_a_valor(valor.clone(), &captura);
+            self.entorno_actual.definir_variable(nombre_final, v);
         }
+        for (nombre, valor) in &modulo.entorno_actual.constantes {
+            if !modulo.exportaciones.get(nombre).copied().unwrap_or(false) {
+                continue;
+            }
+            let nombre_final = format!("{}_{}", alias, nombre);
+            let v = Self::adjuntar_captura_a_valor(valor.clone(), &captura);
+            self.entorno_actual.definir_variable(nombre_final, v);
+        }
+        self.importar_clases_transitivas(modulo);
     }
 
     fn importar_clases_exportadas(&mut self, alias: &str, modulo: &Interpretador) {
+        let captura = Self::captura_de_modulo(modulo);
         for (nombre, clase) in &modulo.gestor_clases.clases {
             if !modulo.exportaciones.get(nombre).copied().unwrap_or(false) {
                 continue;
             }
 
             let nombre_final = format!("{}_{}", alias, nombre);
-            self.gestor_clases
-                .clases
-                .insert(nombre_final, clase.clone());
+            let mut copia = clase.clone();
+            copia.entorno_capturado = Some(captura.clone());
+            self.gestor_clases.clases.insert(nombre_final, copia);
         }
+        self.importar_clases_transitivas(modulo);
     }
 
     fn importar_nombre(&mut self, nombre: String, alias: Option<String>, modulo: &Interpretador) {
@@ -837,8 +905,23 @@ impl Interpretador {
         modulo: &Interpretador,
     ) -> bool {
         if let Some(valor) = modulo.entorno_actual.obtener(nombre) {
+            let captura = Self::captura_de_modulo(modulo);
+            let v = Self::adjuntar_captura_a_valor(valor, &captura);
             self.entorno_actual
-                .definir_variable(nombre_final.to_string(), valor);
+                .definir_variable(nombre_final.to_string(), v);
+            // Copiamos también las clases del módulo para que los objetos
+            // capturados puedan resolver sus métodos.
+            self.importar_clases_transitivas(modulo);
+            return true;
+        }
+        // Las constantes viven en un mapa separado; `obtener` ya las cubre,
+        // pero por si acaso intentamos directo:
+        if let Some(valor) = modulo.entorno_actual.constantes.get(nombre) {
+            let captura = Self::captura_de_modulo(modulo);
+            let v = Self::adjuntar_captura_a_valor(valor.clone(), &captura);
+            self.entorno_actual
+                .definir_variable(nombre_final.to_string(), v);
+            self.importar_clases_transitivas(modulo);
             return true;
         }
         false
@@ -851,9 +934,13 @@ impl Interpretador {
         modulo: &Interpretador,
     ) -> bool {
         if let Some(clase) = modulo.gestor_clases.clases.get(nombre) {
+            let captura = Self::captura_de_modulo(modulo);
+            let mut copia = clase.clone();
+            copia.entorno_capturado = Some(captura);
             self.gestor_clases
                 .clases
-                .insert(nombre_final.to_string(), clase.clone());
+                .insert(nombre_final.to_string(), copia);
+            self.importar_clases_transitivas(modulo);
             return true;
         }
         false
@@ -1695,8 +1782,22 @@ impl Interpretador {
     }
 
     fn crear_entorno_constructor(&mut self, instancia: &crate::runtime::valores::Instancia) {
+        let captura_clase: Option<HashMap<String, Valor>> = self
+            .gestor_clases
+            .obtener_clase(&instancia.clase)
+            .and_then(|c| c.entorno_capturado.clone());
         let anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(None));
         self.entorno_actual = Entorno::nuevo(Some(anterior));
+        if let Some(captura) = captura_clase {
+            for (nombre, valor) in captura {
+                if nombre == "__this__" {
+                    continue;
+                }
+                if self.entorno_actual.obtener(&nombre).is_none() {
+                    self.entorno_actual.definir_variable(nombre, valor);
+                }
+            }
+        }
         self.entorno_actual
             .definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
     }
@@ -1765,7 +1866,7 @@ impl Interpretador {
 
         let (parametros, parametro_rest) = Self::dividir_parametros(&metodo.parametros);
 
-        let funcion = Funcion::con_rest(
+        let mut funcion = Funcion::con_rest(
             propiedad.to_string(),
             parametros,
             parametro_rest,
@@ -1773,6 +1874,7 @@ impl Interpretador {
             metodo.es_async,
             metodo.doc.clone(),
         );
+        funcion.entorno_capturado = clase.entorno_capturado.clone();
 
         Some(Valor::Funcion(funcion))
     }
@@ -2028,8 +2130,26 @@ impl Interpretador {
         parametros: &[umbral_parser::ast::Parametro],
         args: &[Valor],
     ) {
+        let captura_clase: Option<HashMap<String, Valor>> = self
+            .gestor_clases
+            .obtener_clase(&instancia.clase)
+            .and_then(|c| c.entorno_capturado.clone());
         let anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(None));
         self.entorno_actual = Entorno::nuevo(Some(anterior));
+        // Inyectamos los globales del módulo donde se definió la clase,
+        // para que los métodos vean ese contexto aunque la instancia se use
+        // desde otro módulo.
+        if let Some(captura) = captura_clase {
+            for (nombre, valor) in captura {
+                if nombre == "__this__" {
+                    continue;
+                }
+                // No pisar si ya existe (el __this__ y params tienen prioridad).
+                if self.entorno_actual.obtener(&nombre).is_none() {
+                    self.entorno_actual.definir_variable(nombre, valor);
+                }
+            }
+        }
         self.entorno_actual
             .definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));
 
@@ -2600,18 +2720,26 @@ impl Interpretador {
         metodo: &str,
         args: Vec<Valor>,
     ) -> Valor {
-        let clase = match self.gestor_clases.obtener_clase(&instancia.clase) {
-            Some(c) => c,
+        let (metodo_def, captura) = match self.gestor_clases.obtener_clase(&instancia.clase) {
+            Some(c) => match c.obtener_metodo(metodo) {
+                Some(m) => (m.clone(), c.entorno_capturado.clone()),
+                None => return Valor::Nulo,
+            },
             None => return Valor::Nulo,
         };
-
-        let metodo_def = match clase.obtener_metodo(metodo) {
-            Some(m) => m.clone(),
-            None => return Valor::Nulo,
-        };
-
         let anterior = std::mem::replace(&mut self.entorno_actual, Entorno::nuevo(None));
         self.entorno_actual = Entorno::nuevo(Some(anterior));
+
+        if let Some(cap) = captura {
+            for (nombre, valor) in cap {
+                if nombre == "__this__" {
+                    continue;
+                }
+                if self.entorno_actual.obtener(&nombre).is_none() {
+                    self.entorno_actual.definir_variable(nombre, valor);
+                }
+            }
+        }
 
         self.entorno_actual
             .definir_variable("__this__".to_string(), Valor::Objeto(instancia.clone()));

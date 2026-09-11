@@ -12,6 +12,10 @@ pub struct Clase {
     pub metodos: HashMap<String, Metodo>,
     pub constructor: Option<Metodo>,
     pub doc: Option<umbral_parser::ast::UmDoc>,
+    /// Captura de los globales del módulo donde se definió la clase,
+    /// para que sus métodos puedan verlos aunque la instancia se use
+    /// desde otro módulo.
+    pub entorno_capturado: Option<HashMap<String, Valor>>,
 }
 
 impl Clase {
@@ -24,6 +28,7 @@ impl Clase {
             metodos: HashMap::new(),
             constructor: None,
             doc: None,
+            entorno_capturado: None,
         }
     }
 
