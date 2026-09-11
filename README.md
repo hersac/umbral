@@ -1,6 +1,6 @@
 # Umbral
 
-**Versión 1.4.0**
+**Versión 1.5.1**
 
 Lenguaje de programación de propósito general con sintaxis expresiva y moderna. Diseñado para ser fácil de aprender y productivo de usar.
 
@@ -59,19 +59,19 @@ Lenguaje de programación de propósito general con sintaxis expresiva y moderna
 
 Descarga la última versión desde [Releases](https://github.com/hersac/umbral/releases):
 
-- **Linux**: `umbral_1.4.0_amd64.deb`
-- **Windows**: `umbral_1.4.0_x64.exe`
-- **Código fuente**: `umbral-1.4.0.tar.gz` o `umbral-1.4.0.zip`
+- **Linux**: `umbral_1.5.1_amd64.deb`
+- **Windows**: `umbral_1.5.1_x64.exe`
+- **Código fuente**: `umbral-1.5.1.tar.gz` o `umbral-1.5.1.zip`
 
 #### Instalación en Linux (Debian/Ubuntu)
 
 ```bash
-sudo dpkg -i umbral_1.4.0_amd64.deb
+sudo dpkg -i umbral_1.5.1_amd64.deb
 ```
 
 #### Instalación en Windows
 
-Ejecuta el instalador `umbral_1.4.0_x64.exe` y sigue las instrucciones.
+Ejecuta el instalador `umbral_1.5.1_x64.exe` y sigue las instrucciones.
 
 ### Opción 2: Compilar desde código fuente
 
@@ -960,7 +960,7 @@ v: claves = Std.keys(dict);                !! ["a", "b"]
 
 ---
 
-## 📜 Especificación Formal (v1.4.0)
+## 📜 Especificación Formal (v1.5.1)
 
 ### Sistema de Tipos
 
