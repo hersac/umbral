@@ -12,9 +12,6 @@ pub struct Clase {
     pub metodos: HashMap<String, Metodo>,
     pub constructor: Option<Metodo>,
     pub doc: Option<umbral_parser::ast::UmDoc>,
-    /// Captura de los globales del módulo donde se definió la clase,
-    /// para que sus métodos puedan verlos aunque la instancia se use
-    /// desde otro módulo.
     pub entorno_capturado: Option<HashMap<String, Valor>>,
 }
 
@@ -30,6 +27,18 @@ impl Clase {
             doc: None,
             entorno_capturado: None,
         }
+    }
+
+    /// Crea una copia de la clase con su entorno de origen adjunto.
+    pub fn con_captura(self, captura: HashMap<String, Valor>) -> Self {
+        Self {
+            entorno_capturado: Some(captura),
+            ..self
+        }
+    }
+
+    pub fn con_nombre(self, nombre: String) -> Self {
+        Self { nombre, ..self }
     }
 
     pub fn desde_declaracion(decl: &DeclaracionClase) -> Self {

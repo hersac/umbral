@@ -4,11 +4,14 @@ use std::collections::HashMap;
 use umbral_parser::ast::{Asignacion, Expresion, Metodo, ObjetivoAsignacion, Parametro, Sentencia};
 
 pub fn crear_clase_error() -> Clase {
-    let mut propiedades = HashMap::new();
-    propiedades.insert("mensaje".to_string(), Valor::Texto("".to_string()));
-    propiedades.insert("data".to_string(), Valor::Nulo);
+    let propiedades: HashMap<String, Valor> = [
+        ("mensaje", Valor::Texto(String::new())),
+        ("data", Valor::Nulo),
+    ]
+    .into_iter()
+    .map(|(clave, valor)| (clave.to_string(), valor))
+    .collect();
 
-    // Constructor: Error(msg) { th.mensaje = msg; }
     let constructor = Metodo {
         nombre: "Error".to_string(),
         parametros_tipo: Vec::new(),

@@ -1,5 +1,6 @@
 use crate::runtime::entorno::Entorno;
 use crate::runtime::valores::{Funcion, ParametroRest, Valor};
+use std::collections::HashMap;
 
 pub fn dividir_argumentos(
     parametros_fijos: usize,
@@ -25,19 +26,41 @@ pub fn validar_elementos_rest(
     let Some(tipo) = rest.tipo.as_deref() else {
         return;
     };
-    for (i, valor) in elementos.iter().enumerate() {
-        if !valor.es_tipo_compatible(tipo) {
+    elementos
+        .iter()
+        .enumerate()
+        .filter(|(_, valor)| !valor.es_tipo_compatible(tipo))
+        .for_each(|(indice, valor)| {
             eprintln!(
                 "Error: Tipo incompatible en '{}' para '...{}->{}': argumento #{} es {} en lugar de '{}'.",
                 nombre_funcion,
                 rest.nombre,
                 tipo,
-                i + 1,
+                indice + 1,
                 valor.nombre_tipo(),
                 tipo
             );
-        }
-    }
+        });
+}
+
+fn inyectar_captura(captura: Option<&HashMap<String, Valor>>, entorno: &mut Entorno) {
+    let Some(mapa) = captura else {
+        return;
+    };
+    mapa.iter().for_each(|(nombre, valor)| {
+        entorno.definir_variable(nombre.clone(), valor.clone());
+    });
+}
+
+fn vincular_fijos(funcion: &Funcion, fijos: &[Valor], entorno: &mut Entorno) {
+    funcion
+        .parametros
+        .iter()
+        .enumerate()
+        .for_each(|(indice, param)| {
+            let valor = fijos.get(indice).cloned().unwrap_or(Valor::Nulo);
+            entorno.definir_variable(param.clone(), valor);
+        });
 }
 
 #[derive(Clone)]
@@ -53,55 +76,67 @@ impl GestorFunciones {
         argumentos: Vec<Valor>,
         interprete: &mut crate::runtime::interpretador::Interpretador,
     ) -> Valor {
+        Self::preparar_llamada(funcion, argumentos, interprete).await
+    }
+
+    async fn preparar_llamada(
+        funcion: &Funcion,
+        argumentos: Vec<Valor>,
+        interprete: &mut crate::runtime::interpretador::Interpretador,
+    ) -> Valor {
         let anterior = std::mem::replace(&mut interprete.entorno_actual, Entorno::nuevo(None));
         interprete.entorno_actual = Entorno::nuevo(Some(anterior));
+        inyectar_captura(funcion.entorno_capturado.as_ref(), &mut interprete.entorno_actual);
+        Self::vincular_llamada(funcion, argumentos, interprete);
+        let salida = Self::correr_cuerpo(funcion, interprete).await;
+        Self::restaurar_llamada(interprete);
+        salida
+    }
 
-        // Si la función trae captura de su módulo de origen, pre-poblamos el
-        // nuevo ámbito con esos globales para que el cuerpo los vea aunque la
-        // llamada ocurra desde otro módulo. Los parámetros (definidos después)
-        // tienen prioridad por shadowing.
-        if let Some(captura) = &funcion.entorno_capturado {
-            for (nombre, valor) in captura {
-                // No sobrescribir si ya existe en este ámbito fresco (no debería),
-                // simplemente inyectamos los globales del módulo origen.
-                interprete
-                    .entorno_actual
-                    .definir_variable(nombre.clone(), valor.clone());
-            }
-        }
-
+    fn vincular_llamada(
+        funcion: &Funcion,
+        argumentos: Vec<Valor>,
+        interprete: &mut crate::runtime::interpretador::Interpretador,
+    ) {
         let (fijos, resto) = dividir_argumentos(
             funcion.parametros.len(),
             funcion.parametro_rest.is_some(),
             argumentos,
         );
+        vincular_fijos(funcion, &fijos, &mut interprete.entorno_actual);
+        Self::vincular_resto(funcion, resto, interprete);
+    }
 
-        for (i, param) in funcion.parametros.iter().enumerate() {
-            let valor = fijos.get(i).cloned().unwrap_or(Valor::Nulo);
-            interprete
-                .entorno_actual
-                .definir_variable(param.clone(), valor);
-        }
+    fn vincular_resto(
+        funcion: &Funcion,
+        resto: Vec<Valor>,
+        interprete: &mut crate::runtime::interpretador::Interpretador,
+    ) {
+        let Some(param) = &funcion.parametro_rest else {
+            return;
+        };
+        validar_elementos_rest(&funcion.nombre, param, &resto);
+        interprete
+            .entorno_actual
+            .definir_variable(param.nombre.clone(), Valor::Lista(resto));
+    }
 
-        if let Some(rest) = &funcion.parametro_rest {
-            validar_elementos_rest(&funcion.nombre, rest, &resto);
-            interprete
-                .entorno_actual
-                .definir_variable(rest.nombre.clone(), Valor::Lista(resto));
-        }
-
-        let mut resultado = Valor::Nulo;
+    async fn correr_cuerpo(
+        funcion: &Funcion,
+        interprete: &mut crate::runtime::interpretador::Interpretador,
+    ) -> Valor {
         for sentencia in &funcion.cuerpo {
             if let Some(valor) = interprete.ejecutar_sentencia(sentencia.clone()).await {
-                resultado = valor;
-                break;
+                return valor;
             }
         }
+        Valor::Nulo
+    }
 
-        if let Some(parent) = interprete.entorno_actual.parent.take() {
-            interprete.entorno_actual = *parent;
-        }
-
-        resultado
+    fn restaurar_llamada(interprete: &mut crate::runtime::interpretador::Interpretador) {
+        let Some(padre) = interprete.entorno_actual.parent.take() else {
+            return;
+        };
+        interprete.entorno_actual = *padre;
     }
 }
