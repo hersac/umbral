@@ -50,12 +50,27 @@ jobs:
         shell: bash
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
+          # VIProductVersion solo acepta X.X.X.X numérico (ej: 1.5.3.0).
+          # Tags como v1.5.3-2 deben sanitizarse: quitar sufijo -2/+meta y rellenar a 4 partes.
+          BASE="${VERSION%%-*}"
+          BASE="${BASE%%+*}"
+          IFS='.' read -ra PARTS <<< "$BASE"
+          CLEAN=()
+          for p in "${PARTS[@]}"; do
+            # deja solo dígitos, vacío -> 0
+            n="$(echo "$p" | tr -cd '0-9')"
+            [ -z "$n" ] && n="0"
+            CLEAN+=("$n")
+          done
+          while [ "${#CLEAN[@]}" -lt 4 ]; do CLEAN+=(0); done
+          VI_VERSION="$(IFS=.; echo "${CLEAN[*]:0:4}")"
+          echo "VERSION=$VERSION VI_VERSION=$VI_VERSION"
           # Ruta absoluta: si se pasa "windows/umbral.nsi" como relativa,
           # ${__FILEDIR__} queda relativo y los File con ${__FILEDIR__}
           # se resuelven como "windows/windows/...". Con ruta absoluta
           # ${__FILEDIR__} es absoluto y todo resuelve bien.
           "/c/Program Files (x86)/NSIS/makensis.exe" \
-            -DVERSION="${VERSION}" "${GITHUB_WORKSPACE}/windows/umbral.nsi"
+            -DVERSION="${VERSION}" -DVI_VERSION="${VI_VERSION}" "${GITHUB_WORKSPACE}/windows/umbral.nsi"
 
       - name: Subir instalador al release
         uses: softprops/action-gh-release@v2
