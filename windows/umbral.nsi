@@ -15,13 +15,13 @@ Unicode true
 ; ------------------------------------------------------------
 !define APPNAME "Umbral"
 !ifndef VERSION
-  !define VERSION "1.5.3"
+  !define VERSION "1.5.4"
 !endif
 ; VI_VERSION debe ser estrictamente X.X.X.X numérico para VIProductVersion.
 ; Se pasa desde CI con -DVI_VERSION=... (sanitizado desde el tag).
 ; El fallback solo sirve para compilación local.
 !ifndef VI_VERSION
-  !define VI_VERSION "1.5.3.0"
+  !define VI_VERSION "1.5.4.0"
 !endif
 !define APPVERSION "${VERSION}"
 !define EXE_MAIN "umbral.exe"
@@ -55,6 +55,8 @@ BrandingText "Hersac"
 VIProductVersion "${VI_VERSION}"
 VIAddVersionKey "ProductName" "${APPNAME}"
 VIAddVersionKey "CompanyName" "Hersac"
+VIAddVersionKey "FileDescription" "${APPNAME} - Interprete de lenguaje de programacion"
+VIAddVersionKey "LegalCopyright" "Hersac"
 VIAddVersionKey "FileVersion" "${APPVERSION}"
 VIAddVersionKey "ProductVersion" "${APPVERSION}"
 !define MUI_FINISHPAGE_RUN "$INSTDIR\bin\${EXE_REPL}"
@@ -292,7 +294,8 @@ StrStr_loop:
   StrCpy $4 $1 1 $5
   StrCmp $4 "" StrStr_NotFound
   StrCpy $4 $1 $2 $5
-  StrCmp $4 $0 StrStr_Found /ignorecase
+  ; StrCmp ya es insensible a mayusculas/minusculas (no lleva flag /ignorecase).
+  StrCmp $4 $0 StrStr_Found
   IntOp $5 $5 + 1
   Goto StrStr_loop
 
@@ -336,7 +339,8 @@ un.StrStr_loop:
   StrCpy $4 $1 1 $5
   StrCmp $4 "" un.StrStr_NotFound
   StrCpy $4 $1 $2 $5
-  StrCmp $4 $0 un.StrStr_Found /ignorecase
+  ; StrCmp ya es insensible a mayusculas/minusculas (no lleva flag /ignorecase).
+  StrCmp $4 $0 un.StrStr_Found
   IntOp $5 $5 + 1
   Goto un.StrStr_loop
 
