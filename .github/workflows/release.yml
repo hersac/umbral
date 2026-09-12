@@ -50,8 +50,8 @@ jobs:
         shell: bash
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          # VIProductVersion solo acepta X.X.X.X numérico (ej: 1.5.4.0).
-          # Tags como v1.5.4-2 deben sanitizarse: quitar sufijo -2/+meta y rellenar a 4 partes.
+          # VIProductVersion solo acepta X.X.X.X numérico (ej: 1.5.5.0).
+          # Tags como v1.5.5-2 deben sanitizarse: quitar sufijo -2/+meta y rellenar a 4 partes.
           BASE="${VERSION%%-*}"
           BASE="${BASE%%+*}"
           IFS='.' read -ra PARTS <<< "$BASE"
@@ -73,9 +73,11 @@ jobs:
           # ${__FILEDIR__} queda relativo y los File con ${__FILEDIR__}
           # se resuelven como "windows/windows/...". Con ruta absoluta
           # ${__FILEDIR__} es absoluto y todo resuelve bien.
-          # /INPUTCHARSET UTF8: el .nsi está en UTF-8 con acentos en comentarios.
+          # -INPUTCHARSET UTF8 (con guion, no /): el .nsi está en UTF-8 con
+          # acentos en comentarios. Con / Git Bash lo convierte en ruta
+          # (C:/Program Files/Git/INPUTCHARSET) y makensis falla.
           "/c/Program Files (x86)/NSIS/makensis.exe" \
-            /INPUTCHARSET UTF8 \
+            -INPUTCHARSET UTF8 \
             -DVERSION="${VERSION}" -DVI_VERSION="${VI_VERSION}" "${GITHUB_WORKSPACE}/windows/umbral.nsi"
 
       - name: Subir instalador al release

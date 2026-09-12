@@ -50,7 +50,7 @@ cp "${CROSS_BIN}/umbral-repl.exe" target/release/umbral-repl.exe
 VERSION=$(grep -m1 '^version' Cargo.toml | sed 's/.*= *"\(.*\)".*/\1/')
 echo "🚀 Generando instalador v${VERSION}..."
 # VIProductVersion solo acepta X.X.X.X numérico: sanitizar igual que en CI
-# (ej: 1.5.4-2 -> 1.5.4.0 para metadata, VERSION completa para nombre/mostrados).
+# (ej: 1.5.5-2 -> 1.5.5.0 para metadata, VERSION completa para nombre/mostrados).
 BASE="${VERSION%%-*}"
 BASE="${BASE%%+*}"
 VI_VERSION="$(echo "$BASE" | awk -F. '{printf "%s.%s.%s.%s", $1+0, ($2==""?0:$2)+0, ($3==""?0:$3)+0, 0}')"
@@ -58,7 +58,7 @@ echo "VERSION=${VERSION} VI_VERSION=${VI_VERSION}"
 # Ruta absoluta al .nsi: con ruta relativa ${__FILEDIR__} queda relativo
 # y los File con ${__FILEDIR__} se resuelven como "windows/windows/...".
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-makensis /INPUTCHARSET UTF8 -DVERSION="${VERSION}" -DVI_VERSION="${VI_VERSION}" "${SCRIPT_DIR}/umbral.nsi"
+makensis -INPUTCHARSET UTF8 -DVERSION="${VERSION}" -DVI_VERSION="${VI_VERSION}" "${SCRIPT_DIR}/umbral.nsi"
 
 echo ""
 echo "✅ Instalador generado: windows/umbral-setup-${VERSION}.exe"
