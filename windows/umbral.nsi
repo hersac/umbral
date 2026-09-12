@@ -15,13 +15,13 @@ Unicode true
 ; ------------------------------------------------------------
 !define APPNAME "Umbral"
 !ifndef VERSION
-  !define VERSION "1.5.3"
+  !define VERSION "1.5.4"
 !endif
 ; VI_VERSION debe ser estrictamente X.X.X.X numérico para VIProductVersion.
 ; Se pasa desde CI con -DVI_VERSION=... (sanitizado desde el tag).
 ; El fallback solo sirve para compilación local.
 !ifndef VI_VERSION
-  !define VI_VERSION "1.5.3.0"
+  !define VI_VERSION "1.5.4.0"
 !endif
 !define APPVERSION "${VERSION}"
 !define EXE_MAIN "umbral.exe"
