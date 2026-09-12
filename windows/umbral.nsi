@@ -22,7 +22,9 @@ Unicode true
 !define EXE_REPL "umbral-repl.exe"
 
 Name "${APPNAME} ${APPVERSION}"
-OutFile "umbral-setup-${APPVERSION}.exe"
+; NOTA: usar ${__FILEDIR__} para que las rutas no dependan del CWD ni de
+; si makensis se invoca con ruta relativa o absoluta (evita "windows/windows").
+OutFile "${__FILEDIR__}\umbral-setup-${APPVERSION}.exe"
 ; Instalación por usuario (sin privilegios de administrador)
 InstallDir "$LOCALAPPDATA\Umbral"
 InstallDirRegKey HKCU "Software\Umbral" "InstallDir"
@@ -34,8 +36,8 @@ ShowUninstDetails show
 ;  Interfaz MUI
 ; ------------------------------------------------------------
 !define MUI_ABORTWARNING
-!define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
-!define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
+!define MUI_ICON "${__FILEDIR__}\..\images\umbral-pet-sin-fondo.ico"
+!define MUI_UNICON "${__FILEDIR__}\..\images\umbral-pet-sin-fondo.ico"
 ; Imagen personalizada (mascota Umbral sin fondo -> BMP 24-bit para NSIS)
 ; Fuente: images/umbral-pet-sin-fondo.png convertida a BMP (NSIS no acepta PNG directo)
 !define MUI_HEADERIMAGE
@@ -74,8 +76,8 @@ Section "Instalar Umbral" SecInstall
   StrCpy $BinDir "$INSTDIR\bin"
   SetOutPath "$BinDir"
 
-  File "..\target\release\${EXE_MAIN}"
-  File "..\target\release\${EXE_REPL}"
+  File "${__FILEDIR__}\..\target\release\${EXE_MAIN}"
+  File "${__FILEDIR__}\..\target\release\${EXE_REPL}"
 
   ; Guardar ruta para el desinstalador
   WriteRegStr HKCU "Software\Umbral" "InstallDir" "$INSTDIR"

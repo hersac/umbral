@@ -50,8 +50,12 @@ jobs:
         shell: bash
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
+          # Ruta absoluta: si se pasa "windows/umbral.nsi" como relativa,
+          # ${__FILEDIR__} queda relativo y los File con ${__FILEDIR__}
+          # se resuelven como "windows/windows/...". Con ruta absoluta
+          # ${__FILEDIR__} es absoluto y todo resuelve bien.
           "/c/Program Files (x86)/NSIS/makensis.exe" \
-            -DVERSION="${VERSION}" windows/umbral.nsi
+            -DVERSION="${VERSION}" "${GITHUB_WORKSPACE}/windows/umbral.nsi"
 
       - name: Subir instalador al release
         uses: softprops/action-gh-release@v2

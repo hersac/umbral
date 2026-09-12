@@ -49,7 +49,10 @@ cp "${CROSS_BIN}/umbral-repl.exe" target/release/umbral-repl.exe
 # 4. Generar el instalador
 VERSION=$(grep -m1 '^version' Cargo.toml | sed 's/.*= *"\(.*\)".*/\1/')
 echo "🚀 Generando instalador v${VERSION}..."
-makensis -DVERSION="${VERSION}" windows/umbral.nsi
+# Ruta absoluta al .nsi: con ruta relativa ${__FILEDIR__} queda relativo
+# y los File con ${__FILEDIR__} se resuelven como "windows/windows/...".
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+makensis -DVERSION="${VERSION}" "${SCRIPT_DIR}/umbral.nsi"
 
 echo ""
 echo "✅ Instalador generado: windows/umbral-setup-${VERSION}.exe"
