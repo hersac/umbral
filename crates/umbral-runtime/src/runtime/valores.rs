@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::future::Future;
+use std::net::{TcpListener, TcpStream, UdpSocket};
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 
@@ -18,6 +19,7 @@ pub enum Valor {
     Funcion(Funcion),
     FuncionNativa(String, NativeFn),
     Promesa(SharedPromesa),
+    Enchufe(ManejadorEnchufe),
     Clase(String),
     Nulo,
 }
@@ -67,6 +69,7 @@ impl Valor {
             Valor::Funcion(f) => format!("Func({})", f.nombre),
             Valor::FuncionNativa(n, _) => format!("FuncNativa({})", n),
             Valor::Promesa(_) => "Promesa".to_string(),
+            Valor::Enchufe(_) => "Enchufe".to_string(),
             Valor::Clase(n) => format!("Clase({})", n),
             Valor::Nulo => "Null".to_string(),
         }
@@ -93,6 +96,7 @@ impl Valor {
             }
             Valor::Funcion(_) | Valor::FuncionNativa(..) => base == "Func",
             Valor::Promesa(_) => base == "Promesa",
+            Valor::Enchufe(_) => base == "Enchufe",
             Valor::Clase(_) => base == "Clase",
             Valor::Nulo => true,
         }
@@ -133,10 +137,33 @@ impl fmt::Display for Valor {
             Valor::Funcion(func) => write!(f, "<función {}>", func.nombre),
             Valor::FuncionNativa(nombre, _) => write!(f, "<función nativa {}>", nombre),
             Valor::Promesa(_) => write!(f, "<promesa>"),
+            Valor::Enchufe(_) => write!(f, "<enchufe>"),
             Valor::Clase(nombre) => write!(f, "<clase {}>", nombre),
         }
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ClaseEnchufe {
+    Tcp,
+    Udp,
+}
+
+#[derive(Debug)]
+pub struct InteriorEnchufe {
+    pub clase: ClaseEnchufe,
+    pub pendiente: Option<socket2::Socket>,
+    pub oyente: Option<TcpListener>,
+    pub flujo: Option<TcpStream>,
+    pub datagrama: Option<UdpSocket>,
+    pub lectura_ms: Option<u64>,
+    pub escritura_ms: Option<u64>,
+    pub reuso: bool,
+    pub cerrado: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct ManejadorEnchufe(pub Arc<Mutex<InteriorEnchufe>>);
 
 #[derive(Debug, Clone)]
 pub struct Instancia {

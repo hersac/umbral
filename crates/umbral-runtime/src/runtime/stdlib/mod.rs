@@ -3,8 +3,10 @@ use crate::runtime::valores::Valor;
 use std::collections::HashMap;
 
 pub mod collections;
+pub mod dns;
 pub mod errores;
 pub mod fs;
+pub mod net;
 pub mod http;
 pub mod json;
 pub mod num;
@@ -60,6 +62,14 @@ pub fn registrar_stdlib(interpretador: &mut Interpretador) {
     interpretador
         .entorno_actual
         .definir_variable("pulse".to_string(), http::crear_funcion_pulse());
+
+    interpretador
+        .entorno_actual
+        .definir_variable("Net".to_string(), net::crear_modulo());
+
+    interpretador
+        .entorno_actual
+        .definir_variable("Dns".to_string(), dns::crear_modulo());
 
     let error_class = errores::crear_clase_error();
     interpretador.gestor_clases.registrar_clase(error_class);

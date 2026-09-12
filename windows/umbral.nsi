@@ -15,7 +15,7 @@ Unicode true
 ; ------------------------------------------------------------
 !define APPNAME "Umbral"
 !ifndef VERSION
-  !define VERSION "1.5.1"
+  !define VERSION "1.5.2"
 !endif
 !define APPVERSION "${VERSION}"
 !define EXE_MAIN "umbral.exe"

@@ -1,0 +1,19 @@
+!! Ejemplo 23: servidor eco TCP con Net
+!! Uso: umbral 23_red_tcp_servidor.um  (en otra terminal: umbral 24_red_tcp_cliente.um)
+
+v: servidor = Net.tcp();
+servidor.set_reuse_address(true);
+servidor.bind("127.0.0.1", 9999);
+servidor.listen(10);
+tprint("eco en 127.0.0.1:9999");
+
+v: cliente = servidor.accept();
+tprint("cliente aceptado");
+
+v: mensaje = cliente.read(1024);
+tprint("recibido: &mensaje");
+
+cliente.write("eco: &mensaje");
+cliente.close();
+servidor.close();
+tprint("fin servidor");

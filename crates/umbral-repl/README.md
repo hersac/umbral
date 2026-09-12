@@ -63,7 +63,7 @@ umbral> tprint(contador);
 
 ```
 ╔════════════════════════════════════════╗
-║     Umbral REPL v1.5.1                 ║
+║     Umbral REPL v1.5.2                 ║
 ║     Lenguaje de Programación Umbral   ║
 ╚════════════════════════════════════════╝
 

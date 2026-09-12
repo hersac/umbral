@@ -1,0 +1,19 @@
+!! Ejemplo 24: cliente TCP con Net
+!! Requiere el servidor del ejemplo 23 en otra terminal
+
+v: cliente = Net.tcp();
+cliente.set_timeout(5000);
+cliente.connect("127.0.0.1", 9999);
+cliente.write("hola servidor");
+
+v: respuesta = cliente.read(1024);
+tprint("respuesta: &respuesta");
+
+v: local = cliente.local_address();
+tprint("local: &local");
+
+v: remota = cliente.remote_address();
+tprint("remota: &remota");
+
+cliente.close();
+tprint("fin cliente");

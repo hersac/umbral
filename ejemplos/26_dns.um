@@ -1,0 +1,14 @@
+!! Ejemplo 26: resolucion DNS y direcciones con Net.Address
+
+v: todas = Dns.resolve("localhost");
+tprint("todas: &todas");
+
+v: cuatro = Dns.resolve_ipv4("localhost");
+tprint("ipv4: &cuatro");
+
+v: seis = Dns.resolve_ipv6("localhost");
+tprint("ipv6: &seis");
+
+v: dir = Net.Address.create("127.0.0.1", 8080);
+tprint("host: &dir.host");
+tprint("puerto: &dir.port");

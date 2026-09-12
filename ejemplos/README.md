@@ -221,6 +221,24 @@ umbral 10_operador_spread.um
 
 ---
 
+### 🌐 Red con Net y Dns
+**Archivos:** `23_red_tcp_servidor.um`, `24_red_tcp_cliente.um`, `25_red_udp.um`, `26_dns.um`
+
+Aprende sobre:
+- Servidor eco TCP (`Net.tcp`, `bind`, `listen`, `accept`, `read`, `write`, `close`)
+- Cliente TCP (`connect`, `set_timeout`, `local_address`, `remote_address`)
+- UDP en bucle local (`Net.udp`, `send`, `receive`)
+- Direcciones (`Net.Address.create`) y resolución DNS (`Dns.resolve`, `resolve_ipv4`, `resolve_ipv6`)
+
+```bash
+umbral 23_red_tcp_servidor.um  # terminal 1
+umbral 24_red_tcp_cliente.um   # terminal 2
+umbral 25_red_udp.um
+umbral 26_dns.um
+```
+
+---
+
 ## 📦 Módulos
 
 ### modulos/matematicas.um

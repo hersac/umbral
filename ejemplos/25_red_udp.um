@@ -1,0 +1,18 @@
+!! Ejemplo 25: udp en bucle local con Net
+
+v: receptor = Net.udp();
+receptor.bind("127.0.0.1", 9998);
+receptor.set_timeout(3000);
+
+v: emisor = Net.udp();
+emisor.bind("127.0.0.1", 0);
+
+v: enviados = emisor.send("ping", "127.0.0.1", 9998);
+tprint("enviados: &enviados");
+
+v: datos = receptor.receive(64);
+tprint("recibido: &datos");
+
+emisor.close();
+receptor.close();
+tprint("fin udp");

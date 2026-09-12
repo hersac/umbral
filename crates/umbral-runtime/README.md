@@ -43,15 +43,21 @@ Define todos los tipos de valores en Umbral:
 pub enum Valor {
     Entero(i64),
     Flotante(f64),
-    Texto(String),
     Booleano(bool),
+    Texto(String),
     Lista(Vec<Valor>),
     Diccionario(HashMap<String, Valor>),
     Objeto(Instancia),
     Funcion(Funcion),
+    FuncionNativa(String, NativeFn),
+    Promesa(SharedPromesa),
+    Enchufe(ManejadorEnchufe),
+    Clase(String),
     Nulo,
 }
 ```
+
+`Enchufe` es el recurso de red (socket TCP/UDP). Se crea con `Net.tcp()` o `Net.udp()` y guarda su estado en un `Arc<Mutex<InteriorEnchufe>>`: oyente, flujo, datagrama, tiempos de espera y bandera de reuso.
 
 ### `entorno.rs`
 
@@ -130,6 +136,17 @@ Núcleo de ejecución del runtime:
 - Acceso a índices con `[]`
 - Instanciación de clases
 - Llamadas a métodos
+- Métodos de enchufes (`Valor::Enchufe` despacha a `stdlib::net::invocar`)
+
+### `stdlib/net.rs` y `stdlib/dns.rs`
+
+Capa de acceso al sistema operativo para red. El intérprete solo ve `Valor::Enchufe`; todo socket vive en Rust:
+
+- **`net::crear_modulo()`** - Diccionario global `Net` con `tcp`, `udp` y `Address.create`.
+- **`net::invocar()`** - Despacha `bind`, `listen`, `accept`, `connect`, `read`, `write`, `send`, `receive`, `close`, `set_timeout`, `set_read_timeout`, `set_write_timeout`, `set_reuse_address`, `local_address` y `remote_address`.
+- **`dns::crear_modulo()`** - Diccionario global `Dns` con `resolve`, `resolve_ipv4` y `resolve_ipv6` sobre `ToSocketAddrs`.
+- TCP usa `socket2` para `bind` + `listen` con `SO_REUSEADDR` real; UDP usa datagramas con destino opcional.
+- En error retornan `Valor::Nulo` con mensaje en consola.
 
 ## Ejemplo completo
 

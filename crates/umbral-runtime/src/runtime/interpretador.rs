@@ -4,6 +4,7 @@ use crate::runtime::enums::GestorEnums;
 use crate::runtime::funciones::GestorFunciones;
 use crate::runtime::interfaces::{GestorInterfaces, Interfaz};
 use crate::runtime::stdlib::http;
+use crate::runtime::stdlib::net;
 use crate::runtime::valores::{Funcion, SharedPromesa, Valor};
 use async_recursion::async_recursion;
 use std::collections::HashMap;
@@ -2168,6 +2169,11 @@ impl Interpretador {
             }
             eprintln!("Método '{}' no existe para texto", metodo);
             return Valor::Nulo;
+        }
+
+        if let Valor::Enchufe(manejador) = obj_valor {
+            let args = self.evaluar_argumentos(argumentos).await;
+            return net::invocar(&manejador, metodo, args);
         }
 
         let instancia = match obj_valor {

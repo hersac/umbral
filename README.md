@@ -1,6 +1,6 @@
 # Umbral
 
-**Versión 1.5.1**
+**Versión 1.5.2**
 
 Lenguaje de programación de propósito general con sintaxis expresiva y moderna. Diseñado para ser fácil de aprender y productivo de usar.
 
@@ -44,6 +44,7 @@ Lenguaje de programación de propósito general con sintaxis expresiva y moderna
 - 🧬 **Genéricos (`<T>`)** - Interfaces, clases y funciones parametrizadas por tipo
 - ⚡ **Operadores completos** - Aritméticos, lógicos, comparación, incremento/decremento y spread
 - 🌐 **Cliente HTTP nativo** - Función global `pulse` con todos los verbos, conversión automática a JSON y respuesta con `.parse()` / `.json()` / `.text()`
+- 🔌 **Red nativa (`Net` y `Dns`)** - Sockets TCP/UDP bloqueantes, direcciones y resolución DNS para escribir servidores directamente en Umbral
 
 ### 🚧 En desarrollo
 
@@ -59,19 +60,19 @@ Lenguaje de programación de propósito general con sintaxis expresiva y moderna
 
 Descarga la última versión desde [Releases](https://github.com/hersac/umbral/releases):
 
-- **Linux**: `umbral_1.5.1_amd64.deb`
-- **Windows**: `umbral_1.5.1_x64.exe`
-- **Código fuente**: `umbral-1.5.1.tar.gz` o `umbral-1.5.1.zip`
+- **Linux**: `umbral_1.5.2_amd64.deb`
+- **Windows**: `umbral_1.5.2_x64.exe`
+- **Código fuente**: `umbral-1.5.2.tar.gz` o `umbral-1.5.2.zip`
 
 #### Instalación en Linux (Debian/Ubuntu)
 
 ```bash
-sudo dpkg -i umbral_1.5.1_amd64.deb
+sudo dpkg -i umbral_1.5.2_amd64.deb
 ```
 
 #### Instalación en Windows
 
-Ejecuta el instalador `umbral_1.5.1_x64.exe` y sigue las instrucciones.
+Ejecuta el instalador `umbral_1.5.2_x64.exe` y sigue las instrucciones.
 
 ### Opción 2: Compilar desde código fuente
 
@@ -827,6 +828,106 @@ tprint(objeto);                               !! ["nombre" => "Ana"]
 ```
 
 
+### Red nativa (`Net` y `Dns`)
+
+Umbral expone la red del sistema operativo con dos globales: `Net` (sockets TCP/UDP y direcciones) y `Dns` (resolución de nombres). Los sockets son bloqueantes y configurables con tiempos de espera. En caso de error la operación retorna `null` e imprime el motivo en consola, igual que `Std.read_file`.
+
+#### Servidor eco TCP
+
+```umbral
+v: servidor = Net.tcp();
+servidor.set_reuse_address(true);
+servidor.bind("127.0.0.1", 9999);
+servidor.listen(10);
+
+v: cliente = servidor.accept();   !! bloquea hasta que llegue un cliente
+v: mensaje = cliente.read(1024);
+cliente.write("eco: &mensaje");
+
+cliente.close();
+servidor.close();
+```
+
+Ejemplo completo en dos terminales: `ejemplos/23_red_tcp_servidor.um` y `ejemplos/24_red_tcp_cliente.um`.
+
+#### Cliente TCP
+
+```umbral
+v: cliente = Net.tcp();
+cliente.set_timeout(5000);
+cliente.connect("127.0.0.1", 9999);
+cliente.write("hola servidor");
+
+v: respuesta = cliente.read(1024);
+tprint("respuesta: &respuesta");
+
+v: local = cliente.local_address();    !! ["host" => "127.0.0.1", "port" => 52696]
+v: remota = cliente.remote_address();  !! ["host" => "127.0.0.1", "port" => 9999]
+cliente.close();
+```
+
+#### UDP
+
+```umbral
+v: receptor = Net.udp();
+receptor.bind("127.0.0.1", 9998);
+receptor.set_timeout(3000);
+
+v: emisor = Net.udp();
+emisor.bind("127.0.0.1", 0);                    !! puerto 0 = puerto efímero
+v: enviados = emisor.send("ping", "127.0.0.1", 9998);
+
+v: datos = receptor.receive(64);
+tprint("recibido: &datos");                     !! ping
+
+emisor.close();
+receptor.close();
+```
+
+Ver `ejemplos/25_red_udp.um`.
+
+#### Direcciones y DNS
+
+```umbral
+v: dir = Net.Address.create("127.0.0.1", 8080);
+tprint(dir.host);    !! 127.0.0.1
+tprint(dir.port);    !! 8080
+
+v: todas = Dns.resolve("localhost");         !! ["::1", "127.0.0.1"]
+v: cuatro = Dns.resolve_ipv4("localhost");   !! ["127.0.0.1"]
+v: seis = Dns.resolve_ipv6("localhost");     !! ["::1"]
+```
+
+Ver `ejemplos/26_dns.um`.
+
+#### Referencia de métodos del enchufe
+
+| Método | Descripción |
+|--------|-------------|
+| `bind(host, port)` | Vincula el enchufe a una interfaz y puerto locales |
+| `listen(backlog)` | TCP: pone en escucha un enchufe vinculado (`1`–`1024`) |
+| `accept()` | TCP: bloquea y retorna un enchufe nuevo por cliente |
+| `connect(host, port)` | Conecta como cliente (TCP) o fija destino (UDP, requiere `bind` previo) |
+| `read(tamaño)` | TCP: lee hasta `tamaño` bytes como `Str` (`1`–`65536`) |
+| `write(datos)` | TCP: escribe el texto y retorna los bytes enviados |
+| `send(datos, [host, port])` | UDP: envía al destino o al conectado; retorna bytes enviados |
+| `receive(tamaño)` | UDP: bloquea y retorna el texto recibido (`1`–`65536`) |
+| `close()` | Cierra el enchufe y libera el recurso |
+| `set_timeout(ms)` | Fija espera de lectura y escritura (`0` = bloqueo infinito) |
+| `set_read_timeout(ms)` | Fija solo la espera de lectura |
+| `set_write_timeout(ms)` | Fija solo la espera de escritura |
+| `set_reuse_address(bool)` | Activa `SO_REUSEADDR`; debe llamarse antes de `bind` |
+| `local_address()` | Retorna `["host" => ..., "port" => ...]` locales |
+| `remote_address()` | Retorna `["host" => ..., "port" => ...]` remotos |
+
+Notas:
+
+- Un enchufe o escucha (`bind` + `listen` + `accept`) o conecta (`connect`): no combina ambos roles.
+- `accept()` hereda en el enchufe hijo los tiempos de espera del oyente.
+- `receive` retorna solo el texto; la dirección de origen se descarta en esta versión.
+- TLS (`TLS.connect`, `TLS.wrap`) y multiplexado (`select`/`poll`/`epoll`) quedan para una versión posterior.
+
+
 ### Strings e interpolación
 
 ```umbral
@@ -960,7 +1061,7 @@ v: claves = Std.keys(dict);                !! ["a", "b"]
 
 ---
 
-## 📜 Especificación Formal (v1.5.1)
+## 📜 Especificación Formal (v1.5.2)
 
 ### Sistema de Tipos
 
@@ -977,6 +1078,7 @@ v: claves = Std.keys(dict);                !! ["a", "b"]
 *   **Dict**: Colección de pares clave-valor (`HashMap`).
 *   **Obj**: Instancia de una clase.
 *   **Func**: Referencia a una función.
+*   **Enchufe**: Recurso de red (socket TCP/UDP creado con `Net.tcp()` o `Net.udp()`).
 
 #### Reglas de Tipado
 *   **Inferencia**: El tipo se infiere en la asignación si no se especifica.
@@ -1278,6 +1380,7 @@ El proyecto incluye una carpeta `ejemplos/` con código de demostración de toda
 - ✅ Integración con gestor de paquetes UMP
 - ✅ Resolución automática de módulos en `modules_ump/`
 - ✅ Biblioteca estándar (Std) con funciones para strings, números, archivos y colecciones
+- ✅ Red nativa (Net/Dns): sockets TCP/UDP bloqueantes, direcciones y resolución DNS
 - ✅ CLI (`umbral`) con gestión de versiones centralizada
 - ✅ REPL interactivo (`umbral-repl`)
 - ✅ Instaladores para Linux/macOS/Windows
