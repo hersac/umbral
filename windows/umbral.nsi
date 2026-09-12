@@ -36,6 +36,19 @@ ShowUninstDetails show
 !define MUI_ABORTWARNING
 !define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
 !define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
+; Imagen personalizada (mascota Umbral sin fondo -> BMP 24-bit para NSIS)
+; Fuente: images/umbral-pet-sin-fondo.png convertida a BMP (NSIS no acepta PNG directo)
+!define MUI_HEADERIMAGE
+!define MUI_HEADERIMAGE_BITMAP "${__FILEDIR__}\umbral-header.bmp"
+!define MUI_HEADERIMAGE_BITMAP_NOSTRETCH
+!define MUI_WELCOMEFINISHPAGE_BITMAP "${__FILEDIR__}\umbral-wizard.bmp"
+!define MUI_UNWELCOMEFINISHPAGE_BITMAP "${__FILEDIR__}\umbral-wizard.bmp"
+BrandingText "Hersac"
+VIProductVersion "${APPVERSION}.0"
+VIAddVersionKey "ProductName" "${APPNAME}"
+VIAddVersionKey "CompanyName" "Hersac"
+VIAddVersionKey "FileVersion" "${APPVERSION}"
+VIAddVersionKey "ProductVersion" "${APPVERSION}"
 !define MUI_FINISHPAGE_RUN "$INSTDIR\bin\${EXE_REPL}"
 !define MUI_FINISHPAGE_RUN_TEXT "Iniciar el REPL de Umbral"
 !define MUI_FINISHPAGE_RUN_CHECKED
@@ -75,7 +88,7 @@ Section "Instalar Umbral" SecInstall
   ; Entrada en "Agregar o quitar programas"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayName" "${APPNAME}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayVersion" "${APPVERSION}"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "Publisher" "Heriberto Sánchez"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "Publisher" "Hersac"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayIcon" "$BinDir\${EXE_MAIN}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "InstallLocation" "$INSTDIR"
@@ -112,11 +125,14 @@ Section "Uninstall"
 SectionEnd
 
 ; ------------------------------------------------------------
-;  Funciones de manipulación del PATH (canónicas del wiki de NSIS)
-;  http://nsis.sourceforge.net/Path_Manipulation
+;  Funciones de manipulación del PATH (solo tocan HKCU Environment\Path)
+;  - AddToPath: agrega $0 como entrada exacta (sin duplicar, sin tocar
+;    el resto de entradas ni otras variables de entorno).
+;  - un.RemoveFromPath: elimina solo $0 como entrada exacta, conserva
+;    el resto del PATH y no toca otras variables. Si no hay cambios,
+;    no escribe ni notifica.
 ; ------------------------------------------------------------
 ;  AddToPath - Agrega el directorio $0 al PATH del usuario
-;  (evita duplicados y maneja PATH vacío)
 ; ------------------------------------------------------------
 Function AddToPath
   Exch $0
@@ -127,32 +143,34 @@ Function AddToPath
 
   ; no agregar si el directorio no existe
   IfFileExists "$0\*.*" "" AddToPath_done
+  ; no agregar si la ruta está vacía
+  StrCmp $0 "" AddToPath_done
 
   ReadRegStr $1 HKCU "Environment" "Path"
-  StrCpy $2 $1 1 -1
-  StrCmp $2 ";" 0 +3
-    StrCpy $1 $1 -1 ; quitar el ';' final
-  IntCmp $1 "" AddToPath_Get
-    ; ya hay contenido: comprobar si $0 ya está presente
-    StrCpy $2 $1
-    StrCpy $3 ""
-    Push "$2"
-    Push "$0"
-    Call StrStr
-    Pop $2
-    StrCmp $2 "" AddToPath_Get
-    ; ya está en el PATH
-    Goto AddToPath_done
+  ; PATH vacío -> escribir directo
+  StrCmp $1 "" AddToPath_write_new
 
-AddToPath_Get:
+  ; Búsqueda exacta insensible a mayúsculas: ";PATH;" contiene ";DIR;"
+  ; (los ';' evitan falsos positivos con subcadenas, ej. bin vs bin2)
+  StrCpy $2 ";$1;"
+  StrCpy $3 ";$0;"
+  Push "$2"
+  Push "$3"
+  Call StrStr
+  Pop $2
+  ; Si StrStr devolvió algo distinto de vacío, la entrada ya existe
+  StrCmp $2 "" AddToPath_write_append AddToPath_done
+
+AddToPath_write_append:
+  ; Releer por si cambió y anexar al final (preserva el orden existente)
   ClearErrors
   ReadRegStr $2 HKCU "Environment" "Path"
-  StrCmp $2 "" AddToPath_Add
-    StrCpy $3 "$0;$2"
-    Goto AddToPath_Write
-AddToPath_Add:
+  StrCmp $2 "" AddToPath_write_new
+    StrCpy $3 "$2;$0"
+    Goto AddToPath_write
+AddToPath_write_new:
   StrCpy $3 "$0"
-AddToPath_Write:
+AddToPath_write:
   WriteRegExpandStr HKCU "Environment" "Path" $3
   SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
 
@@ -165,7 +183,9 @@ AddToPath_done:
 FunctionEnd
 
 ; ------------------------------------------------------------
-;  RemoveFromPath - Quita el directorio $0 del PATH del usuario
+;  RemoveFromPath - Quita solo el directorio $0 del PATH del usuario
+;  Conserva todas las demás entradas y variables. No escribe si no
+;  hay cambios (evita borrar el PATH por error).
 ; ------------------------------------------------------------
 Function un.RemoveFromPath
   Exch $0
@@ -175,32 +195,62 @@ Function un.RemoveFromPath
   Push $4
   Push $5
   Push $6
+  Push $7
+
+  StrCmp $0 "" un.RemoveFromPath_done
 
   ReadRegStr $1 HKCU "Environment" "Path"
-  StrCpy $5 $1 1 -1
-  StrCmp $5 ";" +2
-    StrCpy $1 "$1;" ; asegurar que termine en ';'
+  ; Si no hay PATH, no hay nada que hacer (no escribir, no notificar)
+  StrCmp $1 "" un.RemoveFromPath_done
 
-  Push $1
-  Push $0
-  Call un.TrimPath
-  Pop $1
+  ; Trabajar con ';' alrededor para coincidencias exactas
+  StrCpy $2 ";$1;"
+  StrCpy $3 ";$0;"
 
-  StrCpy $3 $1 1 -1
-  StrCmp $3 ";" +2
-    StrCpy $1 "$1;" ; asegurar que termine en ';'
+un.RemoveFromPath_loop:
+  Push "$2"
+  Push "$3"
+  Call un.StrStr
+  Pop $4
+  ; $4 vacío = ya no hay ocurrencias
+  StrCmp $4 "" un.RemoveFromPath_finish
+  ; $4 = cola desde la coincidencia (";DIR;...resto")
+  ; prefixLen = Len($2) - Len($4)
+  StrLen $5 "$2"
+  StrLen $6 "$4"
+  IntOp $5 $5 - $6
+  ; Len($3) para calcular el resto (conservando un ';')
+  StrLen $6 "$3"
+  ; prefijo = primeros $5 caracteres de $2
+  StrCpy $7 "$2" $5
+  ; resto = $4 sin los primeros Len($3)-1 caracteres
+  IntOp $6 $6 - 1
+  StrCpy $4 "$4" "" $6
+  ; nuevo valor de trabajo = prefijo + resto
+  StrCpy $2 "$7$4"
+  Goto un.RemoveFromPath_loop
 
-  Push $1
-  Push $0
-  Call un.TrimPath
-  Pop $1
+un.RemoveFromPath_finish:
+  ; Quitar los ';' auxiliares del inicio y fin
+  StrCmp $2 ";" un.RemoveFromPath_empty
+  StrLen $5 "$2"
+  IntOp $5 $5 - 2
+  IntCmp $5 0 un.RemoveFromPath_empty un.RemoveFromPath_empty 0
+  StrCpy $4 "$2" $5 1
+  StrCpy $2 $4
+  Goto un.RemoveFromPath_compare
 
-  ClearErrors
-  ReadRegStr $2 HKCU "Environment" "Path"
-  WriteRegExpandStr HKCU "Environment" "Path" $1
+un.RemoveFromPath_empty:
+  StrCpy $2 ""
+
+un.RemoveFromPath_compare:
+  ; Solo escribir si realmente cambió (protege el resto del PATH)
+  StrCmp $1 $2 un.RemoveFromPath_done
+  WriteRegExpandStr HKCU "Environment" "Path" $2
   SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
 
 un.RemoveFromPath_done:
+  Pop $7
   Pop $6
   Pop $5
   Pop $4
@@ -211,70 +261,8 @@ un.RemoveFromPath_done:
 FunctionEnd
 
 ; ------------------------------------------------------------
-;  TrimPath - Quita la ruta $0 de $1
-;  Entrada: tope de pila = ruta a quitar, segundo = PATH
-;  Salida:  tope de pila = PATH sin la ruta
-; ------------------------------------------------------------
-Function un.TrimPath
-  Exch $1
-  Push $2
-  Push $3
-  Push $4
-  Push $5
-  Push $6
-
-  StrCpy $5 $1 1 -1
-  StrCmp $5 ";" +2
-    StrCpy $1 "$1;"
-  StrCpy $6 $1
-
-  ; si $0 está vacío o no es un directorio, no hay nada que hacer
-  StrCpy $3 $0 1 0
-  StrCmp $3 ";" un.TrimPath_NoPath
-  StrCpy $4 ""
-  StrCpy $2 -1
-  IntOp $2 $2 + 1
-  StrCpy $3 $6 $2
-  StrCmp $3 "" un.TrimPath_NoPath
-  StrCpy $4 $0
-  StrCmp $3 $4 un.TrimPath_Found
-  Goto -5
-
-un.TrimPath_NoPath:
-  StrCpy $1 ""
-  Goto un.TrimPath_Done
-
-un.TrimPath_Found:
-  StrCpy $5 $6 "" $2
-  IntOp $5 $5 + 1
-  StrCpy $3 $6 $5
-  StrCpy $5 $3
-  StrCpy $4 ""
-  StrCpy $2 -1
-  IntOp $2 $2 + 1
-  StrCpy $3 $5 $2
-  StrCmp $3 "" un.TrimPath_NoPath2
-  StrCpy $4 ";"
-  StrCmp $3 $4 un.TrimPath_Done
-  Goto -6
-
-un.TrimPath_NoPath2:
-  StrCpy $1 ""
-
-un.TrimPath_Done:
-  IntOp $5 $2 + 1
-  StrCpy $5 $6 $5 -1
-  StrCpy $1 $5
-  Pop $6
-  Pop $5
-  Pop $4
-  Pop $3
-  Pop $2
-  Exch $1
-FunctionEnd
-
-; ------------------------------------------------------------
-;  StrStr - Busca una subcadena dentro de otra
+;  StrStr - Busca una subcadena dentro de otra (insensible a mayúsculas,
+;  necesario porque Windows compara rutas del PATH sin distinguir caso)
 ;  Entrada:  tope de pila = subcadena, segundo = cadena
 ;  Salida:   tope de pila = resto desde la coincidencia o vacío
 ; ------------------------------------------------------------
@@ -296,7 +284,7 @@ StrStr_loop:
   StrCpy $4 $1 1 $5
   StrCmp $4 "" StrStr_NotFound
   StrCpy $4 $1 $2 $5
-  StrCmp $4 $0 StrStr_Found
+  StrCmp $4 $0 StrStr_Found /ignorecase
   IntOp $5 $5 + 1
   Goto StrStr_loop
 
@@ -308,6 +296,50 @@ StrStr_NotFound:
   StrCpy $3 ""
 
 StrStr_End:
+  Pop $5
+  Pop $4
+  Pop $3
+  Pop $2
+  StrCpy $1 $3
+  Exch $1
+  Exch
+  Pop $0
+FunctionEnd
+
+; ------------------------------------------------------------
+;  un.StrStr - Versión para el desinstalador (las funciones del
+;  instalador no son visibles desde la sección Uninstall)
+; ------------------------------------------------------------
+Function un.StrStr
+  Exch $0
+  Exch
+  Exch $1
+  Push $2
+  Push $3
+  Push $4
+  Push $5
+
+  StrLen $2 $0
+  StrCpy $3 ""
+  StrCpy $4 ""
+  StrCpy $5 0
+
+un.StrStr_loop:
+  StrCpy $4 $1 1 $5
+  StrCmp $4 "" un.StrStr_NotFound
+  StrCpy $4 $1 $2 $5
+  StrCmp $4 $0 un.StrStr_Found /ignorecase
+  IntOp $5 $5 + 1
+  Goto un.StrStr_loop
+
+un.StrStr_Found:
+  StrCpy $3 $1 "" $5
+  Goto un.StrStr_End
+
+un.StrStr_NotFound:
+  StrCpy $3 ""
+
+un.StrStr_End:
   Pop $5
   Pop $4
   Pop $3
