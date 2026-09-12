@@ -72,7 +72,6 @@ fn mostrar_ayuda() {
 }
 
 fn mostrar_docs(codigo: &str) {
-    use umbral_parser::ast::Sentencia;
     let tokens = umbral_lexer::analizar(codigo);
     let programa = umbral_parser::parsear_programa(tokens).unwrap_or_else(|e| {
         eprintln!("Error al parsear: {}", e);
