@@ -15,7 +15,13 @@ Unicode true
 ; ------------------------------------------------------------
 !define APPNAME "Umbral"
 !ifndef VERSION
-  !define VERSION "1.5.2"
+  !define VERSION "1.5.3"
+!endif
+; VI_VERSION debe ser estrictamente X.X.X.X numérico para VIProductVersion.
+; Se pasa desde CI con -DVI_VERSION=... (sanitizado desde el tag).
+; El fallback solo sirve para compilación local.
+!ifndef VI_VERSION
+  !define VI_VERSION "1.5.3.0"
 !endif
 !define APPVERSION "${VERSION}"
 !define EXE_MAIN "umbral.exe"
@@ -46,7 +52,7 @@ ShowUninstDetails show
 !define MUI_WELCOMEFINISHPAGE_BITMAP "${__FILEDIR__}\umbral-wizard.bmp"
 !define MUI_UNWELCOMEFINISHPAGE_BITMAP "${__FILEDIR__}\umbral-wizard.bmp"
 BrandingText "Hersac"
-VIProductVersion "${APPVERSION}.0"
+VIProductVersion "${VI_VERSION}"
 VIAddVersionKey "ProductName" "${APPNAME}"
 VIAddVersionKey "CompanyName" "Hersac"
 VIAddVersionKey "FileVersion" "${APPVERSION}"
