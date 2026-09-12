@@ -10,7 +10,7 @@ members = [
 ]
 
 [workspace.package]
-version = "1.5.4"
+version = "1.5.5"
 edition = "2021"
 authors = ["Heriberto Sánchez"]
 description = "Lenguaje de programación de propósito general"
