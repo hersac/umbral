@@ -55,6 +55,8 @@ BrandingText "Hersac"
 VIProductVersion "${VI_VERSION}"
 VIAddVersionKey "ProductName" "${APPNAME}"
 VIAddVersionKey "CompanyName" "Hersac"
+VIAddVersionKey "FileDescription" "${APPNAME} - Interprete de lenguaje de programacion"
+VIAddVersionKey "LegalCopyright" "Hersac"
 VIAddVersionKey "FileVersion" "${APPVERSION}"
 VIAddVersionKey "ProductVersion" "${APPVERSION}"
 !define MUI_FINISHPAGE_RUN "$INSTDIR\bin\${EXE_REPL}"
@@ -292,7 +294,8 @@ StrStr_loop:
   StrCpy $4 $1 1 $5
   StrCmp $4 "" StrStr_NotFound
   StrCpy $4 $1 $2 $5
-  StrCmp $4 $0 StrStr_Found /ignorecase
+  ; StrCmp ya es insensible a mayusculas/minusculas (no lleva flag /ignorecase).
+  StrCmp $4 $0 StrStr_Found
   IntOp $5 $5 + 1
   Goto StrStr_loop
 
@@ -336,7 +339,8 @@ un.StrStr_loop:
   StrCpy $4 $1 1 $5
   StrCmp $4 "" un.StrStr_NotFound
   StrCpy $4 $1 $2 $5
-  StrCmp $4 $0 un.StrStr_Found /ignorecase
+  ; StrCmp ya es insensible a mayusculas/minusculas (no lleva flag /ignorecase).
+  StrCmp $4 $0 un.StrStr_Found
   IntOp $5 $5 + 1
   Goto un.StrStr_loop
 

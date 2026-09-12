@@ -65,11 +65,17 @@ jobs:
           while [ "${#CLEAN[@]}" -lt 4 ]; do CLEAN+=(0); done
           VI_VERSION="$(IFS=.; echo "${CLEAN[*]:0:4}")"
           echo "VERSION=$VERSION VI_VERSION=$VI_VERSION"
+          # Pre-chequeo: los binarios deben existir (los genera `cargo build --release`).
+          # Sin esto makensis falla con un críptico "File: ... failed".
+          test -f target/release/umbral.exe || { echo "::error::falta target/release/umbral.exe"; ls -l target/release/; exit 1; }
+          test -f target/release/umbral-repl.exe || { echo "::error::falta target/release/umbral-repl.exe"; ls -l target/release/; exit 1; }
           # Ruta absoluta: si se pasa "windows/umbral.nsi" como relativa,
           # ${__FILEDIR__} queda relativo y los File con ${__FILEDIR__}
           # se resuelven como "windows/windows/...". Con ruta absoluta
           # ${__FILEDIR__} es absoluto y todo resuelve bien.
+          # /INPUTCHARSET UTF8: el .nsi está en UTF-8 con acentos en comentarios.
           "/c/Program Files (x86)/NSIS/makensis.exe" \
+            /INPUTCHARSET UTF8 \
             -DVERSION="${VERSION}" -DVI_VERSION="${VI_VERSION}" "${GITHUB_WORKSPACE}/windows/umbral.nsi"
 
       - name: Subir instalador al release

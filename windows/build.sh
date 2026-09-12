@@ -58,7 +58,7 @@ echo "VERSION=${VERSION} VI_VERSION=${VI_VERSION}"
 # Ruta absoluta al .nsi: con ruta relativa ${__FILEDIR__} queda relativo
 # y los File con ${__FILEDIR__} se resuelven como "windows/windows/...".
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-makensis -DVERSION="${VERSION}" -DVI_VERSION="${VI_VERSION}" "${SCRIPT_DIR}/umbral.nsi"
+makensis /INPUTCHARSET UTF8 -DVERSION="${VERSION}" -DVI_VERSION="${VI_VERSION}" "${SCRIPT_DIR}/umbral.nsi"
 
 echo ""
 echo "✅ Instalador generado: windows/umbral-setup-${VERSION}.exe"
