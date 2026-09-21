@@ -122,16 +122,16 @@ impl fmt::Display for Valor {
                 write!(f, "]")
             }
             Valor::Diccionario(map) => {
-                write!(f, "{{")?;
+                write!(f, "[")?;
                 let mut first = true;
                 for (key, value) in map {
                     if !first {
                         write!(f, ", ")?;
                     }
-                    write!(f, "\"{}\": {}", key, value)?;
+                    write!(f, "\"{}\" => {}", key, value)?;
                     first = false;
                 }
-                write!(f, "}}")
+                write!(f, "]")
             }
             Valor::Objeto(inst) => write!(f, "{}", inst),
             Valor::Funcion(func) => write!(f, "<función {}>", func.nombre),
