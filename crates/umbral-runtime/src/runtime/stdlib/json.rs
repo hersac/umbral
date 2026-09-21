@@ -105,6 +105,9 @@ fn convertir_diccionario_json(diccionario: &HashMap<String, Valor>) -> serde_jso
 }
 
 /// Convierte un `Valor` de Umbral a `serde_json::Value`.
+/// Las instancias de clase (`Objeto`) se serializan como objeto JSON
+/// con sus propiedades (mismo formato que genera `parse()`), de forma
+/// recursiva. Así `usuario.json()` produce el JSON tradicional.
 pub(crate) fn valor_a_json(valor: &Valor) -> serde_json::Value {
     match valor {
         Valor::Nulo => serde_json::Value::Null,
@@ -114,6 +117,28 @@ pub(crate) fn valor_a_json(valor: &Valor) -> serde_json::Value {
         Valor::Texto(texto) => serde_json::Value::String(texto.clone()),
         Valor::Lista(lista) => convertir_lista_json(lista),
         Valor::Diccionario(diccionario) => convertir_diccionario_json(diccionario),
+        Valor::Objeto(instancia) => objeto_a_json(instancia),
         _ => serde_json::Value::Null,
     }
+}
+
+/// Serializa las propiedades de una instancia como objeto JSON.
+/// Si el mutex está envenenado, retorna `Null` en lugar de bloquear.
+fn objeto_a_json(instancia: &crate::runtime::valores::Instancia) -> serde_json::Value {
+    let Ok(props) = instancia.propiedades.lock() else {
+        return serde_json::Value::Null;
+    };
+    convertir_diccionario_json(&props)
+}
+
+/// Devuelve las propiedades de una instancia como `Diccionario`.
+/// Es el mismo formato que genera `parse()`: `["prop" => valor]`.
+/// Retorna `Nulo` si el mutex está envenenado.
+pub(crate) fn objeto_a_diccionario(
+    instancia: &crate::runtime::valores::Instancia,
+) -> Valor {
+    let Ok(props) = instancia.propiedades.lock() else {
+        return Valor::Nulo;
+    };
+    Valor::Diccionario(props.clone())
 }

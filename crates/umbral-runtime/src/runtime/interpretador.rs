@@ -4,6 +4,7 @@ use crate::runtime::enums::GestorEnums;
 use crate::runtime::funciones::GestorFunciones;
 use crate::runtime::interfaces::{GestorInterfaces, Interfaz};
 use crate::runtime::stdlib::http;
+use crate::runtime::stdlib::json;
 use crate::runtime::stdlib::net;
 use crate::runtime::valores::{Funcion, SharedPromesa, Valor};
 use async_recursion::async_recursion;
@@ -771,12 +772,19 @@ impl Interpretador {
         funcion: crate::runtime::valores::Funcion,
         captura: &HashMap<String, Valor>,
     ) -> Valor {
-        let filtrada: HashMap<String, Valor> = captura
+        let mut combinada: HashMap<String, Valor> = captura
             .iter()
             .filter(|(nombre, _)| *nombre != &funcion.nombre)
             .map(|(nombre, valor)| (nombre.clone(), valor.clone()))
             .collect();
-        Valor::Funcion(funcion.con_captura(filtrada))
+        // Preserva ligaduras previas (ej. `__this__` de un método extraído
+        // como callback): la instancia ligada gana sobre los globales.
+        if let Some(previa) = funcion.entorno_capturado.clone() {
+            previa.into_iter().for_each(|(nombre, valor)| {
+                combinada.insert(nombre, valor);
+            });
+        }
+        Valor::Funcion(funcion.con_captura(combinada))
     }
 
     fn mapa_con_captura(
@@ -1997,9 +2005,15 @@ impl Interpretador {
             metodo.es_async,
             metodo.doc.clone(),
         );
-        let Some(captura) = clase.entorno_capturado.clone() else {
-            return Some(Valor::Funcion(base));
-        };
+        // Liga la instancia (`th`): al extraer `ctrl.metodo` como callback,
+        // la función resultante conserva su `__this__` vía captura, que
+        // `GestorFunciones` inyecta al invocarla. Sin esto el contexto
+        // de la clase (ej. dependencias inyectadas) se pierde.
+        let mut captura = clase.entorno_capturado.clone().unwrap_or_default();
+        captura.insert(
+            "__this__".to_string(),
+            Valor::Objeto(instancia.clone()),
+        );
         Some(Valor::Funcion(base.con_captura(captura)))
     }
 
@@ -2187,8 +2201,45 @@ impl Interpretador {
             }
         };
 
+        if argumentos.is_empty() {
+            if let Some(valor) = self.json_por_defecto(&instancia, metodo) {
+                return valor;
+            }
+        }
+
         self.ejecutar_metodo_instancia_impl(instancia, metodo, argumentos)
             .await
+    }
+
+    /// Serialización por defecto de instancias: `.json()` / `.text()` /
+    /// `.string()` devuelven el JSON tradicional, `.parse()` devuelve el
+    /// diccionario `["prop" => valor]`. Retorna `None` si la clase define
+    /// su propio método (se respeta el override) o si no es un método
+    /// de conversión.
+    fn json_por_defecto(
+        &self,
+        instancia: &crate::runtime::valores::Instancia,
+        metodo: &str,
+    ) -> Option<Valor> {
+        let es_conversion = matches!(metodo, "json" | "parse" | "text" | "string");
+        if !es_conversion {
+            return None;
+        }
+        let tiene_override = self
+            .gestor_clases
+            .obtener_clase(&instancia.clase)
+            .and_then(|c| c.obtener_metodo(metodo))
+            .is_some();
+        if tiene_override {
+            return None;
+        }
+        let valor = match metodo {
+            "json" | "text" | "string" => {
+                http::valor_a_json_texto(&Valor::Objeto(instancia.clone()))
+            }
+            _ => json::objeto_a_diccionario(instancia),
+        };
+        Some(valor)
     }
 
     #[async_recursion]
@@ -2333,9 +2384,9 @@ impl Interpretador {
         let mut pares = Vec::new();
         for (k, v) in mapa {
             let val_str = self.convertir_a_texto(v).await;
-            pares.push(format!("\"{}\": {}", k, val_str));
+            pares.push(format!("\"{}\" => {}", k, val_str));
         }
-        format!("{{{}}}", pares.join(", "))
+        format!("[{}]", pares.join(", "))
     }
 
     async fn procesar_texto(&mut self, texto: String) -> String {
@@ -2842,6 +2893,11 @@ impl Interpretador {
         args: Vec<Valor>,
     ) -> Valor {
         let Some(datos) = self.datos_metodo(&instancia.clase, metodo) else {
+            if args.is_empty() {
+                if let Some(valor) = self.json_por_defecto(instancia, metodo) {
+                    return valor;
+                }
+            }
             return Valor::Nulo;
         };
         self.preparar_objeto(instancia, &datos, &args);
