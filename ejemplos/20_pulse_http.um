@@ -65,10 +65,11 @@ c: resp5 = awa: pulse("https://jsonplaceholder.typicode.com/posts/1", "DELETE");
 tprint(resp5.status);
 tprint(resp5.ok);
 
-!! 6. .json() y .parse() tambien funcionan fuera de pulse:
+!! 6. .json(), .parse() y .text() tambien funcionan fuera de pulse:
 !!    diccionario.json() convierte sintaxis Umbral a texto JSON,
-!!    texto.parse() convierte texto JSON a sintaxis Umbral
-tprint("--- 6. Conversiones .parse() / .json() ---");
+!!    texto.parse() convierte texto JSON a sintaxis Umbral,
+!!    valor.text() devuelve el valor tal cual como Str
+tprint("--- 6. Conversiones .parse() / .json() / .text() ---");
 c: persona = [
     "nombre" => "Ana García",
     "edad" => 28,
@@ -77,9 +78,11 @@ c: persona = [
     "ciudad" => "Madrid"
 ];
 tprint(persona.json());
+tprint(persona.text());
 c: crudo = '{"propiedad1": "valor1", "propiedad2": "valor2"}';
 c: objeto = crudo.parse();
 tprint(objeto);
 tprint(objeto.json());
+tprint(crudo.text());
 
 tprint("--- Fin del ejemplo pulse ---");

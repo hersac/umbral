@@ -2131,6 +2131,12 @@ impl Interpretador {
                 "json" if argumentos.is_empty() => {
                     return http::valor_a_json_texto(&Valor::Lista(items.clone()));
                 }
+                "text" | "string" if argumentos.is_empty() => {
+                    return Valor::Texto(Valor::Lista(items.clone()).to_string());
+                }
+                "parse" if argumentos.is_empty() => {
+                    return Valor::Lista(items.clone());
+                }
                 _ => {
                     eprintln!("Método '{}' no existe para arreglos", metodo);
                     return Valor::Nulo;
@@ -2173,6 +2179,14 @@ impl Interpretador {
                 return http::valor_a_json_texto(&Valor::Diccionario(mapa));
             }
 
+            if argumentos.is_empty() && (metodo == "text" || metodo == "string") {
+                return Valor::Texto(Valor::Diccionario(mapa).to_string());
+            }
+
+            if argumentos.is_empty() && metodo == "parse" {
+                return Valor::Diccionario(mapa);
+            }
+
             eprintln!("Método '{}' no encontrado en el diccionario", metodo);
             return Valor::Nulo;
         }
@@ -2181,6 +2195,12 @@ impl Interpretador {
             if metodo == "parse" && argumentos.is_empty() {
                 return http::texto_a_valor_umbral(texto);
             }
+            if metodo == "json" && argumentos.is_empty() {
+                return http::texto_a_json_canonico(texto);
+            }
+            if (metodo == "text" || metodo == "string") && argumentos.is_empty() {
+                return Valor::Texto(texto.clone());
+            }
             eprintln!("Método '{}' no existe para texto", metodo);
             return Valor::Nulo;
         }
@@ -2188,6 +2208,17 @@ impl Interpretador {
         if let Valor::Enchufe(manejador) = obj_valor {
             let args = self.evaluar_argumentos(argumentos).await;
             return net::invocar(&manejador, metodo, args);
+        }
+
+        if argumentos.is_empty()
+            && !matches!(obj_valor, Valor::Objeto(_))
+            && (metodo == "text" || metodo == "string" || metodo == "json")
+        {
+            match metodo {
+                "text" | "string" => return Valor::Texto(obj_valor.to_string()),
+                "json" => return http::valor_a_json_texto(&obj_valor),
+                _ => {}
+            }
         }
 
         let instancia = match obj_valor {
@@ -2211,11 +2242,13 @@ impl Interpretador {
             .await
     }
 
-    /// Serialización por defecto de instancias: `.json()` / `.text()` /
-    /// `.string()` devuelven el JSON tradicional, `.parse()` devuelve el
-    /// diccionario `["prop" => valor]`. Retorna `None` si la clase define
-    /// su propio método (se respeta el override) o si no es un método
-    /// de conversión.
+    /// Conversiones por defecto de instancias:
+    /// `.json()` devuelve el JSON tradicional (Texto),
+    /// `.text()` / `.string()` devuelven la forma Umbral tal cual
+    /// (`User(["prop" => valor])`) como Texto,
+    /// `.parse()` devuelve el diccionario `["prop" => valor]`.
+    /// Retorna `None` si la clase define su propio método
+    /// (se respeta el override) o si no es un método de conversión.
     fn json_por_defecto(
         &self,
         instancia: &crate::runtime::valores::Instancia,
@@ -2234,8 +2267,9 @@ impl Interpretador {
             return None;
         }
         let valor = match metodo {
-            "json" | "text" | "string" => {
-                http::valor_a_json_texto(&Valor::Objeto(instancia.clone()))
+            "json" => http::valor_a_json_texto(&Valor::Objeto(instancia.clone())),
+            "text" | "string" => {
+                Valor::Texto(Valor::Objeto(instancia.clone()).to_string())
             }
             _ => json::objeto_a_diccionario(instancia),
         };
@@ -2360,7 +2394,7 @@ impl Interpretador {
             Valor::Booleano(b) => self.booleano_a_texto(b),
             Valor::Lista(l) => self.lista_a_texto(l).await,
             Valor::Diccionario(m) => self.diccionario_a_texto(m).await,
-            Valor::Objeto(o) => o.to_string(),
+            Valor::Objeto(o) => self.objeto_a_texto(o).await,
             Valor::Nulo => "null".to_string(),
             _ => "<valor no imprimible>".to_string(),
         }
@@ -2387,6 +2421,23 @@ impl Interpretador {
             pares.push(format!("\"{}\" => {}", k, val_str));
         }
         format!("[{}]", pares.join(", "))
+    }
+
+    #[async_recursion]
+    async fn objeto_a_texto(
+        &mut self,
+        instancia: crate::runtime::valores::Instancia,
+    ) -> String {
+        let pares = match instancia.propiedades.lock() {
+            Ok(props) => props.clone(),
+            Err(_) => return format!("{}([error])", instancia.clase),
+        };
+        let mut partes = Vec::new();
+        for (k, v) in pares {
+            let val_str = self.convertir_a_texto(v).await;
+            partes.push(format!("\"{}\" => {}", k, val_str));
+        }
+        format!("{}([{}])", instancia.clase, partes.join(", "))
     }
 
     async fn procesar_texto(&mut self, texto: String) -> String {
@@ -2834,8 +2885,32 @@ impl Interpretador {
             {
                 http::valor_a_json_texto(&Valor::Diccionario(mapa.clone()))
             }
+            Valor::Diccionario(ref mapa)
+                if (metodo == "text" || metodo == "string") && args_str.trim().is_empty() =>
+            {
+                Valor::Texto(Valor::Diccionario(mapa.clone()).to_string())
+            }
+            Valor::Diccionario(ref mapa)
+                if metodo == "parse" && args_str.trim().is_empty() =>
+            {
+                Valor::Diccionario(mapa.clone())
+            }
             Valor::Texto(ref texto) if metodo == "parse" && args_str.trim().is_empty() => {
                 http::texto_a_valor_umbral(texto)
+            }
+            Valor::Texto(ref texto) if metodo == "json" && args_str.trim().is_empty() => {
+                http::texto_a_json_canonico(texto)
+            }
+            Valor::Texto(ref texto)
+                if (metodo == "text" || metodo == "string") && args_str.trim().is_empty() =>
+            {
+                Valor::Texto(texto.clone())
+            }
+            otro if (metodo == "text" || metodo == "string") && args_str.trim().is_empty() => {
+                Valor::Texto(otro.to_string())
+            }
+            otro if metodo == "json" && args_str.trim().is_empty() => {
+                http::valor_a_json_texto(&otro)
             }
             _ => Valor::Nulo,
         }
@@ -2849,6 +2924,10 @@ impl Interpretador {
             "json" if args_str.trim().is_empty() => {
                 http::valor_a_json_texto(&Valor::Lista(items.to_vec()))
             }
+            "text" | "string" if args_str.trim().is_empty() => {
+                Valor::Texto(Valor::Lista(items.to_vec()).to_string())
+            }
+            "parse" if args_str.trim().is_empty() => Valor::Lista(items.to_vec()),
             _ => Valor::Nulo,
         }
     }

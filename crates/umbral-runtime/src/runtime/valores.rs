@@ -173,17 +173,17 @@ pub struct Instancia {
 
 impl fmt::Display for Instancia {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {{ ", self.clase)?;
+        write!(f, "{}([", self.clase)?;
         let props = self.propiedades.lock().unwrap();
         let mut first = true;
         for (key, value) in props.iter() {
             if !first {
                 write!(f, ", ")?;
             }
-            write!(f, "{}: {}", key, value)?;
+            write!(f, "\"{}\" => {}", key, value)?;
             first = false;
         }
-        write!(f, " }}")
+        write!(f, "])")
     }
 }
 

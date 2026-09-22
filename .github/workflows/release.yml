@@ -50,8 +50,8 @@ jobs:
         shell: bash
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          # VIProductVersion solo acepta X.X.X.X numérico (ej: 1.5.6.0).
-          # Tags como v1.5.6-2 deben sanitizarse: quitar sufijo -2/+meta y rellenar a 4 partes.
+          # VIProductVersion solo acepta X.X.X.X numérico (ej: 1.5.7.0).
+          # Tags como v1.5.7-2 deben sanitizarse: quitar sufijo -2/+meta y rellenar a 4 partes.
           BASE="${VERSION%%-*}"
           BASE="${BASE%%+*}"
           IFS='.' read -ra PARTS <<< "$BASE"

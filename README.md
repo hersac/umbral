@@ -1,6 +1,6 @@
 # Umbral
 
-**Versión 1.5.6**
+**Versión 1.5.7**
 
 Lenguaje de programación de propósito general con sintaxis expresiva y moderna. Diseñado para ser fácil de aprender y productivo de usar.
 
@@ -60,19 +60,19 @@ Lenguaje de programación de propósito general con sintaxis expresiva y moderna
 
 Descarga la última versión desde [Releases](https://github.com/hersac/umbral/releases):
 
-- **Linux**: `umbral_1.5.6_amd64.deb`
-- **Windows**: `umbral_1.5.6_x64.exe`
-- **Código fuente**: `umbral-1.5.6.tar.gz` o `umbral-1.5.6.zip`
+- **Linux**: `umbral_1.5.7_amd64.deb`
+- **Windows**: `umbral_1.5.7_x64.exe`
+- **Código fuente**: `umbral-1.5.7.tar.gz` o `umbral-1.5.7.zip`
 
 #### Instalación en Linux (Debian/Ubuntu)
 
 ```bash
-sudo dpkg -i umbral_1.5.6_amd64.deb
+sudo dpkg -i umbral_1.5.7_amd64.deb
 ```
 
 #### Instalación en Windows
 
-Ejecuta el instalador `umbral_1.5.6_x64.exe` y sigue las instrucciones.
+Ejecuta el instalador `umbral_1.5.7_x64.exe` y sigue las instrucciones.
 
 ### Opción 2: Compilar desde código fuente
 
@@ -814,18 +814,30 @@ La respuesta es un diccionario con `status`, `ok`, `headers`, `body`, `url` y `e
 
 ```umbral
 c: datos = resp.parse();  !! entrada: {"a": 1} -> ["a" => 1] (sintaxis Umbral)
-c: salida = resp.json();  !! salida: ["a" => 1] -> '{"a":1}' (texto JSON)
-c: crudo = resp.text();   !! cuerpo tal cual llegó
+c: salida = resp.json();  !! salida canónica del body: '{"a":1}' (texto JSON)
+c: crudo = resp.text();   !! cuerpo tal cual llegó (Str)
 ```
 
-Los métodos `.json()` (diccionarios y listas a JSON) y `.parse()` (texto JSON a sintaxis Umbral) también funcionan fuera de `pulse`:
+Conversiones fuera de `pulse` (valen en llamada directa y en interpolación `&x.json()`):
 
 ```umbral
 c: persona = ["nombre" => "Ana", "edad" => 28];
-tprint(persona.json());                       !! '{"nombre":"Ana","edad":28}'
+tprint(persona.json());  !! '{"nombre":"Ana","edad":28}' (Str JSON)
+tprint(persona.text());  !! '["nombre" => Ana, "edad" => 28]' (Str tal cual)
+tprint(persona.parse()); !! ["nombre" => Ana, "edad" => 28] (ya es Umbral, se devuelve igual)
+
 c: objeto = '{"nombre": "Ana"}'.parse();
-tprint(objeto);                               !! ["nombre" => "Ana"]
+tprint(objeto);          !! ["nombre" => Ana]
+tprint(objeto.json());   !! '{"nombre":"Ana"}'
+
+c: u = n: User(123456, 2, "Pepito Perez", "admin@umbral.com");
+tprint(u);        !! User(["password" => 123456, "id" => 2, ...]) (forma Umbral)
+tprint(u.json()); !! '{"password":123456,"id":2,...}' (Str JSON)
+tprint(u.text()); !! 'User(["password" => 123456, "id" => 2, ...])' (Str tal cual)
+tprint(u.parse());!! ["password" => 123456, "id" => 2, ...] (diccionario)
 ```
+
+Regla: `.json()` serializa a JSON (Str), `.parse()` lleva JSON a sintaxis Umbral (`["k" => v]`), `.text()` / `.string()` devuelven el valor tal cual como Str (crudo en `pulse`, forma Umbral en diccionarios, listas e instancias).
 
 
 ### Red nativa (`Net` y `Dns`)
@@ -1061,7 +1073,7 @@ v: claves = Std.keys(dict);                !! ["a", "b"]
 
 ---
 
-## 📜 Especificación Formal (v1.5.6)
+## 📜 Especificación Formal (v1.5.7)
 
 ### Sistema de Tipos
 

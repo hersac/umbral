@@ -87,6 +87,18 @@ pub fn texto_a_valor_umbral(texto: &str) -> Valor {
     parsear_texto_json(texto)
 }
 
+/// Texto JSON a JSON canónico (`{"a":1}`).
+/// Retorna `Nulo` si el texto no es JSON válido.
+pub fn texto_a_json_canonico(texto: &str) -> Valor {
+    let json: serde_json::Value = match serde_json::from_str(texto) {
+        Ok(v) => v,
+        Err(_) => return Valor::Nulo,
+    };
+    serde_json::to_string(&json)
+        .map(Valor::Texto)
+        .unwrap_or(Valor::Nulo)
+}
+
 fn metodo_normalizado(metodo: &str) -> Option<String> {
     let mayus = metodo.trim().to_uppercase();
     let valido = matches!(

@@ -50,7 +50,7 @@ cp "${CROSS_BIN}/umbral-repl.exe" target/release/umbral-repl.exe
 VERSION=$(grep -m1 '^version' Cargo.toml | sed 's/.*= *"\(.*\)".*/\1/')
 echo "🚀 Generando instalador v${VERSION}..."
 # VIProductVersion solo acepta X.X.X.X numérico: sanitizar igual que en CI
-# (ej: 1.5.6-2 -> 1.5.6.0 para metadata, VERSION completa para nombre/mostrados).
+# (ej: 1.5.7-2 -> 1.5.7.0 para metadata, VERSION completa para nombre/mostrados).
 BASE="${VERSION%%-*}"
 BASE="${BASE%%+*}"
 VI_VERSION="$(echo "$BASE" | awk -F. '{printf "%s.%s.%s.%s", $1+0, ($2==""?0:$2)+0, ($3==""?0:$3)+0, 0}')"
